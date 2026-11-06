@@ -21,6 +21,7 @@ aws:
 dynamodb:
   instancesTableArn: ${DYNAMODB_INSTANCES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}
   migrationsTableArn: ${DYNAMODB_MIGRATIONS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}
+  usersTableArn: ${DYNAMODB_USERS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}
   endpoint: ${DYNAMODB_ENDPOINT:}
 
 # Security Configuration (JWT)

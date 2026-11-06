@@ -16,20 +16,24 @@ public class DynamoDbTableInitializer implements ApplicationRunner {
     private final DynamoDbClient dynamoDbClient;
     private final String instancesTableName;
     private final String migrationsTableName;
+    private final String usersTableName;
 
     public DynamoDbTableInitializer(DynamoDbClient dynamoDbClient,
                                     @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}") String instancesTableArn,
-                                    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}") String migrationsTableArn) {
+                                    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}") String migrationsTableArn,
+                                    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}") String usersTableArn) {
         this.dynamoDbClient = dynamoDbClient;
         this.instancesTableName = DynamoDbConfig.parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
         this.migrationsTableName = DynamoDbConfig.parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");
+        this.usersTableName = DynamoDbConfig.parseTableNameFromArn(usersTableArn, "XRegion-Users");
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("Verifying live connection to AWS DynamoDB tables: [{}] and [{}]", instancesTableName, migrationsTableName);
+        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}] and [{}]", instancesTableName, migrationsTableName, usersTableName);
         verifyTable(instancesTableName);
         verifyTable(migrationsTableName);
+        verifyTable(usersTableName);
     }
 
     private void verifyTable(String tableName) {
