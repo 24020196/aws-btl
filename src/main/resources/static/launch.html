@@ -249,10 +249,27 @@
             </div>
           </div>
 
-          <!-- Step 5: Block Storage & DNS -->
+          <!-- Step 5: SSH Key Pair Authentication -->
           <div class="card" style="padding: 22px;">
             <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
               <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">5</span>
+              Khóa Xác Thực SSH (Key Pair)
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Điền tên SSH Key Pair để xác thực truy cập điều khiển từ xa vào máy ảo:</div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên SSH Key Pair:</label>
+              <input type="text" class="form-input" id="instKeyPair" placeholder="vd: xregion-key, my-ssh-key..." oninput="updatePageLaunchSummary()">
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                Nhập tên khóa SSH xác thực đã đăng ký trên hệ thống (để trống sẽ sử dụng mặc định: <code>xregion-key</code>).
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 6: Block Storage & DNS -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">6</span>
               Ổ Đĩa Root EBS & Tên Miền DNS
             </div>
 
@@ -292,6 +309,11 @@
             <div style="margin-bottom: 14px;">
               <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">HỆ ĐIỀU HÀNH (OS)</div>
               <div id="sumOsText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Ubuntu Server 22.04 LTS</div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">KHÓA XÁC THỰC (KEY PAIR)</div>
+              <div id="sumKeyText" style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 3px;">xregion-key</div>
             </div>
 
             <div style="margin-bottom: 20px;">

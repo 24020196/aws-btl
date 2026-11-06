@@ -319,7 +319,7 @@ function filterInstancesUI() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Không có máy ảo nào trong hệ thống. Bấm "+ Launch Instance" để khởi tạo máy ảo mới.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Không có máy ảo nào trong hệ thống. Bấm "+ Launch Instance" để khởi tạo máy ảo mới.</td></tr>';
     return;
   }
 
@@ -334,6 +334,7 @@ function filterInstancesUI() {
       <td><strong>${inst.name}</strong></td>
       <td>${inst.regionName || inst.region}</td>
       <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
+      <td><span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace;">🔑 ${inst.keyName || 'xregion-key'}</span></td>
       <td><code>${inst.privateIp}</code></td>
       <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
       <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
@@ -390,10 +391,16 @@ function updateLaunchSummary() {
   const sumReg = document.getElementById('sumRegionText');
   const sumOs = document.getElementById('sumOsText');
   const sumSpecs = document.getElementById('sumSpecsText');
+  const sumKey = document.getElementById('sumKeyText');
 
   if (sumReg) sumReg.textContent = regionLabel;
   if (sumOs) sumOs.textContent = osLabel;
   if (sumSpecs) sumSpecs.textContent = specsText;
+  if (sumKey) {
+    const kpEl = document.getElementById('instKeyPair');
+    const val = kpEl ? kpEl.value.trim() : '';
+    sumKey.textContent = val ? val : 'Mặc định (xregion-key)';
+  }
 }
 
 async function instanceAction(id, action) {
@@ -430,6 +437,7 @@ async function submitLaunch(e) {
     region: document.getElementById('instRegion').value,
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
+    keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };
@@ -1127,6 +1135,8 @@ async function initDetailPage() {
     const spec = FLAVOR_SPECS[inst.flavor];
     const specDesc = spec ? ` (${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${spec.defaultDisk} GB Root Disk)` : '';
     document.getElementById('detFlavor').textContent = `${inst.flavor}${specDesc}`;
+    const detKeyEl = document.getElementById('detKeyName');
+    if (detKeyEl) detKeyEl.textContent = inst.keyName || 'xregion-key';
     document.getElementById('detImageName').textContent = inst.imageName || 'Ubuntu Server 22.04 LTS';
     document.getElementById('detRegionCode').textContent = inst.region;
     document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
@@ -1200,6 +1210,51 @@ function initLaunchPage() {
   updatePageLaunchSummary();
 }
 
+async function loadKeyPairsDropdown() {
+  const select = document.getElementById('instKeyPair');
+  if (!select) return;
+  try {
+    const keys = await apiRequest('/keys');
+    if (keys && keys.length > 0) {
+      const currentVal = select.value;
+      select.innerHTML = keys.map(k => `<option value="${k.keyName}">${k.keyName} (${k.keyType || 'RSA'})</option>`).join('');
+      if (keys.some(k => k.keyName === currentVal)) {
+        select.value = currentVal;
+      }
+      updatePageLaunchSummary();
+    }
+  } catch (e) {
+    console.warn('Could not load keypairs from API:', e);
+  }
+}
+
+async function promptCreateKey() {
+  const name = prompt('Nhập tên cho SSH Key Pair mới (ví dụ: dev-ssh-key):');
+  if (!name || !name.trim()) return;
+  try {
+    const res = await apiRequest('/keys', {
+      method: 'POST',
+      body: JSON.stringify({ name: name.trim() })
+    });
+    showToast(`Đã tạo SSH Key Pair [${name.trim()}] thành công!`, 'success');
+    if (res && res.privateKey) {
+      const blob = new Blob([res.privateKey], { type: 'application/x-pem-file' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${name.trim()}.pem`;
+      link.click();
+    }
+    await loadKeyPairsDropdown();
+    const select = document.getElementById('instKeyPair');
+    if (select) {
+      select.value = name.trim();
+      updatePageLaunchSummary();
+    }
+  } catch (err) {
+    showToast(`Lỗi tạo Key Pair: ${err.message}`, 'error');
+  }
+}
+
 function selectRegion(regionCode) {
   document.getElementById('instRegion').value = regionCode;
   document.getElementById('optRegionA').classList.toggle('selected', regionCode === 'ap-southeast-2');
@@ -1265,10 +1320,16 @@ function updatePageLaunchSummary() {
   const sumReg = document.getElementById('sumRegionText');
   const sumOs = document.getElementById('sumOsText');
   const sumSpecs = document.getElementById('sumSpecsText');
+  const sumKey = document.getElementById('sumKeyText');
 
   if (sumReg) sumReg.textContent = regionLabel;
   if (sumOs) sumOs.textContent = osLabel;
   if (sumSpecs) sumSpecs.textContent = specsText;
+  if (sumKey) {
+    const kpEl = document.getElementById('instKeyPair');
+    const val = kpEl ? kpEl.value.trim() : '';
+    sumKey.textContent = val ? val : 'Mặc định (xregion-key)';
+  }
 
   // Highlight selected row in specification matrix table
   const allRows = ['row-m1-tiny', 'row-m1-small', 'row-m1-medium', 'row-m1-large', 'row-m1-xlarge', 'row-h1-medium', 'row-h1-large', 'row-h1-xlarge'];
@@ -1301,6 +1362,7 @@ async function handleLaunchPageSubmit(e) {
     region: document.getElementById('instRegion').value,
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
+    keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };

@@ -60,6 +60,9 @@ public class InstanceService {
         String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
                 : "10.1.1." + (100 + new Random().nextInt(150));
         String elasticIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
+        String keyName = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
+                ? request.getKeyPairName().trim()
+                : "xregion-key";
 
         InstanceEntity entity = InstanceEntity.builder()
                 .instanceId(id)
@@ -69,6 +72,7 @@ public class InstanceService {
                 .elasticIp(elasticIp)
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
+                .keyName(keyName)
                 .migrationLock(false)
                 .lockAcquiredAt(0L)
                 .cooldownSeconds(300)
@@ -187,6 +191,7 @@ public class InstanceService {
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
                 .createdAt(timestamp)
                 .updatedAt(timestamp)
+                .keyName(entity.getKeyName() != null ? entity.getKeyName() : "xregion-key")
                 .build();
     }
 }

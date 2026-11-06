@@ -20,3 +20,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+.agents
+scratch_lambda

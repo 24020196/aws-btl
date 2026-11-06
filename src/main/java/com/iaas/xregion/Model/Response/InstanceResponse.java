@@ -24,5 +24,6 @@ public class InstanceResponse {
     private long createdAt;
     private long updatedAt;
     private String consoleUrl;
+    private String keyName;
 }
 
