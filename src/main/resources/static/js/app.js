@@ -43,6 +43,54 @@ function closeModal(id) {
   if (m) m.classList.remove('active');
 }
 
+// On-Screen API Error Banner
+function showApiError(endpoint, errorMsg, httpStatus = null) {
+  const banner = document.getElementById('apiErrorBanner');
+  if (!banner) return;
+
+  const statusText = httpStatus ? `(HTTP ${httpStatus})` : '';
+  const now = new Date().toLocaleTimeString();
+
+  banner.innerHTML = `
+    <div class="api-error-content">
+      <div class="api-error-title">
+        <span>⚠️ LỖI GỌI API: <code>${endpoint}</code> ${statusText}</span>
+        <span style="font-size: 11px; font-weight: 400; color: #94a3b8; margin-left: 8px;">[${now}]</span>
+      </div>
+      <div class="api-error-message">${errorMsg || 'Không thể kết nối đến máy chủ Backend.'}</div>
+      <div class="api-error-hint">
+        💡 <strong>Gợi ý:</strong> Kiểm tra file <code>.env</code> xem đã điền AWS Credentials (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>) chưa hoặc kiểm tra kết nối mạng DynamoDB.
+      </div>
+    </div>
+    <button class="api-error-close" onclick="clearApiError()" title="Đóng thông báo">✕</button>
+  `;
+  banner.style.display = 'flex';
+}
+
+function clearApiError() {
+  const banner = document.getElementById('apiErrorBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+// Toast Notifications
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  const icon = type === 'success' ? '✅' : '❌';
+  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(20px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 // Authenticated Fetch wrapper
 async function apiRequest(endpoint, options = {}) {
   const headers = {
@@ -54,16 +102,29 @@ async function apiRequest(endpoint, options = {}) {
     const res = await fetch(API_BASE + endpoint, { ...options, headers });
     if (res.status === 401) {
       openModal('loginModal');
-      throw new Error('Chưa xác thực hoặc phiên đăng nhập hết hạn.');
+      const err = new Error('Phiên đăng nhập hết hạn hoặc chưa xác thực (HTTP 401). Vui lòng đăng nhập lại.');
+      showApiError(endpoint, err.message, 401);
+      throw err;
     }
-    const data = await res.json();
+
+    let data;
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = { message: text };
+    }
+
     if (!res.ok) {
-      throw new Error(data.message || 'Lỗi xử lý yêu cầu.');
+      const errMsg = (data && data.message) ? data.message : `Yêu cầu thất bại với mã lỗi HTTP ${res.status}`;
+      showApiError(endpoint, errMsg, res.status);
+      throw new Error(errMsg);
     }
-    return data.data;
+    return data ? data.data : null;
   } catch (err) {
-    console.error('API Error:', err);
-    alert('Thông báo: ' + err.message);
+    console.error('API Error:', endpoint, err);
+    showApiError(endpoint, err.message);
     throw err;
   }
 }
@@ -86,11 +147,16 @@ async function submitLogin(e) {
       localStorage.setItem('xregion_jwt', authToken);
       document.getElementById('userNameDisplay').textContent = data.data.fullName || username;
       closeModal('loginModal');
+      clearApiError();
+      showToast('Đăng nhập thành công với vai trò Administrator!', 'success');
       loadInstances();
     } else {
-      alert('Đăng nhập thất bại: ' + (data.message || 'Sai thông tin'));
+      const msg = data.message || 'Sai thông tin đăng nhập';
+      showApiError('/auth/login', msg, res.status);
+      alert('Đăng nhập thất bại: ' + msg);
     }
   } catch (err) {
+    showApiError('/auth/login', err.message);
     alert('Lỗi đăng nhập: ' + err.message);
   }
 }
@@ -98,6 +164,7 @@ async function submitLogin(e) {
 function logout() {
   localStorage.removeItem('xregion_jwt');
   authToken = '';
+  showToast('Đã đăng xuất khỏi hệ thống', 'success');
   openModal('loginModal');
 }
 
@@ -105,6 +172,14 @@ function logout() {
 let cachedInstances = [];
 
 async function loadInstances() {
+  const tbody = document.getElementById('instanceTableBody');
+  const elTotal = document.getElementById('statTotalInstances');
+  const elRegA = document.getElementById('statRegionACount');
+  const elRun = document.getElementById('statRunningInstances');
+  const elStop = document.getElementById('statStoppedInstances');
+  const elMig = document.getElementById('statMigratingInstances');
+  const elBadge = document.getElementById('instanceCountBadge');
+
   try {
     const instances = await apiRequest('/instances');
     cachedInstances = instances || [];
@@ -120,13 +195,6 @@ async function loadInstances() {
     const stopped = cachedInstances.filter(i => i.status === 'SHUTOFF').length;
     const migrating = cachedInstances.filter(i => i.status === 'MIGRATING').length;
     const regionACount = cachedInstances.filter(i => (i.region || '').includes('southeast')).length;
-
-    const elTotal = document.getElementById('statTotalInstances');
-    const elRegA = document.getElementById('statRegionACount');
-    const elRun = document.getElementById('statRunningInstances');
-    const elStop = document.getElementById('statStoppedInstances');
-    const elMig = document.getElementById('statMigratingInstances');
-    const elBadge = document.getElementById('instanceCountBadge');
 
     if (elTotal) elTotal.textContent = total;
     if (elRegA) elRegA.textContent = `${regionACount} in Region A`;
@@ -146,7 +214,31 @@ async function loadInstances() {
 
     filterInstancesUI();
   } catch (err) {
-    console.error('Failed to load instances:', err);
+    console.error('Failed to load instances from API:', err);
+    // Báo lỗi rõ ràng lên 4 thẻ thống kê
+    if (elTotal) elTotal.textContent = 'ERR';
+    if (elRegA) elRegA.textContent = 'Lỗi kết nối API';
+    if (elRun) elRun.textContent = 'ERR';
+    if (elStop) elStop.textContent = 'ERR';
+    if (elMig) elMig.textContent = 'ERR';
+    if (elBadge) elBadge.textContent = '(Lỗi)';
+
+    // Báo lỗi trực tiếp lên bảng máy ảo
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center; padding: 36px 20px; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+            <div style="font-size: 26px; margin-bottom: 8px;">❌</div>
+            <div style="font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 6px;">Không thể tải danh sách máy ảo từ API (GET /api/instances)</div>
+            <div style="font-size: 13px; color: #cbd5e1; max-width: 680px; margin: 0 auto; line-height: 1.5; font-family: monospace; word-break: break-all;">${err.message || 'Lỗi kết nối máy chủ hoặc chưa cấu hình AWS Credentials'}</div>
+            <div style="margin-top: 14px; font-size: 12px; color: #94a3b8;">
+              Nguyên nhân: Chưa cấu hình AWS Credentials trong file <code>.env</code> hoặc bảng DynamoDB không phản hồi.<br>
+              <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="margin-top: 10px;">Thử lại (Retry)</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -165,7 +257,7 @@ function filterInstancesUI() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Chưa có máy ảo nào khớp bộ lọc. Bấm "+ Launch Instance" để tạo máy ảo mới.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Không có máy ảo nào trong hệ thống. Bấm "+ Launch Instance" để khởi tạo máy ảo mới.</td></tr>';
     return;
   }
 
@@ -185,7 +277,7 @@ function filterInstancesUI() {
       <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
       <td><span class="badge ${badgeClass}">${inst.status}</span></td>
       <td>
-        <div style="display:flex; gap:4px;">
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
           ${inst.status === 'ACTIVE' 
             ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">Dừng</button>` 
             : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">Bật</button>`}
@@ -200,6 +292,8 @@ function filterInstancesUI() {
 }
 
 function openLaunchModal() {
+  const errBox = document.getElementById('launchErrorBox');
+  if (errBox) errBox.style.display = 'none';
   openModal('launchModal');
   updateLaunchSummary();
 }
@@ -265,44 +359,68 @@ async function instanceAction(id, action) {
       method: 'POST',
       body: JSON.stringify({ action })
     });
+    showToast(`Thao tác ${action} trên máy ảo ${id} đã được gửi thành công!`, 'success');
     loadInstances();
   } catch (err) {
-    console.error(err);
+    console.error('instanceAction error:', err);
+    showToast(`Lỗi thao tác ${action} trên ${id}: ${err.message}`, 'error');
   }
 }
 
 async function submitLaunch(e) {
   e.preventDefault();
+  const errBox = document.getElementById('launchErrorBox');
+  if (errBox) errBox.style.display = 'none';
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn ? submitBtn.innerHTML : '🚀 Launch Compute Instance';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Đang khởi tạo máy ảo...';
+  }
+
   const body = {
-    name: document.getElementById('instName').value,
+    name: document.getElementById('instName').value.trim(),
     region: document.getElementById('instRegion').value,
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 50,
-    domainName: document.getElementById('instDomain').value
+    domainName: document.getElementById('instDomain').value.trim()
   };
 
   try {
-    await apiRequest('/instances', {
+    const res = await apiRequest('/instances', {
       method: 'POST',
       body: JSON.stringify(body)
     });
     closeModal('launchModal');
+    showToast(`Đã khởi tạo máy ảo ${body.name} (${res ? res.id : ''}) thành công!`, 'success');
     loadInstances();
   } catch (err) {
-    console.error(err);
+    console.error('Launch instance failed:', err);
+    if (errBox) {
+      errBox.innerHTML = `<strong>❌ Lỗi khởi tạo máy ảo (POST /api/instances):</strong><br>${err.message}`;
+      errBox.style.display = 'block';
+    }
+    showToast(`Lỗi khởi tạo máy ảo: ${err.message}`, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+    }
   }
 }
 
 // TAB 2: STORAGE
 async function loadVolumes() {
+  const tbody = document.getElementById('volumeTableBody');
   try {
     const volumes = await apiRequest('/volumes');
-    const tbody = document.getElementById('volumeTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (!volumes || volumes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Chưa có ổ đĩa nào.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px; color: var(--text-muted);">Chưa có ổ đĩa nào trong kho lưu trữ.</td></tr>';
       return;
     }
 
@@ -313,13 +431,13 @@ async function loadVolumes() {
         <td style="font-family:monospace; color:var(--accent-green); font-weight:700;">${vol.id}</td>
         <td><strong>${vol.name}</strong></td>
         <td>${vol.sizeGb} GB</td>
-        <td>${vol.volumeType}</td>
+        <td><span class="badge" style="background:#1e293b; color:#38bdf8;">${vol.volumeType}</span></td>
         <td>${vol.iops} IOPS / ${vol.throughput} MB/s</td>
         <td>${vol.region}</td>
         <td>${vol.attachedInstanceName} ${vol.device ? `(${vol.device})` : ''}</td>
         <td><span class="badge ${isAttached ? 'badge-active' : 'badge-shutoff'}">${vol.status}</span></td>
         <td>
-          <div style="display:flex; gap:4px;">
+          <div style="display:flex; gap:4px; flex-wrap:wrap;">
             ${isAttached 
               ? `<button class="btn btn-secondary btn-sm" onclick="detachVolume('${vol.id}')">Tháo</button>` 
               : `<button class="btn btn-success btn-sm" onclick="promptAttachVolume('${vol.id}')">Gắn</button>`}
@@ -331,51 +449,60 @@ async function loadVolumes() {
       tbody.appendChild(tr);
     });
   } catch (err) {
-    console.error(err);
+    console.error('Failed to load volumes:', err);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: #f87171; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">❌ Không thể tải danh sách ổ đĩa từ API (GET /api/volumes): ${err.message}</td></tr>`;
+    }
   }
 }
 
 async function submitCreateVolume(e) {
   e.preventDefault();
   const body = {
-    name: document.getElementById('volName').value,
+    name: document.getElementById('volName').value.trim(),
     sizeGb: parseInt(document.getElementById('volSize').value) || 20,
     region: document.getElementById('volRegion').value,
     volumeType: 'gp3'
   };
 
   try {
-    await apiRequest('/volumes', {
+    const res = await apiRequest('/volumes', {
       method: 'POST',
       body: JSON.stringify(body)
     });
     closeModal('createVolumeModal');
+    showToast(`Đã cấp phát ổ đĩa ${body.name} (${res ? res.id : ''}) thành công!`, 'success');
     loadVolumes();
   } catch (err) {
-    console.error(err);
+    console.error('Failed to create volume:', err);
+    showToast(`Lỗi cấp phát ổ đĩa: ${err.message}`, 'error');
   }
 }
 
 async function detachVolume(id) {
   try {
     await apiRequest(`/volumes/${id}/detach`, { method: 'POST' });
+    showToast(`Đã tháo ổ đĩa ${id} thành công!`, 'success');
     loadVolumes();
   } catch (err) {
-    console.error(err);
+    console.error('Failed to detach volume:', err);
+    showToast(`Lỗi tháo ổ đĩa: ${err.message}`, 'error');
   }
 }
 
 async function promptAttachVolume(volId) {
-  const instanceId = prompt('Nhập ID máy ảo cần gắn ổ đĩa (VD: vm-syd-01):');
+  const instanceId = prompt('Nhập ID máy ảo cần gắn ổ đĩa (VD: i-0a3f9c21e7b4d5810):');
   if (!instanceId) return;
   try {
     await apiRequest(`/volumes/${volId}/attach`, {
       method: 'POST',
-      body: JSON.stringify({ instanceId, device: '/dev/vdb' })
+      body: JSON.stringify({ instanceId: instanceId.trim(), device: '/dev/vdb' })
     });
+    showToast(`Đã gắn ổ đĩa ${volId} vào máy ảo ${instanceId}!`, 'success');
     loadVolumes();
   } catch (err) {
-    console.error(err);
+    console.error('Failed to attach volume:', err);
+    showToast(`Lỗi gắn ổ đĩa: ${err.message}`, 'error');
   }
 }
 
@@ -402,29 +529,38 @@ async function submitCopySnapshot(e) {
       body: JSON.stringify(body)
     });
     closeModal('copySnapshotModal');
-    alert('Đã kích hoạt sao chép snapshot xuyên vùng sang ' + body.destinationRegion);
+    showToast('Đã kích hoạt sao chép snapshot xuyên vùng sang ' + body.destinationRegion, 'success');
     loadVolumes();
   } catch (err) {
-    console.error(err);
+    console.error('Failed to copy snapshot cross region:', err);
+    showToast(`Lỗi sao chép snapshot: ${err.message}`, 'error');
   }
 }
 
 async function deleteVolume(id) {
-  if (!confirm('Xóa ổ đĩa ' + id + '?')) return;
+  if (!confirm('Bạn có chắc chắn muốn xóa ổ đĩa ' + id + '?')) return;
   try {
     await apiRequest(`/volumes/${id}`, { method: 'DELETE' });
+    showToast(`Đã xóa ổ đĩa ${id} thành công!`, 'success');
     loadVolumes();
   } catch (err) {
-    console.error(err);
+    console.error('Failed to delete volume:', err);
+    showToast(`Lỗi xóa ổ đĩa: ${err.message}`, 'error');
   }
 }
 
 // TAB 3: IMAGES
 async function loadImages() {
+  const grid = document.getElementById('imageGrid');
   try {
     const images = await apiRequest('/images');
-    const grid = document.getElementById('imageGrid');
+    if (!grid) return;
     grid.innerHTML = '';
+
+    if (!images || images.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 24px; color: var(--text-muted);">Không có OS Image nào.</div>';
+      return;
+    }
 
     images.forEach(img => {
       const card = document.createElement('div');
@@ -445,7 +581,10 @@ async function loadImages() {
       grid.appendChild(card);
     });
   } catch (err) {
-    console.error(err);
+    console.error('Failed to load images:', err);
+    if (grid) {
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 30px; background: rgba(239, 68, 68, 0.05); border-radius: 8px; color: #f87171;">❌ Không thể tải kho ảnh hệ điều hành từ API (GET /api/images):<br><span style="font-family: monospace; font-size: 12px; color: #cbd5e1;">${err.message}</span></div>`;
+    }
   }
 }
 

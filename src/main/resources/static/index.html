@@ -79,6 +79,8 @@
 
   <!-- Main Content Areas -->
   <main class="main-content">
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
     <!-- TAB 1: COMPUTE -->
     <div id="tab-compute" class="tab-pane active">
@@ -366,6 +368,7 @@
         <div class="card-title">Launch New Instance (Khởi Tạo Máy Ảo Mới)</div>
         <button class="btn btn-secondary btn-sm" onclick="closeModal('launchModal')">✕</button>
       </div>
+      <div id="launchErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 13px; line-height: 1.4;"></div>
       <form id="launchForm" onsubmit="submitLaunch(event)">
         <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; align-items: start;">
           <!-- Left Column: Configuration -->
@@ -612,6 +615,9 @@
       </form>
     </div>
   </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
 </body>

@@ -2,6 +2,7 @@ package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
+import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
@@ -33,12 +34,18 @@ public class InstanceService {
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to scan instances from AWS DynamoDB: {}", e.getMessage());
-            return Collections.emptyList();
+            throw new AppException("Lỗi kết nối AWS DynamoDB khi đọc danh sách máy ảo: " + e.getMessage());
         }
     }
 
     public InstanceResponse getInstanceById(String id) {
-        InstanceEntity entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
+        }
         if (entity == null) {
             throw new ResourceNotFoundException("Instance not found in AWS DynamoDB: " + id);
         }
@@ -67,7 +74,13 @@ public class InstanceService {
                 .lastMigrationTimestamp(now)
                 .build();
 
-        instancesTable.putItem(entity);
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to put instance into AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
+        }
+
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id, 
                 "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
 
@@ -75,7 +88,14 @@ public class InstanceService {
     }
 
     public InstanceResponse executeAction(String id, InstanceActionRequest request) {
-        InstanceEntity entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
+        }
+
         if (entity == null) {
             throw new ResourceNotFoundException("Instance not found: " + id);
         }
@@ -96,20 +116,35 @@ public class InstanceService {
                     @Override
                     public void run() {
                         entity.setCurrentStatus("RUNNING");
-                        instancesTable.putItem(entity);
+                        try {
+                            instancesTable.putItem(entity);
+                        } catch (Exception e) {
+                            log.error("Failed to update reboot status in DynamoDB: {}", e.getMessage());
+                        }
                     }
                 }, 3000);
                 break;
             case "TERMINATE":
             case "DELETE":
-                instancesTable.deleteItem(Key.builder().partitionValue(id).build());
+                try {
+                    instancesTable.deleteItem(Key.builder().partitionValue(id).build());
+                } catch (Exception e) {
+                    log.error("Failed to delete instance from AWS DynamoDB: {}", e.getMessage());
+                    throw new AppException("Lỗi xóa máy ảo trên AWS DynamoDB: " + e.getMessage());
+                }
                 auditLogService.logAction("TERMINATE_VM", "INSTANCE", id, "Terminated instance " + id);
                 return mapToResponse(entity);
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
         }
 
-        instancesTable.putItem(entity);
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to update instance on AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi cập nhật trạng thái máy ảo trên AWS DynamoDB: " + e.getMessage());
+        }
+
         auditLogService.logAction(action + "_VM", "INSTANCE", id, 
                 "Changed status from " + currentStatus + " to " + entity.getCurrentStatus());
 
