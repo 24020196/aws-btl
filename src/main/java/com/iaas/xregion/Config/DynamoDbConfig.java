@@ -75,7 +75,7 @@ public class DynamoDbConfig {
             log.info("Connecting to local DynamoDB endpoint: {}", endpoint);
             builder.endpointOverride(URI.create(endpoint.trim()));
             builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create("dummy_local_key", "dummy_local_secret")
+                    AwsBasicCredentials.create("dummylocalkey", "dummylocalsecret")
             ));
         } 
         // 2. Direct AWS Cloud connection using pre-stored IAM Access Key (no AWS Toolkit/profile needed)
