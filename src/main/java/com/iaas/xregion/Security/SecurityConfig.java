@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/assets/**",
                                 "/favicon.ico",
                                 "/api/auth/login",
+                                "/api/auth/register",
                                 "/api/auth/health"
                         ).permitAll()
                         // Protected API Endpoints
