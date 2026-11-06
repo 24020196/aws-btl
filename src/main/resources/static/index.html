@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IaaS - XRegion-EC2 Cloud Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <!-- Chart.js for real-time performance graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="header">
+    <div class="logo-container">
+      <div class="logo-badge">XREGION</div>
+      <div class="logo-title">IaaS - XRegion-EC2 Control Plane</div>
+    </div>
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Sydney (ap-southeast-2): Healthy</span>
+      </div>
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>N. Virginia (us-east-1): Standby</span>
+      </div>
+      <div class="user-badge" id="userBadge">
+        <span id="userNameDisplay">Admin</span>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Đăng xuất</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 6 Module Navigation Tabs (Exact layout from design image) -->
+  <nav class="nav-container">
+    <div class="nav-card active" onclick="switchTab('compute')">
+      <div class="nav-icon icon-orange">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+      </div>
+      <div class="nav-label">Compute -<br>Quản lý máy ảo</div>
+    </div>
+
+    <div class="nav-card" onclick="switchTab('storage')">
+      <div class="nav-icon icon-green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <div class="nav-label">Storage -<br>Quản lý lưu trữ</div>
+    </div>
+
+    <div class="nav-card" onclick="switchTab('images')">
+      <div class="nav-icon icon-amber">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <div class="nav-label">Quản lý<br>Image</div>
+    </div>
+
+    <div class="nav-card" onclick="switchTab('network')">
+      <div class="nav-icon icon-purple">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="12 12 12 8 16 8"/></svg>
+      </div>
+      <div class="nav-label">Quản lý mạng và<br>định tuyến tự động</div>
+    </div>
+
+    <div class="nav-card" onclick="switchTab('migration')">
+      <div class="nav-icon icon-pink">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+      </div>
+      <div class="nav-label">Quản lý, thiết lập<br>kịch bản chuyển vùng</div>
+    </div>
+
+    <div class="nav-card" onclick="switchTab('monitoring')">
+      <div class="nav-icon icon-rose">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+      </div>
+      <div class="nav-label">Giám sát chi phí &<br>hiệu năng và nhật ký</div>
+    </div>
+  </nav>
+
+  <!-- Main Content Areas -->
+  <main class="main-content">
+
+    <!-- TAB 1: COMPUTE -->
+    <div id="tab-compute" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Danh sách Máy ảo NovaVM / EC2 Đa vùng</span>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="loadInstances()">Làm mới</button>
+            <button class="btn btn-primary" onclick="openModal('launchModal')">+ Khởi tạo máy ảo (Launch Instance)</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên Máy Ảo</th>
+              <th>Vùng Triển Khai</th>
+              <th>Cấu hình (Flavor)</th>
+              <th>IP Nội Bộ</th>
+              <th>Public / Elastic IP</th>
+              <th>DNS Domain</th>
+              <th>Trạng Thái</th>
+              <th>Hành Động</th>
+            </tr>
+          </thead>
+          <tbody id="instanceTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: STORAGE -->
+    <div id="tab-storage" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Quản lý Ổ đĩa Cinder & AWS EBS gp3</span>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="loadVolumes()">Làm mới</button>
+            <button class="btn btn-primary" onclick="openModal('createVolumeModal')">+ Tạo Ổ Đĩa (Create Volume)</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Volume ID</th>
+              <th>Tên Ổ Đĩa</th>
+              <th>Dung Lượng</th>
+              <th>Loại (gp3)</th>
+              <th>IOPS / Throughput</th>
+              <th>Vùng</th>
+              <th>Gắn Vào Máy Ảo</th>
+              <th>Trạng Thái</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="volumeTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: IMAGE -->
+    <div id="tab-images" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Kho Ảnh Hệ Điều Hành & Snapshot Images (Glance)</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadImages()">Làm mới</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;" id="imageGrid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: NETWORK -->
+    <div id="tab-network" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Topology Mạng VPC & Cấu hình Đa Vùng</div>
+        </div>
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;" id="vpcContainer">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div class="card-header" style="margin-top: 24px;">
+          <div class="card-title">Bản Ghi Route 53 DNS & Tự Động Định Tuyến (Automated Cutover)</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('dnsModal')">+ Cập nhật Route 53 DNS</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tên Miền (Domain)</th>
+              <th>Loại Bản Ghi</th>
+              <th>IP Đích (Target IP)</th>
+              <th>TTL (Giây)</th>
+              <th>Trạng Thái Đồng Bộ</th>
+            </tr>
+          </thead>
+          <tbody id="dnsTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: MIGRATION -->
+    <div id="tab-migration" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Điều Phối Quy Trình Chuyển Vùng X-Region (6-Step Automated Migration)</div>
+          <div>
+            <button class="btn btn-primary" onclick="openModal('scenarioModal')">+ Tạo Kịch Bản Chuyển Vùng</button>
+          </div>
+        </div>
+
+        <!-- 6-Step Visualizer -->
+        <div class="pipeline-container">
+          <div class="pipeline-line">
+            <div class="pipeline-progress-bar" id="pipelineBar"></div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle1">1</div>
+            <div class="step-text">Dừng VM Nguồn (Stop VM)</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle2">2</div>
+            <div class="step-text">Tạo Snapshot EBS gp3</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle3">3</div>
+            <div class="step-text">Sao Chép Snapshot Xuyên Vùng</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle4">4</div>
+            <div class="step-text">Khởi Tạo Volume Vùng Đích</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle5">5</div>
+            <div class="step-text">Khởi Chạy NovaVM Đích</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-circle" id="stepCircle6">6</div>
+            <div class="step-text">Cắt Chuyển DNS Route 53</div>
+          </div>
+        </div>
+
+        <!-- Live Migration Terminal Output -->
+        <div style="margin-top: 24px;">
+          <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--accent-cyan);">
+            Nhật Ký Tiến Trình Di Trú Thời Gian Thực (Live Migration Logs):
+          </div>
+          <div class="terminal-window" id="terminalLogs">
+            [System] Sẵn sàng điều phối chuyển vùng giữa Sydney (ap-southeast-2) và N. Virginia (us-east-1)...
+          </div>
+        </div>
+
+        <!-- Scenarios Table -->
+        <div class="card-header" style="margin-top: 28px;">
+          <div class="card-title">Danh Sách Kịch Bản Di Trú Tự Động (Migration Scenarios)</div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên Kịch Bản</th>
+              <th>Máy Ảo Nguồn</th>
+              <th>Vùng Nguồn -> Vùng Đích</th>
+              <th>Kiểu Kích Hoạt</th>
+              <th>Lịch Trình (Cron)</th>
+              <th>Khóa Cooldown</th>
+              <th>Hành Động</th>
+            </tr>
+          </thead>
+          <tbody id="scenarioTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 6: MONITORING -->
+    <div id="tab-monitoring" class="tab-pane">
+      <!-- Multi-region Cost Breakdown -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;" id="costCards">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Hiệu Năng Máy Ảo Thời Gian Thực (CPU, RAM, Network I/O)</div>
+          <div style="display: flex; gap: 8px;">
+            <select class="form-select" style="width: 200px;" id="metricVmSelect" onchange="loadMetrics()">
+              <!-- Options rendered by JS -->
+            </select>
+          </div>
+        </div>
+        <div style="height: 300px;">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Nhật Ký Thao Tác Hệ Thống (System Audit Logs)</div>
+          <button class="btn btn-secondary btn-sm" onclick="loadAuditLogs()">Làm mới</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Thời Gian</th>
+              <th>Người Dùng</th>
+              <th>Hành Động</th>
+              <th>Loại Tài Nguyên</th>
+              <th>Mã Tài Nguyên</th>
+              <th>Chi Tiết</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL: LAUNCH INSTANCE -->
+  <div class="modal-overlay" id="launchModal">
+    <div class="modal-card">
+      <div class="card-header">
+        <div class="card-title">Khởi Tạo Máy Ảo Mới (Launch NovaVM)</div>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('launchModal')">✕</button>
+      </div>
+      <form id="launchForm" onsubmit="submitLaunch(event)">
+        <div class="form-group">
+          <label class="form-label">Tên Máy Ảo</label>
+          <input type="text" class="form-input" id="instName" required placeholder="nova-prod-app01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vùng Triển Khai (Region)</label>
+          <select class="form-select" id="instRegion" required>
+            <option value="ap-southeast-2">ap-southeast-2 (Sydney - Region A)</option>
+            <option value="us-east-1">us-east-1 (N. Virginia - Region B)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cấu Hình (Flavor)</label>
+          <select class="form-select" id="instFlavor">
+            <option value="m1.small">m1.small (1 vCPU, 2GB RAM)</option>
+            <option value="m1.medium" selected>m1.medium (2 vCPU, 4GB RAM)</option>
+            <option value="c5.large">c5.large (2 vCPU, 8GB RAM, High-Compute)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ảnh Hệ Điều Hành (OS Image)</label>
+          <select class="form-select" id="instImage">
+            <option value="img-u22">Ubuntu 22.04 LTS Cloud</option>
+            <option value="img-deb12">Debian 12 Bookworm</option>
+            <option value="img-rocky9">Rocky Linux 9</option>
+            <option value="img-alp319">Alpine Linux 3.19 Micro-VM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dung Lượng EBS Root Volume (gp3, GB)</label>
+          <input type="number" class="form-input" id="instEbsSize" value="50" min="10" max="500">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên Miền Route 53 (Optional)</label>
+          <input type="text" class="form-input" id="instDomain" placeholder="app01.xregion.net">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('launchModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Xác Nhận Khởi Tạo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE VOLUME -->
+  <div class="modal-overlay" id="createVolumeModal">
+    <div class="modal-card">
+      <div class="card-header">
+        <div class="card-title">Cấp Phát Ổ Đĩa EBS gp3 Độc Lập</div>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('createVolumeModal')">✕</button>
+      </div>
+      <form id="volumeForm" onsubmit="submitCreateVolume(event)">
+        <div class="form-group">
+          <label class="form-label">Tên Ổ Đĩa</label>
+          <input type="text" class="form-input" id="volName" required placeholder="ebs-data-volume">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dung Lượng (GB)</label>
+          <input type="number" class="form-input" id="volSize" value="50" min="1" max="1000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vùng Lưu Trữ</label>
+          <select class="form-select" id="volRegion">
+            <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
+            <option value="us-east-1">us-east-1 (N. Virginia)</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createVolumeModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Cấp Phát</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CROSS REGION COPY -->
+  <div class="modal-overlay" id="copySnapshotModal">
+    <div class="modal-card">
+      <div class="card-header">
+        <div class="card-title">Sao Chép Snapshot Xuyên Vùng (Cross-Region Copy)</div>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('copySnapshotModal')">✕</button>
+      </div>
+      <form id="copySnapshotForm" onsubmit="submitCopySnapshot(event)">
+        <input type="hidden" id="copyVolId">
+        <input type="hidden" id="copySrcRegion">
+        <div class="form-group">
+          <label class="form-label">Ổ Đĩa Nguồn</label>
+          <input type="text" class="form-input" id="copyVolNameDisplay" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vùng Đích (Destination Region)</label>
+          <select class="form-select" id="copyDestRegion">
+            <option value="us-east-1">us-east-1 (N. Virginia)</option>
+            <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('copySnapshotModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Bắt Đầu Sao Chép</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE SCENARIO -->
+  <div class="modal-overlay" id="scenarioModal">
+    <div class="modal-card">
+      <div class="card-header">
+        <div class="card-title">Thiết Lập Kịch Bản Chuyển Vùng Mới</div>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('scenarioModal')">✕</button>
+      </div>
+      <form id="scenarioForm" onsubmit="submitCreateScenario(event)">
+        <div class="form-group">
+          <label class="form-label">Tên Kịch Bản</label>
+          <input type="text" class="form-input" id="scName" required placeholder="Disaster Recovery Sydney to Virginia">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Máy Ảo Cần Di Trú</label>
+          <select class="form-select" id="scInstanceSelect" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vùng Nguồn -> Vùng Đích</label>
+          <div style="display: flex; gap: 10px;">
+            <select class="form-select" id="scSrcRegion">
+              <option value="ap-southeast-2">ap-southeast-2</option>
+              <option value="us-east-1">us-east-1</option>
+            </select>
+            <span style="display: flex; align-items: center;">➔</span>
+            <select class="form-select" id="scDstRegion">
+              <option value="us-east-1">us-east-1</option>
+              <option value="ap-southeast-2">ap-southeast-2</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kiểu Kích Hoạt (Trigger Type)</label>
+          <select class="form-select" id="scTriggerType">
+            <option value="MANUAL">Thủ Công (Manual Trigger)</option>
+            <option value="SCHEDULED">Lập Lịch (Cron Schedule)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Thời Gian Cooldown Khóa An Toàn (Phút)</label>
+          <input type="number" class="form-input" id="scCooldown" value="60">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('scenarioModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu Kịch Bản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: UPDATE ROUTE 53 DNS -->
+  <div class="modal-overlay" id="dnsModal">
+    <div class="modal-card">
+      <div class="card-header">
+        <div class="card-title">Cập Nhật Bản Ghi Route 53 DNS</div>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('dnsModal')">✕</button>
+      </div>
+      <form id="dnsForm" onsubmit="submitUpdateDns(event)">
+        <div class="form-group">
+          <label class="form-label">Tên Miền (Domain Name)</label>
+          <input type="text" class="form-input" id="dnsDomainInput" required placeholder="web01.xregion.net">
+        </div>
+        <div class="form-group">
+          <label class="form-label">IP Đích Mới (Target IP Address)</label>
+          <input type="text" class="form-input" id="dnsTargetIpInput" required placeholder="54.252.199.88">
+        </div>
+        <div class="form-group">
+          <label class="form-label">TTL (Giây)</label>
+          <input type="number" class="form-input" id="dnsTtlInput" value="60">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Cắt Chuyển DNS Ngay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN DIALOG -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="card-header">
+        <div class="card-title">Đăng Nhập Quản Trị XRegion</div>
+      </div>
+      <form id="loginForm" onsubmit="submitLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Tài Khoản</label>
+          <input type="text" class="form-input" id="loginUser" value="admin" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật Khẩu</label>
+          <input type="password" class="form-input" id="loginPass" value="admin123" required>
+        </div>
+        <div style="margin-top: 20px;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Đăng Nhập (Login)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
+
