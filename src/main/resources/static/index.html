@@ -2,656 +2,741 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IaaS - XRegion-EC2 Cloud Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>XRegion Console</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b4bd0'/%3E%3Cpath d='M0 32L32 0V25a7 7 0 0 1-7 7z' fill='%230d8282'/%3E%3Cpath d='M8 12h14l-4-4M24 20H10l4 4' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="/css/dashboard.css">
-  <!-- Chart.js for real-time performance graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 </head>
 <body>
+<!--BODY-START-->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+    <symbol id="i-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 5 5 3-3 5 5"/><circle cx="15.5" cy="8.5" r="1.5"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12l-5.5 4.8M12 12l5.5 4.8"/></symbol>
+    <symbol id="i-migrate" viewBox="0 0 24 24"><path d="M4 7h13M13 3l4 4-4 4"/><path d="M20 17H7M11 13l-4 4 4 4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 15l3-4 3 2 5-6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+    <symbol id="i-reboot" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8.6M20 4v4.6h-4.6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></symbol>
+  </svg>
 
-  <!-- Top Header -->
-  <header class="header">
-    <div class="logo-container">
-      <div class="logo-badge">XREGION</div>
-      <div class="logo-title">IaaS - XRegion-EC2 Control Plane</div>
-    </div>
-    <div class="header-status">
-      <div class="health-pill">
-        <div class="health-dot"></div>
-        <span>Sydney (ap-southeast-2): Healthy</span>
-      </div>
-      <div class="health-pill">
-        <div class="health-dot"></div>
-        <span>N. Virginia (us-east-1): Standby</span>
-      </div>
-      <div class="user-badge" id="userBadge">
-        <span id="userNameDisplay">Admin</span>
-        <button class="btn btn-secondary btn-sm" onclick="logout()">Đăng xuất</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- 6 Module Navigation Tabs (Exact layout from design image) -->
-  <nav class="nav-container">
-    <div class="nav-card active" onclick="switchTab('compute')">
-      <div class="nav-icon icon-orange">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
-      </div>
-      <div class="nav-label">Compute -<br>Quản lý máy ảo</div>
-    </div>
-
-    <div class="nav-card" onclick="switchTab('storage')">
-      <div class="nav-icon icon-green">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-      </div>
-      <div class="nav-label">Storage -<br>Quản lý lưu trữ</div>
-    </div>
-
-    <div class="nav-card" onclick="switchTab('images')">
-      <div class="nav-icon icon-amber">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      </div>
-      <div class="nav-label">Quản lý<br>Image</div>
-    </div>
-
-    <div class="nav-card" onclick="switchTab('network')">
-      <div class="nav-icon icon-purple">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="12 12 12 8 16 8"/></svg>
-      </div>
-      <div class="nav-label">Quản lý mạng và<br>định tuyến tự động</div>
-    </div>
-
-    <div class="nav-card" onclick="switchTab('migration')">
-      <div class="nav-icon icon-pink">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-      </div>
-      <div class="nav-label">Quản lý, thiết lập<br>kịch bản chuyển vùng</div>
-    </div>
-
-    <div class="nav-card" onclick="switchTab('monitoring')">
-      <div class="nav-icon icon-rose">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-      </div>
-      <div class="nav-label">Giám sát chi phí &<br>hiệu năng và nhật ký</div>
-    </div>
-  </nav>
-
-  <!-- Main Content Areas -->
-  <main class="main-content">
-
-    <!-- TAB 1: COMPUTE -->
-    <div id="tab-compute" class="tab-pane active">
-      <!-- 4 Summary Cards (Hình 2.2) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-        <div class="card" style="margin-bottom: 0; padding: 16px;">
-          <div style="font-size: 12px; color: var(--text-muted);">Total Instances</div>
-          <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 8px;">
-            <span id="statTotalInstances" style="font-size: 28px; font-weight: 800;">0</span>
-            <span id="statRegionACount" style="font-size: 12px; color: var(--text-muted);">0 in Region A</span>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom: 0; padding: 16px;">
-          <div style="font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-            Running
-          </div>
-          <div id="statRunningInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
-        </div>
-        <div class="card" style="margin-bottom: 0; padding: 16px;">
-          <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
-            Stopped
-          </div>
-          <div id="statStoppedInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
-        </div>
-        <div class="card" style="margin-bottom: 0; padding: 16px;">
-          <div style="font-size: 12px; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
-            Migrating
-          </div>
-          <div id="statMigratingInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+      <div class="brand">
+        <div class="brand-mark"><svg class="icon icon-sm"><use href="#i-migrate"/></svg></div>
+        <div>
+          <div class="brand-name">XRegion</div>
+          <div class="brand-sub">IaaS chuyển vùng EC2</div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
-          <div class="card-title">
-            <span>Instances</span>
-            <span id="instanceCountBadge" class="badge" style="background: #1e293b; color: #38bdf8;">(0)</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <input type="text" class="form-input" id="instanceSearchInput" placeholder="Tìm theo tên hoặc ID..." style="width: 210px; padding: 6px 12px;" oninput="filterInstancesUI()">
-            <select class="form-select" id="instanceStatusFilter" style="width: 150px; padding: 6px 10px;" onchange="filterInstancesUI()">
-              <option value="ALL">All statuses</option>
-              <option value="ACTIVE">Running (ACTIVE)</option>
-              <option value="SHUTOFF">Stopped (SHUTOFF)</option>
-              <option value="MIGRATING">Migrating</option>
-            </select>
-            <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="padding: 7px 12px;">Làm mới</button>
-            <button class="btn btn-primary" onclick="openLaunchModal()">+ Launch Instance</button>
-          </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-group-title">Hạ tầng</div>
+          <button class="nav-item" data-tab="compute" onclick="switchTab('compute')"><svg class="icon"><use href="#i-cpu"/></svg>Máy ảo<span class="count" id="navCountInstances"></span></button>
+          <button class="nav-item" data-tab="storage" onclick="switchTab('storage')"><svg class="icon"><use href="#i-disk"/></svg>Ổ đĩa &amp; snapshot</button>
+          <button class="nav-item" data-tab="images" onclick="switchTab('images')"><svg class="icon"><use href="#i-image"/></svg>Image</button>
+          <button class="nav-item" data-tab="network" onclick="switchTab('network')"><svg class="icon"><use href="#i-network"/></svg>Mạng &amp; DNS</button>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>INSTANCE ID</th>
-              <th>NAME</th>
-              <th>CURRENT REGION</th>
-              <th>FLAVOR</th>
-              <th>PRIVATE IP</th>
-              <th>PUBLIC / ELASTIC IP</th>
-              <th>DNS DOMAIN</th>
-              <th>STATUS</th>
-              <th>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody id="instanceTableBody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- TAB 2: STORAGE -->
-    <div id="tab-storage" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>Quản lý Ổ đĩa Cinder & AWS EBS gp3</span>
-          </div>
-          <div>
-            <button class="btn btn-secondary btn-sm" onclick="loadVolumes()">Làm mới</button>
-            <button class="btn btn-primary" onclick="openModal('createVolumeModal')">+ Tạo Ổ Đĩa (Create Volume)</button>
-          </div>
+        <div class="nav-group">
+          <div class="nav-group-title">Chuyển vùng</div>
+          <button class="nav-item" data-tab="migration" onclick="switchTab('migration')"><svg class="icon"><use href="#i-migrate"/></svg>Kịch bản &amp; tiến trình<span class="count" id="navCountMigrating"></span></button>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Volume ID</th>
-              <th>Tên Ổ Đĩa</th>
-              <th>Dung Lượng</th>
-              <th>Loại (gp3)</th>
-              <th>IOPS / Throughput</th>
-              <th>Vùng</th>
-              <th>Gắn Vào Máy Ảo</th>
-              <th>Trạng Thái</th>
-              <th>Thao Tác</th>
-            </tr>
-          </thead>
-          <tbody id="volumeTableBody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- TAB 3: IMAGE -->
-    <div id="tab-images" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>Kho Ảnh Hệ Điều Hành & Snapshot Images (Glance)</span>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="loadImages()">Làm mới</button>
+        <div class="nav-group">
+          <div class="nav-group-title">Vận hành</div>
+          <button class="nav-item" data-tab="monitoring" onclick="switchTab('monitoring')"><svg class="icon"><use href="#i-chart"/></svg>Giám sát &amp; nhật ký</button>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;" id="imageGrid">
-          <!-- Rendered by JS -->
-        </div>
-      </div>
-    </div>
+      </nav>
 
-    <!-- TAB 4: NETWORK -->
-    <div id="tab-network" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Topology Mạng VPC & Cấu hình Đa Vùng</div>
-        </div>
-        <div style="display: flex; gap: 20px; margin-bottom: 20px;" id="vpcContainer">
-          <!-- Rendered by JS -->
-        </div>
-
-        <div class="card-header" style="margin-top: 24px;">
-          <div class="card-title">Bản Ghi Route 53 DNS & Tự Động Định Tuyến (Automated Cutover)</div>
-          <button class="btn btn-primary btn-sm" onclick="openModal('dnsModal')">+ Cập nhật Route 53 DNS</button>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Tên Miền (Domain)</th>
-              <th>Loại Bản Ghi</th>
-              <th>IP Đích (Target IP)</th>
-              <th>TTL (Giây)</th>
-              <th>Trạng Thái Đồng Bộ</th>
-            </tr>
-          </thead>
-          <tbody id="dnsTableBody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- TAB 5: MIGRATION -->
-    <div id="tab-migration" class="tab-pane">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Điều Phối Quy Trình Chuyển Vùng X-Region (6-Step Automated Migration)</div>
-          <div>
-            <button class="btn btn-primary" onclick="openModal('scenarioModal')">+ Tạo Kịch Bản Chuyển Vùng</button>
-          </div>
-        </div>
-
-        <!-- 6-Step Visualizer -->
-        <div class="pipeline-container">
-          <div class="pipeline-line">
-            <div class="pipeline-progress-bar" id="pipelineBar"></div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle1">1</div>
-            <div class="step-text">Dừng VM Nguồn (Stop VM)</div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle2">2</div>
-            <div class="step-text">Tạo Snapshot EBS gp3</div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle3">3</div>
-            <div class="step-text">Sao Chép Snapshot Xuyên Vùng</div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle4">4</div>
-            <div class="step-text">Khởi Tạo Volume Vùng Đích</div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle5">5</div>
-            <div class="step-text">Khởi Chạy NovaVM Đích</div>
-          </div>
-
-          <div class="pipeline-step">
-            <div class="step-circle" id="stepCircle6">6</div>
-            <div class="step-text">Cắt Chuyển DNS Route 53</div>
-          </div>
-        </div>
-
-        <!-- Live Migration Terminal Output -->
-        <div style="margin-top: 24px;">
-          <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--accent-cyan);">
-            Nhật Ký Tiến Trình Di Trú Thời Gian Thực (Live Migration Logs):
-          </div>
-          <div class="terminal-window" id="terminalLogs">
-            [System] Sẵn sàng điều phối chuyển vùng giữa Sydney (ap-southeast-2) và N. Virginia (us-east-1)...
-          </div>
-        </div>
-
-        <!-- Scenarios Table -->
-        <div class="card-header" style="margin-top: 28px;">
-          <div class="card-title">Danh Sách Kịch Bản Di Trú Tự Động (Migration Scenarios)</div>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Tên Kịch Bản</th>
-              <th>Máy Ảo Nguồn</th>
-              <th>Vùng Nguồn -> Vùng Đích</th>
-              <th>Kiểu Kích Hoạt</th>
-              <th>Lịch Trình (Cron)</th>
-              <th>Khóa Cooldown</th>
-              <th>Hành Động</th>
-            </tr>
-          </thead>
-          <tbody id="scenarioTableBody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- TAB 6: MONITORING -->
-    <div id="tab-monitoring" class="tab-pane">
-      <!-- Multi-region Cost Breakdown -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;" id="costCards">
+      <div class="region-clocks" id="regionClocks">
         <!-- Rendered by JS -->
       </div>
+    </aside>
+    <div class="scrim" onclick="toggleNav(false)"></div>
 
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Hiệu Năng Máy Ảo Thời Gian Thực (CPU, RAM, Network I/O)</div>
-          <div style="display: flex; gap: 8px;">
-            <select class="form-select" style="width: 200px;" id="metricVmSelect" onchange="loadMetrics()">
-              <!-- Options rendered by JS -->
-            </select>
+    <div class="main">
+      <header class="topbar">
+        <button class="btn btn-ghost btn-icon menu-btn" onclick="toggleNav()" aria-label="Mở menu"><svg class="icon"><use href="#i-menu"/></svg></button>
+        <div class="crumbs">XRegion / <strong id="crumbTitle">Máy ảo</strong></div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-icon" id="themeToggle" onclick="toggleTheme()" aria-label="Đổi giao diện sáng/tối" title="Đổi giao diện sáng/tối"><svg class="icon"><use href="#i-moon"/></svg></button>
+          <div class="user-chip">
+            <span class="user-name" id="userNameDisplay">Quản trị viên</span>
+            <span class="avatar" id="userAvatar">QT</span>
           </div>
+          <button class="btn btn-ghost btn-icon" onclick="logout()" aria-label="Đăng xuất" title="Đăng xuất"><svg class="icon"><use href="#i-logout"/></svg></button>
         </div>
-        <div style="height: 300px;">
-          <canvas id="performanceChart"></canvas>
-        </div>
-      </div>
+      </header>
 
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Nhật Ký Thao Tác Hệ Thống (System Audit Logs)</div>
-          <button class="btn btn-secondary btn-sm" onclick="loadAuditLogs()">Làm mới</button>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Thời Gian</th>
-              <th>Người Dùng</th>
-              <th>Hành Động</th>
-              <th>Loại Tài Nguyên</th>
-              <th>Mã Tài Nguyên</th>
-              <th>Chi Tiết</th>
-            </tr>
-          </thead>
-          <tbody id="auditTableBody">
-            <!-- Rendered by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <main class="content">
+        <div class="demo-banner" id="demoBanner" hidden><svg class="icon icon-sm"><use href="#i-info"/></svg><span>Bản xem trước giao diện, dữ liệu là mẫu và không kết nối tới hạ tầng thật.</span></div>
 
-  </main>
-
-  <!-- MODAL: LAUNCH INSTANCE (Hình 2.3 - 2 Columns with Instance Summary) -->
-  <div class="modal-overlay" id="launchModal">
-    <div class="modal-card" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
-      <div class="card-header">
-        <div class="card-title">Launch New Instance (Khởi Tạo Máy Ảo Mới)</div>
-        <button class="btn btn-secondary btn-sm" onclick="closeModal('launchModal')">✕</button>
-      </div>
-      <form id="launchForm" onsubmit="submitLaunch(event)">
-        <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; align-items: start;">
-          <!-- Left Column: Configuration -->
-          <div>
-            <div class="form-group">
-              <label class="form-label">1. Tên Máy Ảo (Instance Name)</label>
-              <input type="text" class="form-input" id="instName" required placeholder="vm-prod-01" oninput="updateLaunchSummary()">
+        <!-- PAGE: COMPUTE -->
+        <section class="page" id="tab-compute">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Máy ảo</h1>
+              <p class="page-desc">Các NovaVM đang chạy trên EC2 Bare Metal ở hai vùng. Mỗi máy có ổ EBS riêng nên có thể chuyển sang vùng còn lại bất cứ lúc nào.</p>
             </div>
-            <div class="form-group">
-              <label class="form-label">2. Vùng Triển Khai Ban Đầu (Initial Region Selection)</label>
-              <select class="form-select" id="instRegion" required onchange="updateLaunchSummary()">
-                <option value="ap-southeast-2">Region A — Singapore / Sydney (ap-southeast-2) • $0.08/hr</option>
-                <option value="us-east-1">Region B — N. Virginia (us-east-1) • $0.05/hr</option>
+            <div class="page-actions">
+              <button class="btn btn-primary" onclick="openLaunchModal()"><svg class="icon icon-sm"><use href="#i-plus"/></svg>Tạo máy ảo</button>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Tổng số máy ảo</div>
+              <div class="stat-value" id="statTotalInstances">0</div>
+              <div class="split-bar" id="statRegionSplit"><span class="a" style="width:50%"></span><span class="b" style="width:50%"></span></div>
+              <div class="stat-foot" id="statRegionACount">0 ở Region A · 0 ở Region B</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label"><span class="status ok">Đang chạy</span></div>
+              <div class="stat-value" id="statRunningInstances">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label"><span class="status off">Đã dừng</span></div>
+              <div class="stat-value" id="statStoppedInstances">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label"><span class="status warn">Đang chuyển vùng</span></div>
+              <div class="stat-value" id="statMigratingInstances">0</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="toolbar">
+              <label class="search">
+                <svg class="icon icon-sm"><use href="#i-search"/></svg>
+                <input type="search" class="input" id="instanceSearchInput" placeholder="Tìm theo tên hoặc ID" oninput="filterInstancesUI()" aria-label="Tìm máy ảo">
+              </label>
+              <div class="segmented" id="instanceStatusFilter" role="group" aria-label="Lọc theo trạng thái">
+                <button class="active" data-value="ALL">Tất cả</button>
+                <button data-value="ACTIVE">Đang chạy</button>
+                <button data-value="SHUTOFF">Đã dừng</button>
+                <button data-value="MIGRATING">Đang chuyển</button>
+              </div>
+              <select class="select" id="instanceRegionFilter" style="width:auto" onchange="filterInstancesUI()" aria-label="Lọc theo vùng">
+                <option value="ALL">Mọi vùng</option>
               </select>
+              <button class="btn btn-ghost btn-icon" onclick="loadInstances()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
             </div>
-            <div class="form-group">
-              <label class="form-label">3. Hệ Điều Hành (Application and OS Images)</label>
-              <select class="form-select" id="instImage" onchange="updateLaunchSummary()">
-                <option value="img-u22">Ubuntu Server 22.04 LTS (64-bit x86)</option>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Máy ảo</th>
+                    <th>Vùng hiện tại</th>
+                    <th>Cấu hình</th>
+                    <th>Elastic IP / IP private</th>
+                    <th>Tên miền</th>
+                    <th>Trạng thái</th>
+                    <th class="num">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="instanceTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: STORAGE -->
+        <section class="page" id="tab-storage">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Ổ đĩa &amp; snapshot</h1>
+              <p class="page-desc">Ổ EBS gp3 được ánh xạ thành Cinder Volume. Snapshot có thể sao chép sang vùng còn lại qua mạng nội bộ AWS.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-ghost btn-icon" onclick="loadVolumes()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
+              <button class="btn btn-primary" onclick="openModal('createVolumeModal')"><svg class="icon icon-sm"><use href="#i-plus"/></svg>Tạo ổ đĩa</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Ổ đĩa</th>
+                    <th class="num">Dung lượng</th>
+                    <th>Loại</th>
+                    <th>IOPS / Throughput</th>
+                    <th>Vùng</th>
+                    <th>Gắn vào</th>
+                    <th>Trạng thái</th>
+                    <th class="num">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="volumeTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: IMAGES -->
+        <section class="page" id="tab-images">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Image</h1>
+              <p class="page-desc">Hệ điều hành và snapshot trong Glance, dùng làm nguồn khi tạo máy ảo mới.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-ghost btn-icon" onclick="loadImages()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="image-grid" id="imageGrid"></div>
+          </div>
+        </section>
+
+        <!-- PAGE: NETWORK -->
+        <section class="page" id="tab-network">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Mạng &amp; DNS</h1>
+              <p class="page-desc">Hệ thống tự cấu hình VPC và Elastic IP. Sau mỗi lần chuyển vùng, bản ghi A trên Route 53 được trỏ sang Elastic IP mới.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-ghost btn-icon" onclick="loadNetwork()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
+              <button class="btn btn-primary" onclick="openDnsModal()">Cập nhật bản ghi DNS</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title">VPC theo vùng</div></div>
+            <div class="vpc-pair" id="vpcContainer"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Bản ghi Route 53</div>
+                <div class="panel-sub">TTL thấp để người dùng cuối nhận IP mới nhanh sau khi chuyển vùng</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Tên miền</th>
+                    <th>Loại</th>
+                    <th>Trỏ tới</th>
+                    <th class="num">TTL</th>
+                    <th>Đồng bộ</th>
+                    <th class="num">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="dnsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title">Elastic IP</div></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Elastic IP</th>
+                    <th>Vùng</th>
+                    <th>Máy ảo</th>
+                    <th>IP private</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="fipTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: MIGRATION -->
+        <section class="page" id="tab-migration">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Chuyển vùng</h1>
+              <p class="page-desc">Theo dõi lần chuyển vùng đang chạy và quản lý các kịch bản chạy theo lịch hoặc thủ công.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-primary" onclick="openScenarioModal()"><svg class="icon icon-sm"><use href="#i-plus"/></svg>Tạo kịch bản</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="run-card" id="runCard">
+              <div>
+                <div class="run-title" id="runTitle">Chưa có lần chuyển vùng nào đang chạy</div>
+                <div class="run-route" id="runRoute"><span class="panel-sub">Chọn "Chạy ngay" ở một kịch bản hoặc "Chuyển vùng" ở một máy ảo để bắt đầu.</span></div>
+              </div>
+              <div class="run-percent" id="runPercent">0%<small id="runStatus">Đang chờ</small></div>
+              <div class="progress" id="runProgress"><span id="pipelineBar"></span></div>
+            </div>
+
+            <ol class="pipeline" id="pipeline">
+              <li class="pipe-step" id="stepCircle1"><span class="pipe-dot">1</span><div class="pipe-text"><span class="pipe-name">Dừng máy ảo nguồn</span><span class="pipe-hint">fsfreeze rồi dừng NovaVM</span></div></li>
+              <li class="pipe-step" id="stepCircle2"><span class="pipe-dot">2</span><div class="pipe-text"><span class="pipe-name">Tạo snapshot EBS</span><span class="pipe-hint">Snapshot tăng dần, chỉ phần thay đổi</span></div></li>
+              <li class="pipe-step" id="stepCircle3"><span class="pipe-dot">3</span><div class="pipe-text"><span class="pipe-name">Sao chép sang vùng đích</span><span class="pipe-hint">CopySnapshot qua mạng AWS</span></div></li>
+              <li class="pipe-step" id="stepCircle4"><span class="pipe-dot">4</span><div class="pipe-text"><span class="pipe-name">Tạo volume ở vùng đích</span><span class="pipe-hint">CreateVolume, gắn vào Bare Metal</span></div></li>
+              <li class="pipe-step" id="stepCircle5"><span class="pipe-dot">5</span><div class="pipe-text"><span class="pipe-name">Khởi động NovaVM đích</span><span class="pipe-hint">Boot từ volume, kiểm tra sức khỏe</span></div></li>
+              <li class="pipe-step" id="stepCircle6"><span class="pipe-dot">6</span><div class="pipe-text"><span class="pipe-name">Trỏ DNS sang vùng mới</span><span class="pipe-hint">Cập nhật bản ghi A trên Route 53</span></div></li>
+            </ol>
+
+            <div class="terminal-head">
+              <span>Nhật ký tiến trình</span>
+              <button class="btn btn-ghost btn-sm" onclick="clearTerminal()">Xóa nhật ký</button>
+            </div>
+            <div class="terminal" id="terminalLogs" role="log" aria-live="polite"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Kịch bản chuyển vùng</div>
+                <div class="panel-sub">Một máy ảo chỉ chạy một kịch bản tại một thời điểm, và phải chờ hết thời gian nghỉ giữa hai lần chuyển</div>
+              </div>
+              <button class="btn btn-ghost btn-icon" onclick="loadScenarios()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Kịch bản</th>
+                    <th>Máy ảo</th>
+                    <th>Hướng chuyển</th>
+                    <th>Kích hoạt</th>
+                    <th class="num">Thời gian nghỉ</th>
+                    <th>Lần chạy gần nhất</th>
+                    <th class="num">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="scenarioTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: MONITORING -->
+        <section class="page" id="tab-monitoring">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Giám sát &amp; nhật ký</h1>
+              <p class="page-desc">Chỉ số tài nguyên của từng máy ảo, chi phí ước tính theo vùng và nhật ký thao tác.</p>
+            </div>
+            <div class="page-actions">
+              <select class="select" id="metricVmSelect" onchange="loadMetrics()" aria-label="Chọn máy ảo" style="width:auto;max-width:100%"></select>
+            </div>
+          </div>
+
+          <div class="stats" id="metricStats">
+            <div class="stat"><div class="stat-label">CPU</div><div class="stat-value" id="mCpu">–</div><div class="stat-foot">Hiện tại</div></div>
+            <div class="stat"><div class="stat-label">RAM</div><div class="stat-value" id="mRam">–</div><div class="stat-foot">Hiện tại</div></div>
+            <div class="stat"><div class="stat-label">Mạng vào</div><div class="stat-value" id="mNetIn">–</div><div class="stat-foot">Network In</div></div>
+            <div class="stat"><div class="stat-label">Mạng ra</div><div class="stat-value" id="mNetOut">–</div><div class="stat-foot">Network Out</div></div>
+          </div>
+
+          <div class="monitor-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Hiệu năng 1 giờ qua</div>
+                  <div class="panel-sub">Mỗi điểm cách nhau 5 phút</div>
+                </div>
+                <div class="segmented" id="chartMode" role="group" aria-label="Loại biểu đồ">
+                  <button class="active" data-value="usage">CPU &amp; RAM</button>
+                  <button data-value="network">Mạng</button>
+                </div>
+              </div>
+              <div class="chart-box"><canvas id="performanceChart" aria-label="Biểu đồ hiệu năng"></canvas></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Chi phí ước tính</div>
+              </div>
+              <div class="panel-body" id="costCards"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Nhật ký thao tác</div>
+              <button class="btn btn-ghost btn-icon" onclick="loadAuditLogs()" title="Làm mới" aria-label="Làm mới"><svg class="icon icon-sm"><use href="#i-refresh"/></svg></button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>Người dùng</th>
+                    <th>Hành động</th>
+                    <th>Tài nguyên</th>
+                    <th>Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL: LAUNCH INSTANCE -->
+  <div class="modal-overlay" id="launchModal" role="dialog" aria-modal="true" aria-labelledby="launchTitle">
+    <form class="modal wide" id="launchForm" onsubmit="submitLaunch(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="launchTitle">Tạo máy ảo</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('launchModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="launch-layout">
+          <div class="fields">
+            <label class="field">
+              <span class="field-label">Tên máy ảo</span>
+              <input type="text" class="input" id="instName" required placeholder="web-prod-01" oninput="updateLaunchSummary()">
+            </label>
+            <div class="field">
+              <span class="field-label">Vùng ban đầu</span>
+              <div class="choice-group" id="instRegionGroup"></div>
+            </div>
+            <label class="field">
+              <span class="field-label">Hệ điều hành</span>
+              <select class="select" id="instImage" onchange="updateLaunchSummary()">
+                <option value="img-u22">Ubuntu Server 22.04 LTS</option>
                 <option value="img-deb12">Debian 12 Bookworm</option>
                 <option value="img-rocky9">Rocky Linux 9</option>
-                <option value="img-alp319">Alpine Linux 3.19 Minimal</option>
+                <option value="img-alp319">Alpine Linux 3.19</option>
               </select>
+            </label>
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">Cấu hình</span>
+                <select class="select" id="instFlavor" onchange="updateLaunchSummary()">
+                  <option value="m1.small">m1.small · 1 vCPU, 2 GB</option>
+                  <option value="m1.medium" selected>m1.medium · 2 vCPU, 4 GB</option>
+                  <option value="c5.large">c5.large · 4 vCPU, 8 GB</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">Ổ đĩa EBS gp3 (GB)</span>
+                <input type="number" class="input" id="instEbsSize" value="50" min="10" max="1000" oninput="updateLaunchSummary()">
+              </label>
             </div>
-            <div class="form-group">
-              <label class="form-label">4. Cấu Hình Phần Cứng (Instance Specification / Flavor)</label>
-              <select class="form-select" id="instFlavor" onchange="updateLaunchSummary()">
-                <option value="m1.small">t3.small / m1.small (1 vCPU, 2 GB RAM) — $0.040/hr</option>
-                <option value="m1.medium" selected>t3.medium / m1.medium (2 vCPU, 4 GB RAM) — $0.080/hr</option>
-                <option value="c5.large">t3.large / c5.large (4 vCPU, 8 GB RAM) — $0.160/hr</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">5. Ổ Đĩa Lưu Trữ (Block Storage EBS gp3 - GB)</label>
-              <input type="number" class="form-input" id="instEbsSize" value="50" min="10" max="1000" oninput="updateLaunchSummary()">
-              <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
-                <span class="badge" style="background: #1e293b; color: #38bdf8;">gp3 SSD</span>
-                <span class="badge" style="background: #1e293b; color: #94a3b8;">3,000 IOPS</span>
-                <span class="badge" style="background: #1e293b; color: #94a3b8;">125 MB/s</span>
-                <span class="badge" style="background: #1e293b; color: #34d399;">Encrypted AES-256</span>
-              </div>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên Miền DNS Tự Động (Tùy chọn - Để trống hệ thống tự tạo)</label>
-              <input type="text" class="form-input" id="instDomain" placeholder="Tự động gắn: <instance-name>.xregion.net">
-            </div>
+            <label class="field">
+              <span class="field-label">Tên miền</span>
+              <input type="text" class="input" id="instDomain" placeholder="Để trống để dùng tên-máy-ảo.xregion.net">
+              <span class="field-hint">Hệ thống tự gắn bản ghi A vào Elastic IP của máy ảo và cập nhật sau mỗi lần chuyển vùng.</span>
+            </label>
           </div>
 
-          <!-- Right Column: Instance Summary (Hình 2.3) -->
-          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;">
-            <div style="font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
-              Instance Summary
+          <aside class="summary" aria-live="polite">
+            <div class="summary-title">Tóm tắt</div>
+            <dl class="kv">
+              <dt>Vùng</dt><dd id="sumRegionText">–</dd>
+              <dt>Hệ điều hành</dt><dd id="sumOsText">–</dd>
+              <dt>Tài nguyên</dt><dd id="sumSpecsText">–</dd>
+              <dt>Mạng</dt><dd>Hệ thống tự cấu hình, mở cổng 22, 80, 443</dd>
+            </dl>
+            <div class="price">
+              <div class="field-hint">Chi phí ước tính</div>
+              <div class="price-value"><span id="sumCostHour">$0.000</span> <small>/ giờ</small></div>
+              <div class="price-month" id="sumCostMonth">khoảng $0 / tháng</div>
             </div>
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Selected Region</div>
-              <div id="sumRegionText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">Region A (ap-southeast-2)</div>
-            </div>
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">OS Image</div>
-              <div id="sumOsText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">Ubuntu Server 22.04 LTS</div>
-            </div>
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Specs</div>
-              <div id="sumSpecsText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">2 vCPU, 4 GB RAM, 50 GB EBS SSD</div>
-            </div>
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Firewall & Network</div>
-              <div style="font-size: 13px; font-weight: 600; margin-top: 2px;">SSH (22), HTTP (80), HTTPS (443) + Auto DNS</div>
-            </div>
-            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Estimated Running Cost</div>
-              <div style="font-size: 22px; font-weight: 800; color: #f8fafc; margin-top: 4px;">
-                <span id="sumCostHour">$0.080</span> <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">/ hour</span>
-              </div>
-              <div id="sumCostMonth" style="font-size: 12px; color: #fbbf24; margin-top: 2px;">~$57.60 / month</div>
-            </div>
-            <button type="submit" class="btn" style="width: 100%; justify-content: center; background: #f59e0b; color: #0a0f1d; font-weight: 800; padding: 10px 16px; margin-bottom: 8px;">
-              🚀 Launch Compute Instance
-            </button>
-            <button type="button" class="btn btn-secondary" style="width: 100%; justify-content: center;" onclick="closeModal('launchModal')">
-              Cancel
-            </button>
-          </div>
+          </aside>
         </div>
-      </form>
-    </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('launchModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo máy ảo</button>
+      </div>
+    </form>
   </div>
 
   <!-- MODAL: CREATE VOLUME -->
-  <div class="modal-overlay" id="createVolumeModal">
-    <div class="modal-card">
-      <div class="card-header">
-        <div class="card-title">Cấp Phát Ổ Đĩa EBS gp3 Độc Lập</div>
-        <button class="btn btn-secondary btn-sm" onclick="closeModal('createVolumeModal')">✕</button>
+  <div class="modal-overlay" id="createVolumeModal" role="dialog" aria-modal="true" aria-labelledby="volTitle">
+    <form class="modal" id="volumeForm" onsubmit="submitCreateVolume(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="volTitle">Tạo ổ đĩa EBS gp3</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('createVolumeModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
       </div>
-      <form id="volumeForm" onsubmit="submitCreateVolume(event)">
-        <div class="form-group">
-          <label class="form-label">Tên Ổ Đĩa</label>
-          <input type="text" class="form-input" id="volName" required placeholder="ebs-data-volume">
+      <div class="modal-body fields">
+        <label class="field">
+          <span class="field-label">Tên ổ đĩa</span>
+          <input type="text" class="input" id="volName" required placeholder="data-web-01">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">Dung lượng (GB)</span>
+            <input type="number" class="input" id="volSize" value="50" min="1" max="1000">
+          </label>
+          <label class="field">
+            <span class="field-label">Vùng</span>
+            <select class="select" id="volRegion"></select>
+          </label>
         </div>
-        <div class="form-group">
-          <label class="form-label">Dung Lượng (GB)</label>
-          <input type="number" class="form-input" id="volSize" value="50" min="1" max="1000">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Vùng Lưu Trữ</label>
-          <select class="form-select" id="volRegion">
-            <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
-            <option value="us-east-1">us-east-1 (N. Virginia)</option>
-          </select>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('createVolumeModal')">Hủy</button>
-          <button type="submit" class="btn btn-primary">Cấp Phát</button>
-        </div>
-      </form>
-    </div>
+        <span class="field-hint">Mặc định 3.000 IOPS và 125 MB/s theo chuẩn gp3.</span>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('createVolumeModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo ổ đĩa</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- MODAL: ATTACH VOLUME -->
+  <div class="modal-overlay" id="attachVolumeModal" role="dialog" aria-modal="true" aria-labelledby="attachTitle">
+    <form class="modal" id="attachForm" onsubmit="submitAttachVolume(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="attachTitle">Gắn ổ đĩa vào máy ảo</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('attachVolumeModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body fields">
+        <input type="hidden" id="attachVolId">
+        <label class="field">
+          <span class="field-label">Ổ đĩa</span>
+          <input type="text" class="input" id="attachVolDisplay" readonly>
+        </label>
+        <label class="field">
+          <span class="field-label">Máy ảo</span>
+          <select class="select" id="attachInstanceSelect" required></select>
+          <span class="field-hint" id="attachHint">Chỉ hiện máy ảo cùng vùng với ổ đĩa.</span>
+          <p class="form-error" id="attachEmpty" hidden></p>
+        </label>
+        <label class="field">
+          <span class="field-label">Thiết bị</span>
+          <input type="text" class="input" id="attachDevice" value="/dev/vdb">
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('attachVolumeModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary" id="attachSubmit">Gắn ổ đĩa</button>
+      </div>
+    </form>
   </div>
 
   <!-- MODAL: CROSS REGION COPY -->
-  <div class="modal-overlay" id="copySnapshotModal">
-    <div class="modal-card">
-      <div class="card-header">
-        <div class="card-title">Sao Chép Snapshot Xuyên Vùng (Cross-Region Copy)</div>
-        <button class="btn btn-secondary btn-sm" onclick="closeModal('copySnapshotModal')">✕</button>
+  <div class="modal-overlay" id="copySnapshotModal" role="dialog" aria-modal="true" aria-labelledby="copyTitle">
+    <form class="modal" id="copySnapshotForm" onsubmit="submitCopySnapshot(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="copyTitle">Sao chép snapshot sang vùng khác</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('copySnapshotModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
       </div>
-      <form id="copySnapshotForm" onsubmit="submitCopySnapshot(event)">
+      <div class="modal-body fields">
         <input type="hidden" id="copyVolId">
         <input type="hidden" id="copySrcRegion">
-        <div class="form-group">
-          <label class="form-label">Ổ Đĩa Nguồn</label>
-          <input type="text" class="form-input" id="copyVolNameDisplay" readonly>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Vùng Đích (Destination Region)</label>
-          <select class="form-select" id="copyDestRegion">
-            <option value="us-east-1">us-east-1 (N. Virginia)</option>
-            <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
-          </select>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('copySnapshotModal')">Hủy</button>
-          <button type="submit" class="btn btn-primary">Bắt Đầu Sao Chép</button>
-        </div>
-      </form>
-    </div>
+        <label class="field">
+          <span class="field-label">Ổ đĩa nguồn</span>
+          <input type="text" class="input" id="copyVolNameDisplay" readonly>
+        </label>
+        <label class="field">
+          <span class="field-label">Vùng đích</span>
+          <select class="select" id="copyDestRegion"></select>
+        </label>
+        <span class="field-hint">Bản sao đi qua mạng nội bộ AWS. Nếu vùng đích đã có snapshot cũ, chỉ các khối thay đổi được chuyển.</span>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('copySnapshotModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Bắt đầu sao chép</button>
+      </div>
+    </form>
   </div>
 
   <!-- MODAL: CREATE SCENARIO -->
-  <div class="modal-overlay" id="scenarioModal">
-    <div class="modal-card">
-      <div class="card-header">
-        <div class="card-title">Thiết Lập Kịch Bản Chuyển Vùng Mới</div>
-        <button class="btn btn-secondary btn-sm" onclick="closeModal('scenarioModal')">✕</button>
+  <div class="modal-overlay" id="scenarioModal" role="dialog" aria-modal="true" aria-labelledby="scTitle">
+    <form class="modal" id="scenarioForm" onsubmit="submitCreateScenario(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="scTitle">Tạo kịch bản chuyển vùng</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('scenarioModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
       </div>
-      <form id="scenarioForm" onsubmit="submitCreateScenario(event)">
-        <div class="form-group">
-          <label class="form-label">Tên Kịch Bản</label>
-          <input type="text" class="form-input" id="scName" required placeholder="Disaster Recovery Sydney to Virginia">
+      <div class="modal-body fields">
+        <label class="field">
+          <span class="field-label">Tên kịch bản</span>
+          <input type="text" class="input" id="scName" required placeholder="Ban đêm chuyển sang Mỹ">
+        </label>
+        <label class="field">
+          <span class="field-label">Máy ảo</span>
+          <select class="select" id="scInstanceSelect" required onchange="syncScenarioRegions()"></select>
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">Vùng nguồn</span>
+            <select class="select" id="scSrcRegion" disabled></select>
+          </label>
+          <label class="field">
+            <span class="field-label">Vùng đích</span>
+            <select class="select" id="scDstRegion" disabled></select>
+          </label>
         </div>
-        <div class="form-group">
-          <label class="form-label">Máy Ảo Cần Di Trú</label>
-          <select class="form-select" id="scInstanceSelect" required></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Vùng Nguồn -> Vùng Đích</label>
-          <div style="display: flex; gap: 10px;">
-            <select class="form-select" id="scSrcRegion">
-              <option value="ap-southeast-2">ap-southeast-2</option>
-              <option value="us-east-1">us-east-1</option>
-            </select>
-            <span style="display: flex; align-items: center;">➔</span>
-            <select class="form-select" id="scDstRegion">
-              <option value="us-east-1">us-east-1</option>
-              <option value="ap-southeast-2">ap-southeast-2</option>
-            </select>
+        <div class="field">
+          <span class="field-label">Cách kích hoạt</span>
+          <div class="segmented" id="scTriggerType" role="group" aria-label="Cách kích hoạt">
+            <button type="button" class="active" data-value="MANUAL">Thủ công</button>
+            <button type="button" data-value="SCHEDULED">Theo lịch</button>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Kiểu Kích Hoạt (Trigger Type)</label>
-          <select class="form-select" id="scTriggerType">
-            <option value="MANUAL">Thủ Công (Manual Trigger)</option>
-            <option value="SCHEDULED">Lập Lịch (Cron Schedule)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Thời Gian Cooldown Khóa An Toàn (Phút)</label>
-          <input type="number" class="form-input" id="scCooldown" value="60">
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('scenarioModal')">Hủy</button>
-          <button type="submit" class="btn btn-primary">Lưu Kịch Bản</button>
-        </div>
-      </form>
-    </div>
+        <label class="field" id="scCronField" hidden>
+          <span class="field-label">Lịch chạy (cron, giờ UTC)</span>
+          <input type="text" class="input mono" id="scCron" value="0 12 * * *" placeholder="0 12 * * *">
+          <span class="field-hint">Ví dụ <code>0 12 * * *</code> là 19:00 giờ Việt Nam mỗi ngày.</span>
+        </label>
+        <label class="field">
+          <span class="field-label">Thời gian nghỉ giữa hai lần chuyển (phút)</span>
+          <input type="number" class="input" id="scCooldown" value="60" min="5">
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('scenarioModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu kịch bản</button>
+      </div>
+    </form>
   </div>
 
   <!-- MODAL: UPDATE ROUTE 53 DNS -->
-  <div class="modal-overlay" id="dnsModal">
-    <div class="modal-card">
-      <div class="card-header">
-        <div class="card-title">Cập Nhật Bản Ghi Route 53 DNS</div>
-        <button class="btn btn-secondary btn-sm" onclick="closeModal('dnsModal')">✕</button>
+  <div class="modal-overlay" id="dnsModal" role="dialog" aria-modal="true" aria-labelledby="dnsTitle">
+    <form class="modal" id="dnsForm" onsubmit="submitUpdateDns(event)">
+      <div class="modal-head">
+        <div class="modal-title" id="dnsTitle">Cập nhật bản ghi DNS</div>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('dnsModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
       </div>
-      <form id="dnsForm" onsubmit="submitUpdateDns(event)">
-        <div class="form-group">
-          <label class="form-label">Tên Miền (Domain Name)</label>
-          <input type="text" class="form-input" id="dnsDomainInput" required placeholder="web01.xregion.net">
+      <div class="modal-body fields">
+        <label class="field">
+          <span class="field-label">Tên miền</span>
+          <input type="text" class="input" id="dnsDomainInput" required placeholder="web01.xregion.net">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">IP đích</span>
+            <input type="text" class="input mono" id="dnsTargetIpInput" required placeholder="54.252.199.88">
+          </label>
+          <label class="field">
+            <span class="field-label">TTL (giây)</span>
+            <input type="number" class="input" id="dnsTtlInput" value="60" min="30">
+          </label>
         </div>
-        <div class="form-group">
-          <label class="form-label">IP Đích Mới (Target IP Address)</label>
-          <input type="text" class="form-input" id="dnsTargetIpInput" required placeholder="54.252.199.88">
+        <span class="field-hint">Thông thường hệ thống tự cập nhật sau khi chuyển vùng. Chỉ sửa tay khi cần khôi phục.</span>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="closeModal('dnsModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Cập nhật DNS</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- MODAL: CONFIRM -->
+  <div class="modal-overlay" id="confirmModal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal">
+      <div class="modal-head"><div class="modal-title" id="confirmTitle">Xác nhận</div></div>
+      <div class="modal-body"><p class="confirm-text" id="confirmText"></p></div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="confirmCancel">Hủy</button>
+        <button type="button" class="btn btn-primary" id="confirmOk">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH SCREEN -->
+  <div class="auth" id="authScreen" hidden>
+    <div class="auth-art">
+      <div class="brand">
+        <div class="brand-mark"><svg class="icon icon-sm"><use href="#i-migrate"/></svg></div>
+        <div>
+          <div class="brand-name">XRegion</div>
+          <div class="brand-sub">IaaS chuyển vùng EC2</div>
         </div>
-        <div class="form-group">
-          <label class="form-label">TTL (Giây)</label>
-          <input type="number" class="form-input" id="dnsTtlInput" value="60">
+      </div>
+      <div>
+        <h1 class="auth-headline">Đưa máy ảo tới vùng phù hợp, đúng lúc cần.</h1>
+        <p class="auth-lede">Tạo máy ảo như trên EC2, rồi đặt kịch bản để hệ thống tự chuyển giữa N. Virginia và Sydney, giữ nguyên dữ liệu và tên miền.</p>
+      </div>
+      <svg class="globe-route" viewBox="0 0 520 220" role="img" aria-label="Đường chuyển vùng giữa N. Virginia và Sydney">
+        <path class="grid-line" d="M10 60 H510 M10 110 H510 M10 160 H510"/>
+        <path class="grid-line" d="M90 20 V200 M200 20 V200 M310 20 V200 M420 20 V200"/>
+        <path class="path" d="M110 82 C 220 10, 340 230, 420 150"/>
+        <circle class="halo-a" cx="110" cy="82" r="18"/>
+        <circle class="node-a" cx="110" cy="82" r="7"/>
+        <circle class="halo-b" cx="420" cy="150" r="18"/>
+        <circle class="node-b" cx="420" cy="150" r="7"/>
+        <text x="62" y="124">N. Virginia</text>
+        <text class="code" x="62" y="140">us-east-1</text>
+        <text x="388" y="192">Sydney</text>
+        <text class="code" x="388" y="208">ap-southeast-2</text>
+      </svg>
+    </div>
+
+    <div class="auth-form-wrap">
+      <form class="auth-card" id="loginForm" onsubmit="submitLogin(event)">
+        <div>
+          <h2>Đăng nhập</h2>
+          <p class="panel-sub">Dành cho quản trị viên máy ảo</p>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')">Hủy</button>
-          <button type="submit" class="btn btn-primary">Cắt Chuyển DNS Ngay</button>
+        <div class="fields">
+          <label class="field">
+            <span class="field-label">Tài khoản</span>
+            <input type="text" class="input" id="loginUser" autocomplete="username" required>
+          </label>
+          <label class="field">
+            <span class="field-label">Mật khẩu</span>
+            <input type="password" class="input" id="loginPass" autocomplete="current-password" required>
+          </label>
+          <p class="form-error" id="loginError" hidden></p>
         </div>
+        <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+        <p class="auth-switch">Chưa có tài khoản? <button type="button" class="link-btn" onclick="switchToRegister()">Đăng ký</button></p>
+      </form>
+
+      <form class="auth-card" id="registerForm" onsubmit="submitRegister(event)" hidden>
+        <div>
+          <h2>Đăng ký tài khoản</h2>
+          <p class="panel-sub">Tài khoản mới được cấp quyền quản trị máy ảo</p>
+        </div>
+        <div class="fields">
+          <label class="field">
+            <span class="field-label">Tài khoản</span>
+            <input type="text" class="input" id="regUser" autocomplete="username" required>
+          </label>
+          <label class="field">
+            <span class="field-label">Họ và tên</span>
+            <input type="text" class="input" id="regFullName" autocomplete="name">
+          </label>
+          <label class="field">
+            <span class="field-label">Mật khẩu</span>
+            <input type="password" class="input" id="regPass" autocomplete="new-password" required>
+          </label>
+          <label class="field">
+            <span class="field-label">Nhập lại mật khẩu</span>
+            <input type="password" class="input" id="regPassConfirm" autocomplete="new-password" required>
+          </label>
+          <p class="form-error" id="registerError" hidden></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Tạo tài khoản</button>
+        <p class="auth-switch">Đã có tài khoản? <button type="button" class="link-btn" onclick="switchToLogin()">Đăng nhập</button></p>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: LOGIN DIALOG -->
-  <div class="modal-overlay" id="loginModal">
-    <div class="modal-card" style="max-width: 400px;">
-      <div class="card-header">
-        <div class="card-title">Đăng Nhập Quản Trị XRegion</div>
-      </div>
-      <form id="loginForm" onsubmit="submitLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Tài Khoản</label>
-          <input type="text" class="form-input" id="loginUser" value="admin" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Mật Khẩu</label>
-          <input type="password" class="form-input" id="loginPass" value="admin123" required>
-        </div>
-        <div style="margin-top: 20px;">
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Đăng Nhập (Login)</button>
-        </div>
-        <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--text-muted);">
-          Chưa có tài khoản?
-          <a href="javascript:void(0)" onclick="switchToRegister()" style="color: var(--accent-blue); text-decoration: none; font-weight: 600;">Đăng ký ngay</a>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: REGISTER DIALOG -->
-  <div class="modal-overlay" id="registerModal">
-    <div class="modal-card" style="max-width: 400px;">
-      <div class="card-header">
-        <div class="card-title">Đăng Ký Tài Khoản XRegion</div>
-      </div>
-      <form id="registerForm" onsubmit="submitRegister(event)">
-        <div class="form-group">
-          <label class="form-label">Tài Khoản (Username)</label>
-          <input type="text" class="form-input" id="regUser" placeholder="Nhập username..." required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Họ và Tên (Full Name)</label>
-          <input type="text" class="form-input" id="regFullName" placeholder="VD: Nguyễn Mạnh Cường">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Mật Khẩu</label>
-          <input type="password" class="form-input" id="regPass" placeholder="Nhập mật khẩu..." required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Xác Nhận Mật Khẩu</label>
-          <input type="password" class="form-input" id="regPassConfirm" placeholder="Nhập lại mật khẩu..." required>
-        </div>
-        <div style="margin-top: 20px;">
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Đăng Ký (Register)</button>
-        </div>
-        <div style="margin-top: 12px; text-align: center; font-size: 13px; color: var(--text-muted);">
-          Đã có tài khoản?
-          <a href="javascript:void(0)" onclick="switchToLogin()" style="color: var(--accent-blue); text-decoration: none; font-weight: 600;">Quay lại đăng nhập</a>
-        </div>
-      </form>
-    </div>
-  </div>
-
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+<!--BODY-END-->
   <script src="/js/app.js"></script>
 </body>
 </html>
-
