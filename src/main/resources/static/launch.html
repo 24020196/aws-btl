@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khởi Tạo Máy Ảo (Launch Instance) - XRegion-EC2</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Sydney (ap-southeast-2): Healthy</span>
+      </div>
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>N. Virginia (us-east-1): Standby</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer"></div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+  </nav>
+
+  <!-- Main Content Area (Hình 2.3 2-Column Full Page Layout) -->
+  <main class="main-content">
+    <div class="breadcrumb">
+      <a href="/index.html">XRegion-EC2</a>
+      <span>/</span>
+      <a href="/instances.html">Instances</a>
+      <span>/</span>
+      <span>Launch Instance</span>
+    </div>
+
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <div style="margin-bottom: 24px;">
+      <h1 style="font-size: 24px; font-weight: 800; color: #fff;">Launch New Instance</h1>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+        Cấu hình máy chủ ảo hóa liên vùng. Sau khi khởi tạo, dữ liệu có thể tự động sao chép và di chuyển giữa các vùng hạ tầng theo kịch bản.
+      </p>
+    </div>
+
+    <form id="launchInstancePageForm" onsubmit="handleLaunchPageSubmit(event)">
+      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
+        
+        <!-- Left Column: 5 Configuration Steps -->
+        <div>
+          <!-- Step 1: Basic Details -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">1</span>
+              Basic Details
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tên Máy Ảo (Instance Name) *</label>
+              <input type="text" class="form-input" id="instName" required placeholder="e.g., web-prod-01" oninput="updatePageLaunchSummary()">
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Tối đa 63 ký tự. Chữ cái thường, chữ số và dấu gạch ngang.</div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Môi Trường (Environment Tag)</label>
+              <select class="form-select" id="instTag">
+                <option value="Production">Production (Môi trường vận hành chính thức)</option>
+                <option value="Staging">Staging (Môi trường thử nghiệm)</option>
+                <option value="DisasterRecovery">Disaster Recovery (Dự phòng thảm họa)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Step 2: Initial Region Selection -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">2</span>
+              Initial Region Selection
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Chọn vùng máy ảo được cấp phát ban đầu. Snapshot có thể sao chép liên vùng sau đó.</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <label class="option-card selected" id="optRegionA" onclick="selectRegion('ap-southeast-2')">
+                <input type="radio" name="regionRadio" value="ap-southeast-2" checked>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <strong style="color: #fff; font-size: 14px;">Region A (Singapore / Sydney)</strong>
+                  <span class="badge badge-active" style="font-size: 10px;">Active Primary</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>ap-southeast-2</code></div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px;">
+                  <span style="color: #34d399;">⚡ Latency: 35ms</span>
+                  <strong style="color: #fff;">$0.08 / hr</strong>
+                </div>
+              </label>
+
+              <label class="option-card" id="optRegionB" onclick="selectRegion('us-east-1')">
+                <input type="radio" name="regionRadio" value="us-east-1">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <strong style="color: #fff; font-size: 14px;">Region B (N. Virginia)</strong>
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px;">Low Cost</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>us-east-1</code></div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px;">
+                  <span style="color: #fbbf24;">⚡ Latency: 180ms</span>
+                  <strong style="color: #34d399;">$0.05 / hr</strong>
+                </div>
+              </label>
+            </div>
+            <input type="hidden" id="instRegion" value="ap-southeast-2">
+          </div>
+
+          <!-- Step 3: Application and OS Images -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">3</span>
+              Application and OS Images
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Chọn ảnh máy ảo hệ điều hành (Glance OS Image) lưu trữ trên cụm Bare Metal:</div>
+
+            <div class="option-grid">
+              <div class="option-card selected" id="optOsUbuntu" onclick="selectOs('img-u22', 'Ubuntu Server 22.04 LTS')">
+                <input type="radio" name="osRadio" value="img-u22" checked>
+                <div class="option-icon icon-ubuntu">U</div>
+                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Ubuntu</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">22.04 LTS (x86_64)</div>
+              </div>
+
+              <div class="option-card" id="optOsDebian" onclick="selectOs('img-deb12', 'Debian 12 Bookworm')">
+                <input type="radio" name="osRadio" value="img-deb12">
+                <div class="option-icon icon-debian">D</div>
+                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Debian</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">12 Bookworm</div>
+              </div>
+
+              <div class="option-card" id="optOsRocky" onclick="selectOs('img-rocky9', 'Rocky Linux 9 Enterprise')">
+                <input type="radio" name="osRadio" value="img-rocky9">
+                <div class="option-icon icon-rocky">R</div>
+                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Rocky Linux</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">9 Enterprise</div>
+              </div>
+
+              <div class="option-card" id="optOsAlpine" onclick="selectOs('img-alp319', 'Alpine Linux 3.19 Minimal')">
+                <input type="radio" name="osRadio" value="img-alp319">
+                <div class="option-icon icon-alpine">A</div>
+                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Alpine Linux</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">3.19 Minimal (Micro-VM)</div>
+              </div>
+            </div>
+            <input type="hidden" id="instImage" value="img-u22">
+          </div>
+
+          <!-- Step 4: Instance Specification / Flavor -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">4</span>
+              Instance Specification (Flavor & Root Disk)
+            </div>
+            <div class="form-group">
+              <label class="form-label">Chọn gói cấu hình Flavor cho phép:</label>
+              <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
+                <optgroup label="── Dòng Tiêu Chuẩn (m1) ──">
+                  <option value="m1.tiny">m1.tiny — 1 vCPU • 512 MB RAM • 10 GB Root Disk ($0.020/hr)</option>
+                  <option value="m1.small">m1.small — 1 vCPU • 2048 MB RAM (2 GB) • 10 GB Root Disk ($0.040/hr)</option>
+                  <option value="m1.medium" selected>m1.medium — 2 vCPUs • 4096 MB RAM (4 GB) • 10 GB Root Disk ($0.080/hr) [Mặc định]</option>
+                  <option value="m1.large">m1.large — 4 vCPUs • 8192 MB RAM (8 GB) • 10 GB Root Disk ($0.160/hr)</option>
+                  <option value="m1.xlarge">m1.xlarge — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk ($0.320/hr)</option>
+                </optgroup>
+                <optgroup label="── Dòng Hiệu Năng Cao (h1) ──">
+                  <option value="h1.medium">h1.medium — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk ($0.480/hr)</option>
+                  <option value="h1.large">h1.large — 16 vCPUs • 32768 MB RAM (32 GB) • 10 GB Root Disk ($0.960/hr)</option>
+                  <option value="h1.xlarge">h1.xlarge — 32 vCPUs • 65536 MB RAM (64 GB) • 10 GB Root Disk ($1.920/hr)</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Flavor Matrix Specification Table matching requirements -->
+            <div style="margin-top: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+              <div style="padding: 8px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                📋 Bảng Danh Sách Flavor Cho Phép & Thông Số Kỹ Thuật
+              </div>
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                  <thead>
+                    <tr style="background: rgba(0,0,0,0.25); color: var(--text-muted); font-size: 11px;">
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Dòng</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Tên Flavor</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">VCPUs</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">RAM (MB)</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Root Disk (GB)</th>
+                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Chi Phí Cơ Bản</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr id="row-m1-tiny" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td rowspan="5" style="padding: 8px 12px; font-weight: 600; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">Tiêu chuẩn (m1)</td>
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.tiny</td>
+                      <td style="padding: 8px 12px;">1</td>
+                      <td style="padding: 8px 12px;">512</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.020 / hr</td>
+                    </tr>
+                    <tr id="row-m1-small" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.small</td>
+                      <td style="padding: 8px 12px;">1</td>
+                      <td style="padding: 8px 12px;">2048</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.040 / hr</td>
+                    </tr>
+                    <tr id="row-m1-medium" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #38bdf8;">m1.medium ★</td>
+                      <td style="padding: 8px 12px; font-weight: 700; color: #fff;">2</td>
+                      <td style="padding: 8px 12px; font-weight: 700; color: #fff;">4096</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 700;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24; font-weight: 700;">$0.080 / hr</td>
+                    </tr>
+                    <tr id="row-m1-large" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.large</td>
+                      <td style="padding: 8px 12px;">4</td>
+                      <td style="padding: 8px 12px;">8192</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.160 / hr</td>
+                    </tr>
+                    <tr id="row-m1-xlarge" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.xlarge</td>
+                      <td style="padding: 8px 12px;">8</td>
+                      <td style="padding: 8px 12px;">16384</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.320 / hr</td>
+                    </tr>
+                    <tr id="row-h1-medium" style="border-top: 2px solid rgba(255,255,255,0.1); transition: background 0.2s;">
+                      <td rowspan="3" style="padding: 8px 12px; font-weight: 600; color: #a855f7; border-right: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">Hiệu năng cao (h1)</td>
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.medium</td>
+                      <td style="padding: 8px 12px;">8</td>
+                      <td style="padding: 8px 12px;">16384</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.480 / hr</td>
+                    </tr>
+                    <tr id="row-h1-large" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.large</td>
+                      <td style="padding: 8px 12px;">16</td>
+                      <td style="padding: 8px 12px;">32768</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$0.960 / hr</td>
+                    </tr>
+                    <tr id="row-h1-xlarge" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.xlarge</td>
+                      <td style="padding: 8px 12px;">32</td>
+                      <td style="padding: 8px 12px;">65536</td>
+                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      <td style="padding: 8px 12px; color: #fbbf24;">$1.920 / hr</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5: Block Storage & DNS -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">5</span>
+              Block Storage Configuration & DNS
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label class="form-label">Loại Ổ Đĩa (Volume Type)</label>
+                <select class="form-select" id="instVolType" disabled>
+                  <option value="gp3">gp3 - General Purpose SSD</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Dung Lượng Ổ Đĩa Root EBS (GB) * (Mặc định: 10 GB)</label>
+                <input type="number" class="form-input" id="instEbsSize" value="10" min="10" max="1000" oninput="updatePageLaunchSummary()">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+              <span class="badge" style="background: #1e293b; color: #38bdf8;">3,000 IOPS</span>
+              <span class="badge" style="background: #1e293b; color: #94a3b8;">125 MiB/s throughput</span>
+              <span class="badge" style="background: #1e293b; color: #34d399;">Encrypted AES-256</span>
+              <span class="badge" style="background: #1e293b; color: #fbbf24;">Incremental Snapshot Ready</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên Miền Route 53 DNS (Tự động gắn vào Public IP sau chuyển vùng)</label>
+              <input type="text" class="form-input" id="instDomain" placeholder="Tự động gắn: <instance-name>.xregion.net">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Sticky Summary & Realtime Pricing -->
+        <div style="position: sticky; top: 80px;">
+          <div class="card" style="padding: 22px; border-color: var(--accent-cyan); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+              Instance Summary
+            </div>
+
+            <!-- On-screen Error Alert in Summary Card -->
+            <div id="launchErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 12px; line-height: 1.4;"></div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">SELECTED REGION</div>
+              <div id="sumRegionText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Region A (Singapore / Sydney)</div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">OS IMAGE</div>
+              <div id="sumOsText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Ubuntu Server 22.04 LTS</div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">HARDWARE SPECS</div>
+              <div id="sumSpecsText" style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">2 vCPUs • 4096 MB RAM • 10 GB Root Disk (gp3 SSD)</div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">FIREWALL & ROUTING</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">SSH (22), HTTP (80), HTTPS (443) + Auto Route 53 Cutover</div>
+            </div>
+
+            <!-- Estimated Cost Box -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">ESTIMATED RUNNING COST</div>
+              <div style="font-size: 26px; font-weight: 900; color: #fff; margin-top: 4px;">
+                <span id="sumCostHour">$0.081</span> <span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">/ hour</span>
+              </div>
+              <div id="sumCostMonth" style="font-size: 13px; color: #fbbf24; font-weight: 600; margin-top: 4px;">~$58.40 / month</div>
+            </div>
+
+            <button type="submit" id="btnLaunchInstance" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; font-weight: 800; background: #f59e0b; color: #0a0f1d; border: none; margin-bottom: 10px;">
+              🚀 Launch Compute Instance
+            </button>
+            <a href="/instances.html" class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 10px;">
+              Hủy bỏ (Cancel)
+            </a>
+
+            <div style="margin-top: 16px; font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+              ℹ️ Máy ảo sẽ được tự động cấp phát trên máy chủ Bare Metal chuyên dụng và gắn kèm ổ đĩa EBS gp3 độc lập.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initLaunchPage();
+    });
+  </script>
+</body>
+</html>
+

@@ -49,12 +49,19 @@ public class SecurityConfig {
                         // Public Endpoints & Static Files
                         .requestMatchers(
                                 "/",
+                                "/*.html",
                                 "/index.html",
+                                "/login.html",
+                                "/register.html",
+                                "/instances.html",
+                                "/launch.html",
+                                "/instance-detail.html",
                                 "/css/**",
                                 "/js/**",
                                 "/assets/**",
                                 "/favicon.ico",
                                 "/api/auth/login",
+                                "/api/auth/register",
                                 "/api/auth/health"
                         ).permitAll()
                         // Protected API Endpoints

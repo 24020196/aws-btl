@@ -19,6 +19,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final AuditLogService auditLogService;
+    private final com.iaas.xregion.Security.UserDetailsServiceImpl userDetailsService;
 
     public JwtResponse login(LoginRequest request) {
         try {
@@ -42,6 +43,22 @@ public class AuthService {
                     .build();
         } catch (Exception e) {
             throw new AppException("Authentication failed: " + e.getMessage());
+        }
+    }
+
+    public void register(com.iaas.xregion.Model.Request.RegisterRequest request) {
+        try {
+            userDetailsService.registerUser(
+                    request.getUsername(),
+                    request.getPassword(),
+                    request.getFullName(),
+                    request.getRole()
+            );
+            auditLogService.logAction("REGISTER", "USER", request.getUsername(), "Registered new user account");
+        } catch (IllegalArgumentException e) {
+            throw new AppException(e.getMessage());
+        } catch (Exception e) {
+            throw new AppException("Đăng ký tài khoản thất bại: " + e.getMessage());
         }
     }
 }

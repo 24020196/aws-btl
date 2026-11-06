@@ -174,7 +174,7 @@ public class InstanceService {
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)
                 .regionName(regionType.getDisplayName())
-                .flavor(entity.getFlavor() != null ? entity.getFlavor() : "2 vCPU / 4 GB RAM")
+                .flavor(entity.getFlavor() != null ? entity.getFlavor() : "m1.medium")
                 .status(uiStatus)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")

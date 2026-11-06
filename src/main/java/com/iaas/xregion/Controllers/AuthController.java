@@ -27,6 +27,12 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody com.iaas.xregion.Model.Request.RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.ok(ApiResponse.ok("Đăng ký tài khoản thành công!", null));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

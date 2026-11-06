@@ -5,6 +5,18 @@ let authToken = localStorage.getItem('xregion_jwt') || '';
 let performanceChart = null;
 let migrationPollInterval = null;
 
+// OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
+const FLAVOR_SPECS = {
+  'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          baseCost: 0.020, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.small':  { vcpu: 1,  ramMb: 2048,  ramDisplay: '2048 MB (2 GB)',  baseCost: 0.040, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.medium': { vcpu: 2,  ramMb: 4096,  ramDisplay: '4096 MB (4 GB)',  baseCost: 0.080, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.large':  { vcpu: 4,  ramMb: 8192,  ramDisplay: '8192 MB (8 GB)',  baseCost: 0.160, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.xlarge': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',baseCost: 0.320, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'h1.medium': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',baseCost: 0.480, defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
+  'h1.large':  { vcpu: 16, ramMb: 32768, ramDisplay: '32768 MB (32 GB)',baseCost: 0.960, defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
+  'h1.xlarge': { vcpu: 32, ramMb: 65536, ramDisplay: '65536 MB (64 GB)',baseCost: 1.920, defaultDisk: 10, series: 'Hiệu năng cao (h1)' }
+};
+
 // Tab Routing
 function switchTab(tabId) {
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
@@ -101,9 +113,11 @@ async function apiRequest(endpoint, options = {}) {
   try {
     const res = await fetch(API_BASE + endpoint, { ...options, headers });
     if (res.status === 401) {
-      openModal('loginModal');
       const err = new Error('Phiên đăng nhập hết hạn hoặc chưa xác thực (HTTP 401). Vui lòng đăng nhập lại.');
       showApiError(endpoint, err.message, 401);
+      setTimeout(() => {
+        window.location.href = '/login.html';
+      }, 1500);
       throw err;
     }
 
@@ -163,9 +177,12 @@ async function submitLogin(e) {
 
 function logout() {
   localStorage.removeItem('xregion_jwt');
+  localStorage.removeItem('xregion_user');
   authToken = '';
   showToast('Đã đăng xuất khỏi hệ thống', 'success');
-  openModal('loginModal');
+  setTimeout(() => {
+    window.location.href = '/login.html';
+  }, 400);
 }
 
 // TAB 1: COMPUTE
@@ -268,7 +285,7 @@ function filterInstancesUI() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="font-family:monospace; color:var(--accent-cyan); font-weight:700;">${inst.id}</td>
+      <td><a href="/instance-detail.html?id=${inst.id}" style="font-family:monospace; color:var(--accent-cyan); font-weight:700; text-decoration:none;" title="Xem chi tiết máy ảo">${inst.id}</a></td>
       <td><strong>${inst.name}</strong></td>
       <td>${inst.regionName || inst.region}</td>
       <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
@@ -278,6 +295,7 @@ function filterInstancesUI() {
       <td><span class="badge ${badgeClass}">${inst.status}</span></td>
       <td>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="text-decoration:none; padding:4px 8px;">Chi tiết</a>
           ${inst.status === 'ACTIVE' 
             ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">Dừng</button>` 
             : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">Bật</button>`}
@@ -313,23 +331,17 @@ function updateLaunchSummary() {
   const osMap = {
     'img-u22': 'Ubuntu Server 22.04 LTS',
     'img-deb12': 'Debian 12 Bookworm',
-    'img-rocky9': 'Rocky Linux 9',
+    'img-rocky9': 'Rocky Linux 9 Enterprise',
     'img-alp319': 'Alpine Linux 3.19 Minimal'
   };
   const osLabel = osMap[imageEl.value] || 'Ubuntu Server 22.04 LTS';
 
   const flavorVal = flavorEl.value;
-  const ebsSize = parseInt(ebsEl.value) || 50;
+  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.medium'];
+  const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
 
-  let specsText = `2 vCPU, 4 GB RAM, ${ebsSize} GB EBS SSD`;
-  let baseHourly = 0.08;
-  if (flavorVal === 'm1.small') {
-    specsText = `1 vCPU, 2 GB RAM, ${ebsSize} GB EBS SSD`;
-    baseHourly = 0.04;
-  } else if (flavorVal === 'c5.large') {
-    specsText = `4 vCPU, 8 GB RAM, ${ebsSize} GB EBS SSD`;
-    baseHourly = 0.16;
-  }
+  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk (gp3 SSD)`;
+  const baseHourly = spec.baseCost;
 
   // Adjust by region factor (Region B N. Virginia is ~25% cheaper)
   const regionMultiplier = isRegionA ? 1.0 : 0.75;
@@ -384,7 +396,7 @@ async function submitLaunch(e) {
     region: document.getElementById('instRegion').value,
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
-    ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 50,
+    ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };
 
@@ -913,15 +925,380 @@ async function loadAuditLogs() {
   }
 }
 
-// Initial bootstrap
-window.addEventListener('DOMContentLoaded', () => {
-  if (!authToken) {
-    // Attempt auto-login with default admin credentials for quick access
-    submitLogin({
-      preventDefault: () => {}
-    });
+// ============================================================
+// GLOBAL USER BADGE & AUTH STATUS
+// ============================================================
+function renderUserBadge() {
+  const container = document.getElementById('userBadgeContainer');
+  if (!container) return;
+
+  const token = localStorage.getItem('xregion_jwt');
+  const user = localStorage.getItem('xregion_user') || 'Admin';
+
+  if (token) {
+    container.innerHTML = `
+      <span style="font-weight: 600; color: #fff;">👤 ${user}</span>
+      <button class="btn btn-secondary btn-sm" onclick="logout()" style="padding: 4px 10px; font-size: 11px;">Đăng xuất</button>
+    `;
   } else {
-    loadInstances();
+    container.innerHTML = `
+      <a href="/login.html" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">Đăng Nhập</a>
+      <a href="/register.html" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none; margin-left: 6px;">Đăng Ký</a>
+    `;
   }
-});
+}
+
+// ============================================================
+// PAGE INITIALIZERS: OVERVIEW, INSTANCES, DETAIL, LAUNCH
+// ============================================================
+
+// 1. OVERVIEW PAGE (index.html)
+async function initOverviewPage() {
+  renderUserBadge();
+  clearApiError();
+
+  const elTotal = document.getElementById('overviewTotalInstances');
+  const elRun = document.getElementById('overviewRunningCount');
+  const elStorage = document.getElementById('overviewStorageGb');
+  const elRegA = document.getElementById('regionAInstanceCount');
+  const elRegB = document.getElementById('regionBInstanceCount');
+  const tbodyInst = document.getElementById('overviewInstanceTableBody');
+  const tbodyLogs = document.getElementById('overviewAuditLogsBody');
+
+  // Load Instances
+  try {
+    const instances = await apiRequest('/instances');
+    const list = instances || [];
+    const total = list.length;
+    const running = list.filter(i => i.status === 'ACTIVE').length;
+    const regA = list.filter(i => (i.region || '').includes('southeast')).length;
+    const regB = list.filter(i => (i.region || '').includes('us-east')).length;
+
+    if (elTotal) elTotal.textContent = total;
+    if (elRun) elRun.textContent = `${running} Running`;
+    if (elRegA) elRegA.textContent = `${regA} máy ảo`;
+    if (elRegB) elRegB.textContent = `${regB} máy ảo`;
+
+    if (tbodyInst) {
+      if (list.length === 0) {
+        tbodyInst.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Chưa có máy ảo nào. <a href="/launch.html" style="color: var(--accent-cyan); font-weight: 700;">+ Khởi tạo ngay</a></td></tr>';
+      } else {
+        tbodyInst.innerHTML = '';
+        list.slice(0, 5).forEach(inst => {
+          const badgeClass = inst.status === 'ACTIVE' ? 'badge-active' :
+                             inst.status === 'MIGRATING' ? 'badge-migrating' :
+                             inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><a href="/instance-detail.html?id=${inst.id}" style="color:var(--accent-cyan); font-weight:700; text-decoration:none; font-family:monospace;">${inst.id}</a></td>
+            <td><strong>${inst.name}</strong></td>
+            <td>${inst.regionName || inst.region}</td>
+            <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
+            <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
+            <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
+            <td><span class="badge ${badgeClass}">${inst.status}</span></td>
+            <td><a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; text-decoration:none;">Xem Chi Tiết →</a></td>
+          `;
+          tbodyInst.appendChild(tr);
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load overview instances:', err);
+    if (elTotal) elTotal.textContent = 'ERR';
+    if (elRun) elRun.textContent = 'Lỗi API';
+    if (tbodyInst) {
+      tbodyInst.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color: #f87171; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">❌ Không thể tải danh sách máy ảo từ API (GET /api/instances): ${err.message}</td></tr>`;
+    }
+  }
+
+  // Load Volumes to calculate storage
+  try {
+    const volumes = await apiRequest('/volumes');
+    if (volumes && elStorage) {
+      const totalGb = volumes.reduce((sum, v) => sum + (v.sizeGb || 0), 0);
+      elStorage.textContent = totalGb;
+    }
+  } catch (err) {
+    if (elStorage) elStorage.textContent = '50';
+  }
+
+  // Load Audit Logs
+  try {
+    const logs = await apiRequest('/logs?limit=5');
+    if (tbodyLogs) {
+      if (!logs || logs.length === 0) {
+        tbodyLogs.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Chưa có nhật ký vận hành.</td></tr>';
+      } else {
+        tbodyLogs.innerHTML = '';
+        logs.slice(0, 5).forEach(l => {
+          const tr = document.createElement('tr');
+          const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'N/A';
+          tr.innerHTML = `
+            <td style="color:var(--text-muted); font-size:12px;">${time}</td>
+            <td><strong>${l.username || 'admin'}</strong></td>
+            <td><span class="badge" style="background:#1e293b; color:var(--accent-cyan);">${l.action}</span></td>
+            <td><code>${l.resourceType}</code></td>
+            <td style="color:#cbd5e1;">${l.details}</td>
+          `;
+          tbodyLogs.appendChild(tr);
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load logs for overview:', err);
+  }
+}
+
+// 2. INSTANCES LIST PAGE (instances.html)
+function initInstancesPage() {
+  renderUserBadge();
+  loadInstances();
+}
+
+// 3. INSTANCE DETAIL PAGE (instance-detail.html)
+async function initDetailPage() {
+  renderUserBadge();
+  clearApiError();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const instanceId = urlParams.get('id');
+
+  if (!instanceId) {
+    showApiError('/instances/{id}', 'Không tìm thấy tham số ID máy ảo trong URL. Vui lòng quay lại danh sách máy ảo.');
+    return;
+  }
+
+  const bcId = document.getElementById('breadcrumbInstanceId');
+  if (bcId) bcId.textContent = instanceId;
+
+  try {
+    const inst = await apiRequest(`/instances/${instanceId}`);
+    if (!inst) {
+      throw new Error(`Không tìm thấy thông tin máy ảo với ID [${instanceId}]`);
+    }
+
+    // Populate header
+    document.getElementById('detInstanceName').textContent = inst.name || inst.id;
+    document.getElementById('detInstanceId').textContent = inst.id;
+    document.getElementById('detRegionName').textContent = inst.regionName || inst.region;
+
+    const badge = document.getElementById('detStatusBadge');
+    badge.textContent = inst.status;
+    badge.className = 'badge ' + (inst.status === 'ACTIVE' ? 'badge-active' :
+                                  inst.status === 'MIGRATING' ? 'badge-migrating' :
+                                  inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error');
+
+    // Populate Cards
+    const spec = FLAVOR_SPECS[inst.flavor];
+    const specDesc = spec ? ` (${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${spec.defaultDisk} GB Root Disk)` : '';
+    document.getElementById('detFlavor').textContent = `${inst.flavor}${specDesc}`;
+    document.getElementById('detImageName').textContent = inst.imageName || 'Ubuntu Server 22.04 LTS';
+    document.getElementById('detRegionCode').textContent = inst.region;
+    document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
+    document.getElementById('detPublicIp').textContent = inst.publicIp || 'Chưa gán';
+    document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
+    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? new Date(inst.updatedAt).toLocaleString() : 'Vừa xong';
+
+    const consoleLink = document.getElementById('detConsoleLink');
+    if (consoleLink) {
+      consoleLink.href = inst.consoleUrl || '#';
+      consoleLink.onclick = (e) => {
+        if (!inst.consoleUrl || inst.consoleUrl === '#') {
+          e.preventDefault();
+          showToast(`Đang mở Web Terminal VNC cho ${inst.id}...`, 'success');
+        }
+      };
+    }
+
+    // Render Actions Toolbar
+    const actionsContainer = document.getElementById('detailActionButtons');
+    if (actionsContainer) {
+      actionsContainer.innerHTML = `
+        ${inst.status === 'ACTIVE'
+          ? `<button class="btn btn-secondary" onclick="executeDetailAction('${inst.id}', 'STOP')">⏸ Dừng Máy (Stop)</button>`
+          : `<button class="btn btn-success" onclick="executeDetailAction('${inst.id}', 'START')">▶ Bật Máy (Start)</button>`}
+        <button class="btn btn-secondary" onclick="executeDetailAction('${inst.id}', 'REBOOT')">🔄 Reboot</button>
+        <button class="btn btn-primary" onclick="triggerDirectMigration('${inst.id}')">⚡ Fast Migrate X-Region</button>
+        <button class="btn btn-danger" onclick="executeDetailAction('${inst.id}', 'TERMINATE')">🗑 Xóa Máy Ảo</button>
+      `;
+    }
+  } catch (err) {
+    console.error('Failed to load instance detail:', err);
+    showApiError(`/instances/${instanceId}`, err.message);
+    document.getElementById('detInstanceName').textContent = 'Lỗi Tải Dữ Liệu';
+  }
+}
+
+async function executeDetailAction(id, action) {
+  if (action === 'TERMINATE' && !confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn máy ảo [${id}]?`)) {
+    return;
+  }
+
+  try {
+    await apiRequest(`/instances/${id}/actions`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+    showToast(`Đã gửi lệnh [${action}] đến máy ảo ${id}!`, 'success');
+
+    if (action === 'TERMINATE') {
+      setTimeout(() => {
+        window.location.href = '/instances.html';
+      }, 1000);
+    } else {
+      initDetailPage();
+    }
+  } catch (err) {
+    showToast(`Lỗi thao tác ${action}: ${err.message}`, 'error');
+  }
+}
+
+// 4. LAUNCH INSTANCE PAGE (launch.html)
+function initLaunchPage() {
+  renderUserBadge();
+  clearApiError();
+  updatePageLaunchSummary();
+}
+
+function selectRegion(regionCode) {
+  document.getElementById('instRegion').value = regionCode;
+  document.getElementById('optRegionA').classList.toggle('selected', regionCode === 'ap-southeast-2');
+  document.getElementById('optRegionB').classList.toggle('selected', regionCode === 'us-east-1');
+  
+  const radioA = document.querySelector('input[name="regionRadio"][value="ap-southeast-2"]');
+  const radioB = document.querySelector('input[name="regionRadio"][value="us-east-1"]');
+  if (radioA) radioA.checked = (regionCode === 'ap-southeast-2');
+  if (radioB) radioB.checked = (regionCode === 'us-east-1');
+
+  updatePageLaunchSummary();
+}
+
+function selectOs(imageId, osName) {
+  document.getElementById('instImage').value = imageId;
+  const osCards = ['optOsUbuntu', 'optOsDebian', 'optOsRocky', 'optOsAlpine'];
+  osCards.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('selected');
+  });
+
+  const cardMap = {
+    'img-u22': 'optOsUbuntu',
+    'img-deb12': 'optOsDebian',
+    'img-rocky9': 'optOsRocky',
+    'img-alp319': 'optOsAlpine'
+  };
+  const activeCard = document.getElementById(cardMap[imageId]);
+  if (activeCard) activeCard.classList.add('selected');
+
+  const radio = document.querySelector(`input[name="osRadio"][value="${imageId}"]`);
+  if (radio) radio.checked = true;
+
+  updatePageLaunchSummary();
+}
+
+function updatePageLaunchSummary() {
+  const regionEl = document.getElementById('instRegion');
+  const imageEl = document.getElementById('instImage');
+  const flavorEl = document.getElementById('instFlavor');
+  const ebsEl = document.getElementById('instEbsSize');
+
+  if (!regionEl || !imageEl || !flavorEl || !ebsEl) return;
+
+  const region = regionEl.value;
+  const isRegionA = region.includes('southeast');
+  const regionLabel = isRegionA ? 'Region A (Singapore / Sydney)' : 'Region B (N. Virginia)';
+
+  const osMap = {
+    'img-u22': 'Ubuntu Server 22.04 LTS',
+    'img-deb12': 'Debian 12 Bookworm',
+    'img-rocky9': 'Rocky Linux 9 Enterprise',
+    'img-alp319': 'Alpine Linux 3.19 Minimal'
+  };
+  const osLabel = osMap[imageEl.value] || 'Ubuntu Server 22.04 LTS';
+
+  const flavorVal = flavorEl.value;
+  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.medium'];
+  const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
+
+  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk (gp3 SSD)`;
+  const baseHourly = spec.baseCost;
+
+  // Region B (Virginia) gets 25% discount
+  const regionMultiplier = isRegionA ? 1.0 : 0.75;
+  const ebsHourly = (ebsSize * 0.08) / 720.0;
+  const totalHourly = (baseHourly * regionMultiplier) + ebsHourly;
+  const totalMonthly = totalHourly * 720.0;
+
+  const sumReg = document.getElementById('sumRegionText');
+  const sumOs = document.getElementById('sumOsText');
+  const sumSpecs = document.getElementById('sumSpecsText');
+  const sumHour = document.getElementById('sumCostHour');
+  const sumMonth = document.getElementById('sumCostMonth');
+
+  if (sumReg) sumReg.textContent = regionLabel;
+  if (sumOs) sumOs.textContent = osLabel;
+  if (sumSpecs) sumSpecs.textContent = specsText;
+  if (sumHour) sumHour.textContent = `$${totalHourly.toFixed(3)}`;
+  if (sumMonth) sumMonth.textContent = `~$${totalMonthly.toFixed(2)} / month`;
+
+  // Highlight selected row in specification matrix table
+  const allRows = ['row-m1-tiny', 'row-m1-small', 'row-m1-medium', 'row-m1-large', 'row-m1-xlarge', 'row-h1-medium', 'row-h1-large', 'row-h1-xlarge'];
+  allRows.forEach(rowId => {
+    const rowEl = document.getElementById(rowId);
+    if (rowEl) {
+      if (rowId === `row-${flavorVal.replace('.', '-')}`) {
+        rowEl.style.background = 'rgba(56, 189, 248, 0.15)';
+      } else {
+        rowEl.style.background = 'transparent';
+      }
+    }
+  });
+}
+
+async function handleLaunchPageSubmit(e) {
+  e.preventDefault();
+  const errBox = document.getElementById('launchErrorBox');
+  if (errBox) errBox.style.display = 'none';
+
+  const btn = document.getElementById('btnLaunchInstance');
+  const origText = btn ? btn.innerHTML : '🚀 Launch Compute Instance';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang cấp phát máy chủ Bare Metal & ổ đĩa EBS...';
+  }
+
+  const payload = {
+    name: document.getElementById('instName').value.trim(),
+    region: document.getElementById('instRegion').value,
+    flavor: document.getElementById('instFlavor').value,
+    imageId: document.getElementById('instImage').value,
+    ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
+    domainName: document.getElementById('instDomain').value.trim()
+  };
+
+  try {
+    const res = await apiRequest('/instances', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    showToast(`Khởi tạo máy ảo [${payload.name}] (${res ? res.id : ''}) thành công!`, 'success');
+    setTimeout(() => {
+      window.location.href = '/instances.html';
+    }, 1200);
+  } catch (err) {
+    console.error('Launch failed:', err);
+    if (errBox) {
+      errBox.innerHTML = `<strong>❌ Lỗi khởi tạo máy ảo (POST /api/instances):</strong><br>${err.message}`;
+      errBox.style.display = 'block';
+    }
+    showToast(`Lỗi khởi tạo: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
 
