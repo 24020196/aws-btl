@@ -65,7 +65,20 @@ public class DynamoDbConfig {
     }
 
     @Bean
-    public DynamoDbClient dynamoDbClient() {
+    public software.amazon.awssdk.auth.credentials.AwsCredentialsProvider awsCredentialsProvider() {
+        if (accessKeyId != null && !accessKeyId.trim().isEmpty() &&
+            secretAccessKey != null && !secretAccessKey.trim().isEmpty()) {
+            log.info("Initialized StaticCredentialsProvider with configured IAM Access Key");
+            return StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim())
+            );
+        }
+        log.info("Initialized DefaultCredentialsProvider for AWS components");
+        return DefaultCredentialsProvider.create();
+    }
+
+    @Bean
+    public DynamoDbClient dynamoDbClient(software.amazon.awssdk.auth.credentials.AwsCredentialsProvider credentialsProvider) {
         String regionCode = parseRegionFromArn(instancesTableArn, awsRegion);
         DynamoDbClientBuilder builder = DynamoDbClient.builder()
                 .region(Region.of(regionCode));
@@ -77,19 +90,8 @@ public class DynamoDbConfig {
             builder.credentialsProvider(StaticCredentialsProvider.create(
                     AwsBasicCredentials.create("dummy_local_key", "dummy_local_secret")
             ));
-        } 
-        // 2. Direct AWS Cloud connection using pre-stored IAM Access Key (no AWS Toolkit/profile needed)
-        else if (accessKeyId != null && !accessKeyId.trim().isEmpty() &&
-                 secretAccessKey != null && !secretAccessKey.trim().isEmpty()) {
-            log.info("Connecting directly to AWS Cloud DynamoDB in [{}] using fixed IAM credentials", regionCode);
-            builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim())
-            ));
-        } 
-        // 3. Fallback to standard DefaultCredentialsProvider
-        else {
-            log.info("Connecting to AWS Cloud DynamoDB using DefaultCredentialsProvider");
-            builder.credentialsProvider(DefaultCredentialsProvider.create());
+        } else {
+            builder.credentialsProvider(credentialsProvider);
         }
 
         return builder.build();

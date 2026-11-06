@@ -25,6 +25,7 @@ public class UserEntity {
     private String role;
     private Boolean active;
     private Long createdAt;
+    private java.util.List<ApiTokenItem> apiTokens;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("username")
@@ -55,6 +56,11 @@ public class UserEntity {
     @DynamoDbAttribute("created_at")
     public Long getCreatedAt() {
         return createdAt;
+    }
+
+    @DynamoDbAttribute("api_tokens")
+    public java.util.List<ApiTokenItem> getApiTokens() {
+        return apiTokens;
     }
 }
 

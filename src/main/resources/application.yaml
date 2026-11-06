@@ -19,6 +19,9 @@ aws:
   region: ${AWS_REGION:ap-southeast-2}
   accessKeyId: ${AWS_ACCESS_KEY_ID:}
   secretAccessKey: ${AWS_SECRET_ACCESS_KEY:}
+  apigateway:
+    eventEndpoint: ${AWS_APIGATEWAY_EVENT_ENDPOINT:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
+    apiToken: ${AWS_APIGATEWAY_API_TOKEN:}
 
 # DynamoDB Live Cloud Configuration via Table ARN
 dynamodb:

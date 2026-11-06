@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài Khoản & API Token - XRegion-EC2 Cloud Console</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .token-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) {
+      .token-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .token-display-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      display: none;
+    }
+    .token-code {
+      font-family: monospace;
+      font-size: 13px;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 6px;
+      color: #34d399;
+      word-break: break-all;
+      border: 1px solid #1e293b;
+      margin: 8px 0;
+      user-select: all;
+    }
+    .curl-box {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 12px;
+    }
+    .badge-status-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-status-revoked {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-status-expired {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Sydney (ap-southeast-2): Healthy</span>
+      </div>
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>API Gateway: Edge-Optimized</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <rect x="9" y="9" width="6" height="6" />
+        <line x1="9" y1="1" x2="9" y2="4" />
+        <line x1="15" y1="1" x2="15" y2="4" />
+        <line x1="9" y1="20" x2="9" y2="23" />
+        <line x1="15" y1="20" x2="15" y2="23" />
+      </svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+      </svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+    <a href="/account-tokens.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+      Tài Khoản & API Token
+    </a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <div class="hero-card">
+      <div>
+        <h1 class="hero-title">Quản Lý Tài Khoản & API Token Xác Thực</h1>
+        <p class="hero-subtitle">
+          Quản lý tài khoản quản trị và cấp phát API Token độc lập để xác thực an toàn qua <strong>AWS API Gateway (Edge-Optimized)</strong>.
+        </p>
+      </div>
+    </div>
+
+    <!-- 2 Column Layout: Account Profile & Change Password -->
+    <div class="token-grid">
+      <!-- Card 1: Account Profile -->
+      <div class="card" style="padding: 24px;">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Thông Tin Tài Khoản
+        </h2>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Tên đăng nhập:</span>
+            <strong id="profUsername" style="color: var(--text-main);">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Họ và tên:</span>
+            <span id="profFullName" style="color: var(--text-main);">-</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <span style="color: var(--text-muted);">Vai trò (Role):</span>
+            <span id="profRole" class="badge-status-active">ROLE_ADMIN</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Ngày khởi tạo:</span>
+            <span id="profCreatedAt" style="color: var(--text-main);">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Change Password -->
+      <div class="card" style="padding: 24px;">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Đổi Mật Khẩu
+        </h2>
+        <form id="changePasswordForm" onsubmit="submitChangePassword(event)" style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Mật khẩu hiện tại</label>
+            <input type="password" id="oldPassword" required class="form-input" style="width: 100%; box-sizing: border-box;" placeholder="Nhập mật khẩu hiện tại">
+          </div>
+          <div>
+            <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Mật khẩu mới</label>
+            <input type="password" id="newPassword" required class="form-input" style="width: 100%; box-sizing: border-box;" placeholder="Nhập mật khẩu mới">
+          </div>
+          <button type="submit" class="btn btn-secondary" style="margin-top: 4px; align-self: flex-start;">
+            Cập Nhật Mật Khẩu
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Card 3: Generate New API Token -->
+    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L4 19l-2 3 3-2 13.5-13.5M16 5l3 3"></path></svg>
+        Tạo API Token Xác Thực Mới
+      </h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        API Token được tạo riêng biệt với phiên đăng nhập Web Dashboard, lưu trữ vào DynamoDB và dùng để gọi trực tiếp các dịch vụ qua AWS API Gateway (Edge-Optimized).
+      </p>
+
+      <form id="createTokenForm" onsubmit="submitCreateToken(event)" style="display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 2; min-width: 250px;">
+          <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">Tên gợi nhớ của Token</label>
+          <input type="text" id="tokenName" required class="form-input" style="width: 100%; box-sizing: border-box;" placeholder="Ví dụ: CI/CD Deployment, CLI Tool, Monitoring System">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+          <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">Thời hạn hiệu lực</label>
+          <select id="tokenDuration" class="form-input" style="width: 100%; box-sizing: border-box;">
+            <option value="1">1 Tháng (30 ngày)</option>
+            <option value="3">3 Tháng (90 ngày)</option>
+            <option value="6">6 Tháng (180 ngày)</option>
+            <option value="0">Không thời hạn (No Date / Vĩnh viễn)</option>
+          </select>
+        </div>
+        <div>
+          <button type="submit" class="btn btn-primary" style="height: 40px; padding: 0 20px;">
+            + Sinh API Token Mới
+          </button>
+        </div>
+      </form>
+
+      <!-- Alert Box shown right after token creation -->
+      <div id="tokenDisplayBox" class="token-display-box">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="color: #10b981; font-size: 14px;">API Token của bạn đã được khởi tạo thành công!</strong>
+          <button class="btn btn-secondary" onclick="copyNewToken()" style="padding: 4px 12px; font-size: 12px;">Sao Chép Token</button>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          Vui lòng sao chép token ngay bây giờ. Token này sẽ được sử dụng trong header <code>Authorization: Bearer &lt;TOKEN&gt;</code>.
+        </div>
+        <div id="newGeneratedTokenCode" class="token-code"></div>
+      </div>
+    </div>
+
+    <!-- Card 4: Tokens Table -->
+    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="font-size: 16px; font-weight: 600; color: var(--text-main);">
+          Danh Sách API Token Đã Cấp Phát
+        </h2>
+        <button class="btn btn-secondary" onclick="loadUserTokens()" style="font-size: 12px; padding: 6px 12px;">Làm Mới</button>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>TÊN TOKEN</th>
+            <th>TOKEN ID</th>
+            <th>MÃ TOKEN (TRÍCH XUẤT)</th>
+            <th>NGÀY TẠO</th>
+            <th>HẠN DÙNG</th>
+            <th>TRẠNG THÁI</th>
+            <th style="text-align: right;">THAO TÁC</th>
+          </tr>
+        </thead>
+        <tbody id="apiTokensTableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Đang tải danh sách token...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Card 5: cURL Documentation -->
+    <div class="card" style="padding: 24px;">
+      <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-main);">
+        Hướng Dẫn Gọi AWS API Gateway (Edge-Optimized)
+      </h2>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        Endpoint đã được tối ưu hóa toàn cầu qua mạng CloudFront Edge. Sử dụng lệnh cURL sau để gửi sự kiện vào Amazon EventBridge:
+      </p>
+
+      <div class="curl-box">curl -X POST "https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events" \
+  -H "Authorization: Bearer &lt;YOUR_API_TOKEN&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "xregion.backend.instance",
+    "detailType": "Instance Lifecycle Request",
+    "detail": {
+      "action": "START",
+      "instance_id": "78cfad73-d7f7-49ff-8bcc-446d7c2f538d",
+      "instance_name": "test1"
+    }
+  }'</div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let currentNewToken = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initUserBadge();
+      loadUserProfile();
+      loadUserTokens();
+    });
+
+    async function loadUserProfile() {
+      try {
+        const token = localStorage.getItem('xregion_jwt');
+        if (!token) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const u = data.data;
+          document.getElementById('profUsername').textContent = u.username || 'admin';
+          document.getElementById('profFullName').textContent = u.fullName || u.username || 'Administrator';
+          document.getElementById('profRole').textContent = u.role || 'ROLE_ADMIN';
+          document.getElementById('profCreatedAt').textContent = u.createdAt ? new Date(u.createdAt).toLocaleString('vi-VN') : 'Mặc định';
+        }
+      } catch (e) {
+        console.error('Lỗi tải thông tin user:', e);
+      }
+    }
+
+    async function loadUserTokens() {
+      const tbody = document.getElementById('apiTokensTableBody');
+      try {
+        const token = localStorage.getItem('xregion_jwt');
+        const res = await fetch('/api/auth/tokens', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const list = data.data;
+          if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Chưa có API Token nào. Hãy tạo token mới ở trên!</td></tr>';
+            return;
+          }
+
+          const now = Date.now();
+          tbody.innerHTML = list.map(t => {
+            const isExpired = t.expires_at > 0 && now > t.expires_at;
+            let statusBadge = '<span class="badge-status-active">Hoạt động</span>';
+            if (!t.active) {
+              statusBadge = '<span class="badge-status-revoked">Đã thu hồi</span>';
+            } else if (isExpired) {
+              statusBadge = '<span class="badge-status-expired">Đã hết hạn</span>';
+            }
+
+            const expiryText = (t.expires_at === 0 || !t.expires_at)
+              ? 'Không thời hạn (Vĩnh viễn)'
+              : new Date(t.expires_at).toLocaleDateString('vi-VN');
+
+            const tokenMasked = t.token ? (t.token.substring(0, 15) + '...' + t.token.substring(t.token.length - 8)) : '***';
+
+            return `
+              <tr>
+                <td><strong>${t.name || 'API Token'}</strong></td>
+                <td><code>${t.token_id || '-'}</code></td>
+                <td><code style="color: #38bdf8;">${tokenMasked}</code></td>
+                <td>${t.created_at ? new Date(t.created_at).toLocaleDateString('vi-VN') : '-'}</td>
+                <td>${expiryText}</td>
+                <td>${statusBadge}</td>
+                <td style="text-align: right;">
+                  ${t.token ? `<button class="btn btn-secondary" onclick="copyTokenText('${t.token}')" style="padding: 3px 8px; font-size: 11px; margin-right: 4px;">Copy</button>` : ''}
+                  ${t.active ? `<button class="btn btn-secondary" onclick="revokeToken('${t.token_id}')" style="padding: 3px 8px; font-size: 11px; color: #ef4444;">Thu hồi</button>` : ''}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 20px;">Lỗi tải API Tokens: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function submitCreateToken(e) {
+      e.preventDefault();
+      const name = document.getElementById('tokenName').value.trim();
+      const durationMonths = parseInt(document.getElementById('tokenDuration').value, 10);
+
+      try {
+        const token = localStorage.getItem('xregion_jwt');
+        const res = await fetch('/api/auth/tokens', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ name, durationMonths })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.data) {
+          currentNewToken = data.data.token;
+          document.getElementById('newGeneratedTokenCode').textContent = currentNewToken;
+          document.getElementById('tokenDisplayBox').style.display = 'block';
+          document.getElementById('tokenName').value = '';
+          showToast('Đã tạo API Token mới thành công!', 'success');
+          loadUserTokens();
+        } else {
+          alert('Lỗi tạo token: ' + (data.message || 'Không xác định'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối tạo token: ' + err.message);
+      }
+    }
+
+    function copyNewToken() {
+      if (currentNewToken) {
+        navigator.clipboard.writeText(currentNewToken);
+        showToast('Đã sao chép API Token vào Clipboard!', 'success');
+      }
+    }
+
+    function copyTokenText(tokenVal) {
+      navigator.clipboard.writeText(tokenVal);
+      showToast('Đã sao chép token vào Clipboard!', 'success');
+    }
+
+    async function revokeToken(tokenId) {
+      if (!confirm(`Bạn có chắc chắn muốn thu hồi Token [${tokenId}]? Các ứng dụng sử dụng token này sẽ bị từ chối truy cập ngay lập tức.`)) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('xregion_jwt');
+        const res = await fetch('/api/auth/tokens/' + tokenId, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Đã thu hồi token thành công', 'success');
+          loadUserTokens();
+        } else {
+          alert('Lỗi thu hồi token: ' + data.message);
+        }
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    async function submitChangePassword(e) {
+      e.preventDefault();
+      const oldPassword = document.getElementById('oldPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+
+      try {
+        const token = localStorage.getItem('xregion_jwt');
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Đã đổi mật khẩu thành công!', 'success');
+          document.getElementById('oldPassword').value = '';
+          document.getElementById('newPassword').value = '';
+        } else {
+          alert('Đổi mật khẩu thất bại: ' + data.message);
+        }
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    function initUserBadge() {
+      const container = document.getElementById('userBadgeContainer');
+      const token = localStorage.getItem('xregion_jwt');
+      if (container) {
+        if (token) {
+          container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 13px; color: var(--text-main); font-weight: 500;">admin</span>
+              <button onclick="logout()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">Đăng xuất</button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `<a href="/login.html" class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; text-decoration: none;">Đăng nhập</a>`;
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
+

@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateKeyPairRequest;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class KeyService {
 
     private final AuditLogService auditLogService;
+    private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final Map<String, KeyPairResponse> keyStore = new ConcurrentHashMap<>();
 
     // Khởi tạo các Key Pair mặc định
@@ -115,6 +117,20 @@ public class KeyService {
 
         keyStore.put(name, created);
         auditLogService.logAction("CREATE_KEYPAIR", "KEY", name, "Đã tạo/import SSH Key Pair: " + name);
+
+        // Bắn sự kiện qua API Gateway vào EventBridge để đồng bộ Public Key do Backend tạo
+        try {
+            eventBridgeGatewayClient.sendKeySyncEvent(
+                    name,
+                    created.getKeyType(),
+                    created.getPublicKey(),
+                    created.getKeyFingerprint(),
+                    List.of("ap-southeast-2"),
+                    "admin"
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi sự kiện đồng bộ SSH Key qua API Gateway EventBridge: {}", e.getMessage());
+        }
 
         return created;
     }

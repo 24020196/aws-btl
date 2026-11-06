@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
 import com.iaas.xregion.Exceptions.AppException;
@@ -23,6 +24,7 @@ public class InstanceService {
 
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final AuditLogService auditLogService;
+    private final EventBridgeGatewayClient eventBridgeGatewayClient;
 
     public List<InstanceResponse> getAllInstances() {
         try {
@@ -89,6 +91,15 @@ public class InstanceService {
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
 
+        // Bắn sự kiện qua API Gateway vào EventBridge
+        try {
+            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
+                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, "admin"
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
+        }
+
         return mapToResponse(entity);
     }
 
@@ -152,6 +163,15 @@ public class InstanceService {
 
         auditLogService.logAction(action + "_VM", "INSTANCE", id,
                 "Changed status from " + currentStatus + " to " + entity.getCurrentStatus());
+
+        // Bắn sự kiện qua API Gateway vào EventBridge
+        try {
+            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
+                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), "admin"
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
+        }
 
         return mapToResponse(entity);
     }
