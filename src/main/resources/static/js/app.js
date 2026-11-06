@@ -98,7 +98,53 @@ async function submitLogin(e) {
 function logout() {
   localStorage.removeItem('xregion_jwt');
   authToken = '';
+  closeModal('registerModal');
   openModal('loginModal');
+}
+
+function switchToRegister() {
+  closeModal('loginModal');
+  openModal('registerModal');
+}
+
+function switchToLogin() {
+  closeModal('registerModal');
+  openModal('loginModal');
+}
+
+async function submitRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('regUser').value.trim();
+  const fullName = document.getElementById('regFullName').value.trim();
+  const password = document.getElementById('regPass').value;
+  const confirmPass = document.getElementById('regPassConfirm').value;
+
+  if (password !== confirmPass) {
+    alert('Mật khẩu xác nhận không khớp!');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + '/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, fullName })
+    });
+    const data = await res.json();
+    if (res.ok && data.data && data.data.token) {
+      authToken = data.data.token;
+      localStorage.setItem('xregion_jwt', authToken);
+      document.getElementById('userNameDisplay').textContent = data.data.fullName || username;
+      document.getElementById('registerForm').reset();
+      closeModal('registerModal');
+      alert('Đăng ký tài khoản thành công!');
+      loadInstances();
+    } else {
+      alert('Đăng ký thất bại: ' + (data.message || 'Tài khoản đã tồn tại hoặc dữ liệu không hợp lệ'));
+    }
+  } catch (err) {
+    alert('Lỗi đăng ký: ' + err.message);
+  }
 }
 
 // TAB 1: COMPUTE

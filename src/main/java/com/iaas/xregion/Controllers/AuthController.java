@@ -1,6 +1,7 @@
 package com.iaas.xregion.Controllers;
 
 import com.iaas.xregion.Model.Request.LoginRequest;
+import com.iaas.xregion.Model.Request.RegisterRequest;
 import com.iaas.xregion.Model.Response.ApiResponse;
 import com.iaas.xregion.Model.Response.JwtResponse;
 import com.iaas.xregion.Services.AuthService;
@@ -25,6 +26,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<JwtResponse>> login(@Valid @RequestBody LoginRequest request) {
         JwtResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<JwtResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        JwtResponse response = authService.register(request);
+        return ResponseEntity.ok(ApiResponse.ok("Register successful", response));
     }
 
     @GetMapping("/me")
