@@ -57,7 +57,8 @@ public class InstanceService {
         long now = System.currentTimeMillis();
 
         String region = request.getRegion();
-        String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150)) : "10.1.1." + (100 + new Random().nextInt(150));
+        String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
+                : "10.1.1." + (100 + new Random().nextInt(150));
         String elasticIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
 
         InstanceEntity entity = InstanceEntity.builder()
@@ -81,7 +82,7 @@ public class InstanceService {
             throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
         }
 
-        auditLogService.logAction("LAUNCH_VM", "INSTANCE", id, 
+        auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
 
         return mapToResponse(entity);
@@ -145,7 +146,7 @@ public class InstanceService {
             throw new AppException("Lỗi cập nhật trạng thái máy ảo trên AWS DynamoDB: " + e.getMessage());
         }
 
-        auditLogService.logAction(action + "_VM", "INSTANCE", id, 
+        auditLogService.logAction(action + "_VM", "INSTANCE", id,
                 "Changed status from " + currentStatus + " to " + entity.getCurrentStatus());
 
         return mapToResponse(entity);
@@ -159,14 +160,15 @@ public class InstanceService {
         String uiStatus = "ACTIVE";
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "MIGRATING";
-        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus()) || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
+        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "SHUTOFF";
         } else if ("REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "REBOOTING";
         }
 
-        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0 
-                ? entity.getLastMigrationTimestamp() 
+        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0
+                ? entity.getLastMigrationTimestamp()
                 : System.currentTimeMillis();
 
         return InstanceResponse.builder()
@@ -178,7 +180,8 @@ public class InstanceService {
                 .status(uiStatus)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
-                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net")
+                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net"
+                        : "app.xregion.net")
                 .imageId("img-u22")
                 .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())

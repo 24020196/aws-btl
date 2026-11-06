@@ -137,10 +137,9 @@
           <span class="badge badge-active">Active Primary</span>
         </div>
         <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
-          <div>• Base Price: <strong style="color: #fff;">$0.08 / hour</strong> (~$57.60/month)</div>
-          <div>• Network Latency: <strong style="color: #34d399;">35 ms</strong> (Đông Nam Á & Châu Á - TBD)</div>
-          <div>• Control Plane: OpenStack Nova / Cinder on EC2 Bare Metal</div>
-          <div>• Mạng ảo: VPC <code>10.0.0.0/16</code>, NAT Gateway 1:1 Elastic IP</div>
+          <div>• Mã vùng: <code>ap-southeast-2</code></div>
+          <div>• Vai trò: Active Primary Production</div>
+          <div>• Định tuyến mạng: VPC Subnet <code>10.0.1.0/24</code>, Elastic IP</div>
         </div>
         <div
           style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
@@ -159,11 +158,9 @@
           <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">Low Cost Standby</span>
         </div>
         <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
-          <div>• Base Price: <strong style="color: #fff;">$0.05 / hour</strong> (~$36.00/month) • <span
-              style="color: #34d399;">Rẻ hơn 25%</span></div>
-          <div>• Network Latency: <strong style="color: #fbbf24;">180 ms</strong> (Bắc Mỹ & Quốc tế)</div>
-          <div>• Standby Target: Sẵn sàng nhận snapshot sao lưu xuyên vùng</div>
-          <div>• Mạng ảo: VPC <code>10.1.0.0/16</code>, Auto Route 53 Cutover</div>
+          <div>• Mã vùng: <code>us-east-1</code></div>
+          <div>• Vai trò: Standby Secondary & Disaster Recovery</div>
+          <div>• Định tuyến mạng: VPC Subnet <code>10.1.1.0/24</code>, Route 53 Cutover</div>
         </div>
         <div
           style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">

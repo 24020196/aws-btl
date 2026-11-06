@@ -7,14 +7,14 @@ let migrationPollInterval = null;
 
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
-  'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          baseCost: 0.020, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.small':  { vcpu: 1,  ramMb: 2048,  ramDisplay: '2048 MB (2 GB)',  baseCost: 0.040, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.medium': { vcpu: 2,  ramMb: 4096,  ramDisplay: '4096 MB (4 GB)',  baseCost: 0.080, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.large':  { vcpu: 4,  ramMb: 8192,  ramDisplay: '8192 MB (8 GB)',  baseCost: 0.160, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.xlarge': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',baseCost: 0.320, defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'h1.medium': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',baseCost: 0.480, defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
-  'h1.large':  { vcpu: 16, ramMb: 32768, ramDisplay: '32768 MB (32 GB)',baseCost: 0.960, defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
-  'h1.xlarge': { vcpu: 32, ramMb: 65536, ramDisplay: '65536 MB (64 GB)',baseCost: 1.920, defaultDisk: 10, series: 'Hiệu năng cao (h1)' }
+  'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.small':  { vcpu: 1,  ramMb: 2048,  ramDisplay: '2048 MB (2 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.medium': { vcpu: 2,  ramMb: 4096,  ramDisplay: '4096 MB (4 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.large':  { vcpu: 4,  ramMb: 8192,  ramDisplay: '8192 MB (8 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.xlarge': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'h1.medium': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
+  'h1.large':  { vcpu: 16, ramMb: 32768, ramDisplay: '32768 MB (32 GB)',defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
+  'h1.xlarge': { vcpu: 32, ramMb: 65536, ramDisplay: '65536 MB (64 GB)',defaultDisk: 10, series: 'Hiệu năng cao (h1)' }
 };
 
 // Tab Routing
@@ -385,26 +385,15 @@ function updateLaunchSummary() {
   const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.medium'];
   const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
 
-  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk (gp3 SSD)`;
-  const baseHourly = spec.baseCost;
-
-  // Adjust by region factor (Region B N. Virginia is ~25% cheaper)
-  const regionMultiplier = isRegionA ? 1.0 : 0.75;
-  const ebsHourly = (ebsSize * 0.08) / 720.0;
-  const totalHourly = (baseHourly * regionMultiplier) + ebsHourly;
-  const totalMonthly = totalHourly * 720.0;
+  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk`;
 
   const sumReg = document.getElementById('sumRegionText');
   const sumOs = document.getElementById('sumOsText');
   const sumSpecs = document.getElementById('sumSpecsText');
-  const sumHour = document.getElementById('sumCostHour');
-  const sumMonth = document.getElementById('sumCostMonth');
 
   if (sumReg) sumReg.textContent = regionLabel;
   if (sumOs) sumOs.textContent = osLabel;
   if (sumSpecs) sumSpecs.textContent = specsText;
-  if (sumHour) sumHour.textContent = `$${totalHourly.toFixed(3)}`;
-  if (sumMonth) sumMonth.textContent = `~$${totalMonthly.toFixed(2)} / month`;
 }
 
 async function instanceAction(id, action) {
@@ -1145,6 +1134,11 @@ async function initDetailPage() {
     document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
     document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? new Date(inst.updatedAt).toLocaleString() : 'Vừa xong';
 
+    const volIdEl = document.getElementById('detEbsVolumeId');
+    if (volIdEl) volIdEl.textContent = inst.ebsVolumeId || `vol-${inst.id.replace('i-', '')}`;
+    const diskSizeEl = document.getElementById('detRootDiskSize');
+    if (diskSizeEl) diskSizeEl.textContent = `${spec ? spec.defaultDisk : 10} GB`;
+
     const consoleLink = document.getElementById('detConsoleLink');
     if (consoleLink) {
       consoleLink.href = inst.consoleUrl || '#';
@@ -1266,26 +1260,15 @@ function updatePageLaunchSummary() {
   const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.medium'];
   const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
 
-  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk (gp3 SSD)`;
-  const baseHourly = spec.baseCost;
-
-  // Region B (Virginia) gets 25% discount
-  const regionMultiplier = isRegionA ? 1.0 : 0.75;
-  const ebsHourly = (ebsSize * 0.08) / 720.0;
-  const totalHourly = (baseHourly * regionMultiplier) + ebsHourly;
-  const totalMonthly = totalHourly * 720.0;
+  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk`;
 
   const sumReg = document.getElementById('sumRegionText');
   const sumOs = document.getElementById('sumOsText');
   const sumSpecs = document.getElementById('sumSpecsText');
-  const sumHour = document.getElementById('sumCostHour');
-  const sumMonth = document.getElementById('sumCostMonth');
 
   if (sumReg) sumReg.textContent = regionLabel;
   if (sumOs) sumOs.textContent = osLabel;
   if (sumSpecs) sumSpecs.textContent = specsText;
-  if (sumHour) sumHour.textContent = `$${totalHourly.toFixed(3)}`;
-  if (sumMonth) sumMonth.textContent = `~$${totalMonthly.toFixed(2)} / month`;
 
   // Highlight selected row in specification matrix table
   const allRows = ['row-m1-tiny', 'row-m1-small', 'row-m1-medium', 'row-m1-large', 'row-m1-xlarge', 'row-h1-medium', 'row-h1-large', 'row-h1-xlarge'];
