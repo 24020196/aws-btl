@@ -102,50 +102,40 @@ function logout() {
 }
 
 // TAB 1: COMPUTE
+let cachedInstances = [];
+
 async function loadInstances() {
   try {
     const instances = await apiRequest('/instances');
-    const tbody = document.getElementById('instanceTableBody');
+    cachedInstances = instances || [];
     const select = document.getElementById('scInstanceSelect');
     const metricSelect = document.getElementById('metricVmSelect');
-    
-    tbody.innerHTML = '';
+
     if (select) select.innerHTML = '';
     if (metricSelect) metricSelect.innerHTML = '';
 
-    if (!instances || instances.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Chưa có máy ảo nào. Bấm "Launch Instance" để tạo máy ảo mới.</td></tr>';
-      return;
-    }
+    // Update 4 Summary Cards (Hình 2.2)
+    const total = cachedInstances.length;
+    const running = cachedInstances.filter(i => i.status === 'ACTIVE').length;
+    const stopped = cachedInstances.filter(i => i.status === 'SHUTOFF').length;
+    const migrating = cachedInstances.filter(i => i.status === 'MIGRATING').length;
+    const regionACount = cachedInstances.filter(i => (i.region || '').includes('southeast')).length;
 
-    instances.forEach(inst => {
-      const badgeClass = inst.status === 'ACTIVE' ? 'badge-active' :
-                         inst.status === 'MIGRATING' ? 'badge-migrating' :
-                         inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error';
+    const elTotal = document.getElementById('statTotalInstances');
+    const elRegA = document.getElementById('statRegionACount');
+    const elRun = document.getElementById('statRunningInstances');
+    const elStop = document.getElementById('statStoppedInstances');
+    const elMig = document.getElementById('statMigratingInstances');
+    const elBadge = document.getElementById('instanceCountBadge');
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-family:monospace; color:var(--accent-cyan); font-weight:700;">${inst.id}</td>
-        <td><strong>${inst.name}</strong></td>
-        <td>${inst.regionName || inst.region}</td>
-        <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
-        <td><code>${inst.privateIp}</code></td>
-        <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
-        <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
-        <td><span class="badge ${badgeClass}">${inst.status}</span></td>
-        <td>
-          <div style="display:flex; gap:4px;">
-            ${inst.status === 'ACTIVE' 
-              ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">Dừng</button>` 
-              : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">Bật</button>`}
-            <button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'REBOOT')">Reboot</button>
-            <button class="btn btn-primary btn-sm" onclick="triggerDirectMigration('${inst.id}')">Di Trú</button>
-            <button class="btn btn-danger btn-sm" onclick="instanceAction('${inst.id}', 'TERMINATE')">Xóa</button>
-          </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
+    if (elTotal) elTotal.textContent = total;
+    if (elRegA) elRegA.textContent = `${regionACount} in Region A`;
+    if (elRun) elRun.textContent = running;
+    if (elStop) elStop.textContent = stopped;
+    if (elMig) elMig.textContent = migrating;
+    if (elBadge) elBadge.textContent = `(${total})`;
 
+    cachedInstances.forEach(inst => {
       if (select) {
         select.innerHTML += `<option value="${inst.id}">${inst.name} (${inst.id}) - ${inst.region}</option>`;
       }
@@ -154,9 +144,116 @@ async function loadInstances() {
       }
     });
 
+    filterInstancesUI();
   } catch (err) {
     console.error('Failed to load instances:', err);
   }
+}
+
+function filterInstancesUI() {
+  const tbody = document.getElementById('instanceTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const q = (document.getElementById('instanceSearchInput')?.value || '').trim().toLowerCase();
+  const statusFilter = document.getElementById('instanceStatusFilter')?.value || 'ALL';
+
+  const filtered = cachedInstances.filter(inst => {
+    const matchText = !q || (inst.name || '').toLowerCase().includes(q) || (inst.id || '').toLowerCase().includes(q);
+    const matchStatus = statusFilter === 'ALL' || inst.status === statusFilter;
+    return matchText && matchStatus;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Chưa có máy ảo nào khớp bộ lọc. Bấm "+ Launch Instance" để tạo máy ảo mới.</td></tr>';
+    return;
+  }
+
+  filtered.forEach(inst => {
+    const badgeClass = inst.status === 'ACTIVE' ? 'badge-active' :
+                       inst.status === 'MIGRATING' ? 'badge-migrating' :
+                       inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:monospace; color:var(--accent-cyan); font-weight:700;">${inst.id}</td>
+      <td><strong>${inst.name}</strong></td>
+      <td>${inst.regionName || inst.region}</td>
+      <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
+      <td><code>${inst.privateIp}</code></td>
+      <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
+      <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
+      <td><span class="badge ${badgeClass}">${inst.status}</span></td>
+      <td>
+        <div style="display:flex; gap:4px;">
+          ${inst.status === 'ACTIVE' 
+            ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">Dừng</button>` 
+            : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">Bật</button>`}
+          <button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'REBOOT')">Reboot</button>
+          <button class="btn btn-primary btn-sm" onclick="triggerDirectMigration('${inst.id}')">⚡ Fast Migrate</button>
+          <button class="btn btn-danger btn-sm" onclick="instanceAction('${inst.id}', 'TERMINATE')">Xóa</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openLaunchModal() {
+  openModal('launchModal');
+  updateLaunchSummary();
+}
+
+function updateLaunchSummary() {
+  const regionEl = document.getElementById('instRegion');
+  const imageEl = document.getElementById('instImage');
+  const flavorEl = document.getElementById('instFlavor');
+  const ebsEl = document.getElementById('instEbsSize');
+
+  if (!regionEl || !imageEl || !flavorEl || !ebsEl) return;
+
+  const region = regionEl.value;
+  const isRegionA = region.includes('southeast');
+  const regionLabel = isRegionA ? 'Region A (Singapore / Sydney)' : 'Region B (N. Virginia)';
+
+  const osMap = {
+    'img-u22': 'Ubuntu Server 22.04 LTS',
+    'img-deb12': 'Debian 12 Bookworm',
+    'img-rocky9': 'Rocky Linux 9',
+    'img-alp319': 'Alpine Linux 3.19 Minimal'
+  };
+  const osLabel = osMap[imageEl.value] || 'Ubuntu Server 22.04 LTS';
+
+  const flavorVal = flavorEl.value;
+  const ebsSize = parseInt(ebsEl.value) || 50;
+
+  let specsText = `2 vCPU, 4 GB RAM, ${ebsSize} GB EBS SSD`;
+  let baseHourly = 0.08;
+  if (flavorVal === 'm1.small') {
+    specsText = `1 vCPU, 2 GB RAM, ${ebsSize} GB EBS SSD`;
+    baseHourly = 0.04;
+  } else if (flavorVal === 'c5.large') {
+    specsText = `4 vCPU, 8 GB RAM, ${ebsSize} GB EBS SSD`;
+    baseHourly = 0.16;
+  }
+
+  // Adjust by region factor (Region B N. Virginia is ~25% cheaper)
+  const regionMultiplier = isRegionA ? 1.0 : 0.75;
+  const ebsHourly = (ebsSize * 0.08) / 720.0;
+  const totalHourly = (baseHourly * regionMultiplier) + ebsHourly;
+  const totalMonthly = totalHourly * 720.0;
+
+  const sumReg = document.getElementById('sumRegionText');
+  const sumOs = document.getElementById('sumOsText');
+  const sumSpecs = document.getElementById('sumSpecsText');
+  const sumHour = document.getElementById('sumCostHour');
+  const sumMonth = document.getElementById('sumCostMonth');
+
+  if (sumReg) sumReg.textContent = regionLabel;
+  if (sumOs) sumOs.textContent = osLabel;
+  if (sumSpecs) sumSpecs.textContent = specsText;
+  if (sumHour) sumHour.textContent = `$${totalHourly.toFixed(3)}`;
+  if (sumMonth) sumMonth.textContent = `~$${totalMonthly.toFixed(2)} / month`;
 }
 
 async function instanceAction(id, action) {

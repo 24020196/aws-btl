@@ -82,28 +82,68 @@
 
     <!-- TAB 1: COMPUTE -->
     <div id="tab-compute" class="tab-pane active">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>Danh sách Máy ảo NovaVM / EC2 Đa vùng</span>
+      <!-- 4 Summary Cards (Hình 2.2) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+        <div class="card" style="margin-bottom: 0; padding: 16px;">
+          <div style="font-size: 12px; color: var(--text-muted);">Total Instances</div>
+          <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 8px;">
+            <span id="statTotalInstances" style="font-size: 28px; font-weight: 800;">0</span>
+            <span id="statRegionACount" style="font-size: 12px; color: var(--text-muted);">0 in Region A</span>
           </div>
-          <div>
-            <button class="btn btn-secondary btn-sm" onclick="loadInstances()">Làm mới</button>
-            <button class="btn btn-primary" onclick="openModal('launchModal')">+ Khởi tạo máy ảo (Launch Instance)</button>
+        </div>
+        <div class="card" style="margin-bottom: 0; padding: 16px;">
+          <div style="font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+            Running
+          </div>
+          <div id="statRunningInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
+        </div>
+        <div class="card" style="margin-bottom: 0; padding: 16px;">
+          <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
+            Stopped
+          </div>
+          <div id="statStoppedInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
+        </div>
+        <div class="card" style="margin-bottom: 0; padding: 16px;">
+          <div style="font-size: 12px; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+            Migrating
+          </div>
+          <div id="statMigratingInstances" style="font-size: 28px; font-weight: 800; margin-top: 8px;">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div class="card-title">
+            <span>Instances</span>
+            <span id="instanceCountBadge" class="badge" style="background: #1e293b; color: #38bdf8;">(0)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <input type="text" class="form-input" id="instanceSearchInput" placeholder="Tìm theo tên hoặc ID..." style="width: 210px; padding: 6px 12px;" oninput="filterInstancesUI()">
+            <select class="form-select" id="instanceStatusFilter" style="width: 150px; padding: 6px 10px;" onchange="filterInstancesUI()">
+              <option value="ALL">All statuses</option>
+              <option value="ACTIVE">Running (ACTIVE)</option>
+              <option value="SHUTOFF">Stopped (SHUTOFF)</option>
+              <option value="MIGRATING">Migrating</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="padding: 7px 12px;">Làm mới</button>
+            <button class="btn btn-primary" onclick="openLaunchModal()">+ Launch Instance</button>
           </div>
         </div>
         <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Tên Máy Ảo</th>
-              <th>Vùng Triển Khai</th>
-              <th>Cấu hình (Flavor)</th>
-              <th>IP Nội Bộ</th>
-              <th>Public / Elastic IP</th>
-              <th>DNS Domain</th>
-              <th>Trạng Thái</th>
-              <th>Hành Động</th>
+              <th>INSTANCE ID</th>
+              <th>NAME</th>
+              <th>CURRENT REGION</th>
+              <th>FLAVOR</th>
+              <th>PRIVATE IP</th>
+              <th>PUBLIC / ELASTIC IP</th>
+              <th>DNS DOMAIN</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
             </tr>
           </thead>
           <tbody id="instanceTableBody">
@@ -319,53 +359,96 @@
 
   </main>
 
-  <!-- MODAL: LAUNCH INSTANCE -->
+  <!-- MODAL: LAUNCH INSTANCE (Hình 2.3 - 2 Columns with Instance Summary) -->
   <div class="modal-overlay" id="launchModal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
       <div class="card-header">
-        <div class="card-title">Khởi Tạo Máy Ảo Mới (Launch NovaVM)</div>
+        <div class="card-title">Launch New Instance (Khởi Tạo Máy Ảo Mới)</div>
         <button class="btn btn-secondary btn-sm" onclick="closeModal('launchModal')">✕</button>
       </div>
       <form id="launchForm" onsubmit="submitLaunch(event)">
-        <div class="form-group">
-          <label class="form-label">Tên Máy Ảo</label>
-          <input type="text" class="form-input" id="instName" required placeholder="nova-prod-app01">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Vùng Triển Khai (Region)</label>
-          <select class="form-select" id="instRegion" required>
-            <option value="ap-southeast-2">ap-southeast-2 (Sydney - Region A)</option>
-            <option value="us-east-1">us-east-1 (N. Virginia - Region B)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Cấu Hình (Flavor)</label>
-          <select class="form-select" id="instFlavor">
-            <option value="m1.small">m1.small (1 vCPU, 2GB RAM)</option>
-            <option value="m1.medium" selected>m1.medium (2 vCPU, 4GB RAM)</option>
-            <option value="c5.large">c5.large (2 vCPU, 8GB RAM, High-Compute)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ảnh Hệ Điều Hành (OS Image)</label>
-          <select class="form-select" id="instImage">
-            <option value="img-u22">Ubuntu 22.04 LTS Cloud</option>
-            <option value="img-deb12">Debian 12 Bookworm</option>
-            <option value="img-rocky9">Rocky Linux 9</option>
-            <option value="img-alp319">Alpine Linux 3.19 Micro-VM</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Dung Lượng EBS Root Volume (gp3, GB)</label>
-          <input type="number" class="form-input" id="instEbsSize" value="50" min="10" max="500">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Tên Miền Route 53 (Optional)</label>
-          <input type="text" class="form-input" id="instDomain" placeholder="app01.xregion.net">
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('launchModal')">Hủy</button>
-          <button type="submit" class="btn btn-primary">Xác Nhận Khởi Tạo</button>
+        <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; align-items: start;">
+          <!-- Left Column: Configuration -->
+          <div>
+            <div class="form-group">
+              <label class="form-label">1. Tên Máy Ảo (Instance Name)</label>
+              <input type="text" class="form-input" id="instName" required placeholder="vm-prod-01" oninput="updateLaunchSummary()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">2. Vùng Triển Khai Ban Đầu (Initial Region Selection)</label>
+              <select class="form-select" id="instRegion" required onchange="updateLaunchSummary()">
+                <option value="ap-southeast-2">Region A — Singapore / Sydney (ap-southeast-2) • $0.08/hr</option>
+                <option value="us-east-1">Region B — N. Virginia (us-east-1) • $0.05/hr</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">3. Hệ Điều Hành (Application and OS Images)</label>
+              <select class="form-select" id="instImage" onchange="updateLaunchSummary()">
+                <option value="img-u22">Ubuntu Server 22.04 LTS (64-bit x86)</option>
+                <option value="img-deb12">Debian 12 Bookworm</option>
+                <option value="img-rocky9">Rocky Linux 9</option>
+                <option value="img-alp319">Alpine Linux 3.19 Minimal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">4. Cấu Hình Phần Cứng (Instance Specification / Flavor)</label>
+              <select class="form-select" id="instFlavor" onchange="updateLaunchSummary()">
+                <option value="m1.small">t3.small / m1.small (1 vCPU, 2 GB RAM) — $0.040/hr</option>
+                <option value="m1.medium" selected>t3.medium / m1.medium (2 vCPU, 4 GB RAM) — $0.080/hr</option>
+                <option value="c5.large">t3.large / c5.large (4 vCPU, 8 GB RAM) — $0.160/hr</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">5. Ổ Đĩa Lưu Trữ (Block Storage EBS gp3 - GB)</label>
+              <input type="number" class="form-input" id="instEbsSize" value="50" min="10" max="1000" oninput="updateLaunchSummary()">
+              <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                <span class="badge" style="background: #1e293b; color: #38bdf8;">gp3 SSD</span>
+                <span class="badge" style="background: #1e293b; color: #94a3b8;">3,000 IOPS</span>
+                <span class="badge" style="background: #1e293b; color: #94a3b8;">125 MB/s</span>
+                <span class="badge" style="background: #1e293b; color: #34d399;">Encrypted AES-256</span>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên Miền DNS Tự Động (Tùy chọn - Để trống hệ thống tự tạo)</label>
+              <input type="text" class="form-input" id="instDomain" placeholder="Tự động gắn: <instance-name>.xregion.net">
+            </div>
+          </div>
+
+          <!-- Right Column: Instance Summary (Hình 2.3) -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+              Instance Summary
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Selected Region</div>
+              <div id="sumRegionText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">Region A (ap-southeast-2)</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">OS Image</div>
+              <div id="sumOsText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">Ubuntu Server 22.04 LTS</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Specs</div>
+              <div id="sumSpecsText" style="font-size: 13px; font-weight: 600; margin-top: 2px;">2 vCPU, 4 GB RAM, 50 GB EBS SSD</div>
+            </div>
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Firewall & Network</div>
+              <div style="font-size: 13px; font-weight: 600; margin-top: 2px;">SSH (22), HTTP (80), HTTPS (443) + Auto DNS</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Estimated Running Cost</div>
+              <div style="font-size: 22px; font-weight: 800; color: #f8fafc; margin-top: 4px;">
+                <span id="sumCostHour">$0.080</span> <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">/ hour</span>
+              </div>
+              <div id="sumCostMonth" style="font-size: 12px; color: #fbbf24; margin-top: 2px;">~$57.60 / month</div>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; justify-content: center; background: #f59e0b; color: #0a0f1d; font-weight: 800; padding: 10px 16px; margin-bottom: 8px;">
+              🚀 Launch Compute Instance
+            </button>
+            <button type="button" class="btn btn-secondary" style="width: 100%; justify-content: center;" onclick="closeModal('launchModal')">
+              Cancel
+            </button>
+          </div>
         </div>
       </form>
     </div>
