@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="/css/dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
   <!-- Top Global Header -->
@@ -37,15 +39,31 @@
   <!-- Sub Navigation Bar -->
   <nav class="sub-nav">
     <a href="/index.html" class="sub-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
       Trang Chủ Overview
     </a>
     <a href="/instances.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <rect x="9" y="9" width="6" height="6" />
+        <line x1="9" y1="1" x2="9" y2="4" />
+        <line x1="15" y1="1" x2="15" y2="4" />
+        <line x1="9" y1="20" x2="9" y2="23" />
+        <line x1="15" y1="20" x2="15" y2="23" />
+      </svg>
       Danh Sách Máy Ảo (Instances)
     </a>
     <a href="/launch.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+      </svg>
       Khởi Tạo Máy Ảo (+ Launch VM)
     </a>
   </nav>
@@ -60,17 +78,20 @@
       <div>
         <h1 class="hero-title">Tổng Quan Hạ Tầng Điện Toán Đa Vùng</h1>
         <p class="hero-subtitle">
-          Quản lý vòng đời máy ảo NovaVM trên máy chủ Bare Metal, tự động sao chép ổ đĩa EBS gp3 và cắt chuyển định tuyến Route 53 DNS xuyên vùng không gián đoạn.
+          Quản lý vòng đời máy ảo NovaVM trên máy chủ Bare Metal, tự động sao chép ổ đĩa EBS gp3 và cắt chuyển định
+          tuyến Route 53 DNS xuyên vùng không gián đoạn.
         </p>
       </div>
       <div style="display: flex; gap: 12px; z-index: 1;">
-        <a href="/launch.html" class="btn btn-primary" style="padding: 10px 18px; font-weight: 700;">+ Launch Instance</a>
+        <a href="/launch.html" class="btn btn-primary" style="padding: 10px 18px; font-weight: 700;">+ Launch
+          Instance</a>
         <a href="/instances.html" class="btn btn-secondary" style="padding: 10px 18px;">Quản Lý Máy Ảo →</a>
       </div>
     </div>
 
     <!-- 4 Key Metric Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px;">
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px;">
       <div class="card" style="margin-bottom: 0; padding: 20px;">
         <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Total Compute Instances</div>
         <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 10px;">
@@ -121,7 +142,8 @@
           <div>• Control Plane: OpenStack Nova / Cinder on EC2 Bare Metal</div>
           <div>• Mạng ảo: VPC <code>10.0.0.0/16</code>, NAT Gateway 1:1 Elastic IP</div>
         </div>
-        <div style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div
+          style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 12px; color: var(--text-muted);">Máy ảo tại vùng:</span>
           <strong id="regionAInstanceCount" style="color: var(--accent-cyan); font-size: 15px;">--</strong>
         </div>
@@ -137,12 +159,14 @@
           <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">Low Cost Standby</span>
         </div>
         <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
-          <div>• Base Price: <strong style="color: #fff;">$0.05 / hour</strong> (~$36.00/month) • <span style="color: #34d399;">Rẻ hơn 25%</span></div>
+          <div>• Base Price: <strong style="color: #fff;">$0.05 / hour</strong> (~$36.00/month) • <span
+              style="color: #34d399;">Rẻ hơn 25%</span></div>
           <div>• Network Latency: <strong style="color: #fbbf24;">180 ms</strong> (Bắc Mỹ & Quốc tế)</div>
           <div>• Standby Target: Sẵn sàng nhận snapshot sao lưu xuyên vùng</div>
           <div>• Mạng ảo: VPC <code>10.1.0.0/16</code>, Auto Route 53 Cutover</div>
         </div>
-        <div style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div
+          style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 12px; color: var(--text-muted);">Máy ảo tại vùng:</span>
           <strong id="regionBInstanceCount" style="color: #fbbf24; font-size: 15px;">--</strong>
         </div>
@@ -171,7 +195,10 @@
           </tr>
         </thead>
         <tbody id="overviewInstanceTableBody">
-          <tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Đang tải dữ liệu máy ảo...</td></tr>
+          <tr>
+            <td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Đang tải dữ liệu máy
+              ảo...</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -192,7 +219,9 @@
           </tr>
         </thead>
         <tbody id="overviewAuditLogsBody">
-          <tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Đang tải nhật ký...</td></tr>
+          <tr>
+            <td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Đang tải nhật ký...</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -207,4 +236,5 @@
     });
   </script>
 </body>
+
 </html>

@@ -2,6 +2,7 @@ package com.iaas.xregion.Config;
 
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +37,9 @@ public class DynamoDbConfig {
 
     @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}")
     private String migrationsTableArn;
+
+    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}")
+    private String usersTableArn;
 
     @Value("${dynamodb.endpoint:}")
     private String endpoint;
@@ -110,5 +114,12 @@ public class DynamoDbConfig {
         String tableName = parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");
         log.info("Initialized DynamoDB table bean for migrations: {}", tableName);
         return enhancedClient.table(tableName, TableSchema.fromBean(MigrationEntity.class));
+    }
+
+    @Bean
+    public DynamoDbTable<UserEntity> usersTable(DynamoDbEnhancedClient enhancedClient) {
+        String tableName = parseTableNameFromArn(usersTableArn, "XRegion-Users");
+        log.info("Initialized DynamoDB table bean for users: {}", tableName);
+        return enhancedClient.table(tableName, TableSchema.fromBean(UserEntity.class));
     }
 }

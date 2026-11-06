@@ -5,14 +5,12 @@ import lombok.Data;
 
 @Data
 public class RegisterRequest {
-    @NotBlank(message = "Tên đăng nhập không được để trống")
+    @NotBlank(message = "Username cannot be empty")
     private String username;
 
-    @NotBlank(message = "Mật khẩu không được để trống")
+    @NotBlank(message = "Password cannot be empty")
     private String password;
 
     private String fullName;
-    private String email;
     private String role;
 }
-

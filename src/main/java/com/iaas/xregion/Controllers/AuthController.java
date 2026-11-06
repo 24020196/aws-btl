@@ -1,6 +1,7 @@
 package com.iaas.xregion.Controllers;
 
 import com.iaas.xregion.Model.Request.LoginRequest;
+import com.iaas.xregion.Model.Request.RegisterRequest;
 import com.iaas.xregion.Model.Response.ApiResponse;
 import com.iaas.xregion.Model.Response.JwtResponse;
 import com.iaas.xregion.Services.AuthService;
@@ -28,9 +29,9 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody com.iaas.xregion.Model.Request.RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.ok(ApiResponse.ok("Đăng ký tài khoản thành công!", null));
+    public ResponseEntity<ApiResponse<JwtResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        JwtResponse response = authService.register(request);
+        return ResponseEntity.ok(ApiResponse.ok("Register successful", response));
     }
 
     @GetMapping("/me")
@@ -51,4 +52,3 @@ public class AuthController {
         return ResponseEntity.ok(health);
     }
 }
-
