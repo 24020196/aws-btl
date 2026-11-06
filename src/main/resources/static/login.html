@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập - XRegion-EC2 Cloud Console</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo-badge">XREGION-EC2</div>
+      <h1 class="auth-title">Đăng Nhập Quản Trị</h1>
+      <p class="auth-desc">Nền tảng IaaS tự động chuyển vùng máy ảo (Multi-Region Cloud)</p>
+    </div>
+
+    <!-- On-screen Alert Box -->
+    <div id="loginErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 13px; line-height: 1.4;"></div>
+
+    <form id="authLoginForm" onsubmit="handleLoginPageSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Tên Đăng Nhập (Username)</label>
+        <input type="text" class="form-input" id="authUsername" value="admin" required placeholder="admin" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mật Khẩu (Password)</label>
+        <input type="password" class="form-input" id="authPassword" value="admin123" required placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 12px; color: var(--text-muted);">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <input type="checkbox" id="rememberMe" checked> Ghi nhớ đăng nhập
+        </label>
+        <span style="color: var(--accent-cyan); font-family: monospace;">Mặc định: admin / admin123</span>
+      </div>
+
+      <button type="submit" id="loginBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 14px;">
+        Đăng Nhập vào Console
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <div>Chưa có tài khoản quản trị? <a href="/register.html">Đăng ký tài khoản mới</a></div>
+      <div style="margin-top: 10px;"><a href="/index.html" style="color: var(--text-muted); font-size: 12px;">← Quay về Trang chủ Overview</a></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    async function handleLoginPageSubmit(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('loginErrorBox');
+      errBox.style.display = 'none';
+
+      const btn = document.getElementById('loginBtn');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Đang xác thực...';
+
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.data && data.data.token) {
+          localStorage.setItem('xregion_jwt', data.data.token);
+          localStorage.setItem('xregion_user', data.data.fullName || username);
+          showToast('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+          setTimeout(() => {
+            window.location.href = '/instances.html';
+          }, 600);
+        } else {
+          throw new Error(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+        }
+      } catch (err) {
+        errBox.innerHTML = `<strong>❌ Lỗi đăng nhập:</strong> ${err.message}`;
+        errBox.style.display = 'block';
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+  </script>
+</body>
+</html>
+

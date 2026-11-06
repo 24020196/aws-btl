@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Máy Ảo (Instances) - XRegion-EC2</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Sydney (ap-southeast-2): Healthy</span>
+      </div>
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>N. Virginia (us-east-1): Standby</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <div class="breadcrumb">
+      <a href="/index.html">XRegion-EC2</a>
+      <span>/</span>
+      <span>Compute Instances</span>
+    </div>
+
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <!-- 4 Summary Status Cards (Hình 2.2 chuẩn) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+      <div class="card" style="margin-bottom: 0; padding: 18px;">
+        <div style="font-size: 12px; color: var(--text-muted);">Total Instances</div>
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 8px;">
+          <span id="statTotalInstances" style="font-size: 30px; font-weight: 800; color: #fff;">0</span>
+          <span id="statRegionACount" style="font-size: 12px; color: var(--text-muted);">0 in Region A</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 0; padding: 18px;">
+        <div style="font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+          Running
+        </div>
+        <div id="statRunningInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #34d399;">0</div>
+      </div>
+
+      <div class="card" style="margin-bottom: 0; padding: 18px;">
+        <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
+          Stopped
+        </div>
+        <div id="statStoppedInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #94a3b8;">0</div>
+      </div>
+
+      <div class="card" style="margin-bottom: 0; padding: 18px;">
+        <div style="font-size: 12px; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+          Migrating
+        </div>
+        <div id="statMigratingInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #fbbf24;">0</div>
+      </div>
+    </div>
+
+    <!-- Instances Table Card (Hình 2.2) -->
+    <div class="card">
+      <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+        <div class="card-title">
+          <span>Instances</span>
+          <span id="instanceCountBadge" class="badge" style="background: #1e293b; color: #38bdf8;">(0)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <input type="text" class="form-input" id="instanceSearchInput" placeholder="Tìm theo tên hoặc ID..." style="width: 220px; padding: 7px 12px;" oninput="filterInstancesUI()">
+          
+          <select class="form-select" id="instanceStatusFilter" style="width: 150px; padding: 7px 10px;" onchange="filterInstancesUI()">
+            <option value="ALL">All statuses</option>
+            <option value="ACTIVE">Running (ACTIVE)</option>
+            <option value="SHUTOFF">Stopped (SHUTOFF)</option>
+            <option value="MIGRATING">Migrating</option>
+          </select>
+
+          <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="padding: 8px 14px;">Làm mới</button>
+          <a href="/launch.html" class="btn btn-primary" style="padding: 8px 16px; font-weight: 700;">+ Launch Instance</a>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>INSTANCE ID</th>
+            <th>TÊN MÁY ẢO</th>
+            <th>VÙNG HIỆN TẠI</th>
+            <th>FLAVOR</th>
+            <th>IP NỘI BỘ</th>
+            <th>PUBLIC / ELASTIC IP</th>
+            <th>DNS DOMAIN</th>
+            <th>TRẠNG THÁI</th>
+            <th>THAO TÁC</th>
+          </tr>
+        </thead>
+        <tbody id="instanceTableBody">
+          <tr><td colspan="9" style="text-align:center; padding: 30px; color: var(--text-muted);">Đang tải danh sách máy ảo...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initInstancesPage();
+    });
+  </script>
+</body>
+</html>
+

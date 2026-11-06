@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi Tiết Máy Ảo - XRegion-EC2</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Sydney (ap-southeast-2): Healthy</span>
+      </div>
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>N. Virginia (us-east-1): Standby</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer"></div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <div class="breadcrumb">
+      <a href="/index.html">XRegion-EC2</a>
+      <span>/</span>
+      <a href="/instances.html">Instances</a>
+      <span>/</span>
+      <span id="breadcrumbInstanceId" style="color: var(--accent-cyan); font-family: monospace;">Loading...</span>
+    </div>
+
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <!-- Detail Header & Lifecycle Actions Toolbar -->
+    <div class="detail-header">
+      <div class="detail-info">
+        <div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h1 class="detail-title" id="detInstanceName">Đang tải...</h1>
+            <span class="badge" id="detStatusBadge" style="font-size: 13px; padding: 4px 10px;">UNKNOWN</span>
+          </div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 14px; font-family: monospace;">
+            <span>ID: <strong id="detInstanceId" style="color: var(--accent-cyan);">--</strong></span>
+            <span>•</span>
+            <span>Region: <strong id="detRegionName" style="color: #fff;">--</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Toolbar -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="detailActionButtons">
+        <!-- Injected by JS: Start/Stop, Reboot, Fast Migrate, Console, Terminate -->
+      </div>
+    </div>
+
+    <!-- Detail 4 Grid Cards -->
+    <div class="detail-grid">
+      <!-- Card 1: Hardware & OS -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">Cấu Hình Phần Cứng & Hệ Điều Hành</div>
+        </div>
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Flavor Cấu Hình:</td>
+            <td class="kv-value"><span class="badge" id="detFlavor" style="background: #1e293b; color: var(--accent-cyan);">--</span></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Hệ Điều Hành (OS):</td>
+            <td class="kv-value" id="detImageName">--</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Mã Glance Image ID:</td>
+            <td class="kv-value"><code>img-u22</code></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Kiến Trúc Nhân:</td>
+            <td class="kv-value">64-bit x86 (KVM Hypervisor on Bare Metal)</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Khóa Chống Xung Đột:</td>
+            <td class="kv-value" id="detLockStatus">Không bị khóa (Unlocked)</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Card 2: Network & DNS -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">Mạng & Định Tuyến Tự Động (Route 53)</div>
+        </div>
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Vùng Đám Mây:</td>
+            <td class="kv-value" id="detRegionCode">--</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Địa Chỉ IP Nội Bộ:</td>
+            <td class="kv-value"><code id="detPrivateIp">--</code></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Địa Chỉ Elastic IP (Public):</td>
+            <td class="kv-value"><code id="detPublicIp" style="color: var(--accent-cyan);">--</code></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Bản Ghi Route 53 DNS:</td>
+            <td class="kv-value"><strong id="detDnsDomain" style="color: #38bdf8;">--</strong> (TTL = 60s)</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Security Group Tường Lửa:</td>
+            <td class="kv-value">sg-default (Inbound: 22 SSH, 80 HTTP, 443 HTTPS)</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Card 3: Storage EBS gp3 -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">Ổ Đĩa Khối Đính Kèm (Block Storage)</div>
+        </div>
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Mã Ổ Đĩa Root EBS:</td>
+            <td class="kv-value"><code id="detEbsVolumeId">vol-ebs-root-default</code></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Loại Ổ Đĩa (Volume Type):</td>
+            <td class="kv-value"><span class="badge" style="background: #1e293b; color: #34d399;">gp3 SSD</span></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Dung Lượng Root Disk:</td>
+            <td class="kv-value"><strong id="detRootDiskSize">10 GB</strong> (gp3 Root Volume)</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Card 4: Migration & Auto-Rollback Status -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div class="card-title">Lịch Sử Di Trú & Tính Sẵn Sàng (X-Region)</div>
+        </div>
+        <table class="kv-table">
+          <tr>
+            <td class="kv-label">Trạng Thái Di Trú:</td>
+            <td class="kv-value"><span class="badge badge-active">Sẵn Sàng Chuyển Vùng</span></td>
+          </tr>
+          <tr>
+            <td class="kv-label">Cơ Chế Sao Chép:</td>
+            <td class="kv-value">Incremental Snapshot (Pha 1 Base + Pha 2 Delta)</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Cơ Chế Phục Hồi:</td>
+            <td class="kv-value" style="color: #34d399;">Auto-Rollback kích hoạt khi lỗi</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Thời Điểm Cập Nhật:</td>
+            <td class="kv-value" id="detUpdatedAt">--</td>
+          </tr>
+          <tr>
+            <td class="kv-label">Console Web VNC:</td>
+            <td class="kv-value"><a href="#" id="detConsoleLink" target="_blank" style="color: var(--accent-cyan);">Mở Web Terminal Console →</a></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initDetailPage();
+    });
+  </script>
+</body>
+</html>
+

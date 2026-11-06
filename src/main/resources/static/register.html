@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký - XRegion-EC2 Cloud Console</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card" style="max-width: 480px;">
+    <div class="auth-header">
+      <div class="auth-logo-badge">XREGION-EC2</div>
+      <h1 class="auth-title">Đăng Ký Tài Khoản</h1>
+      <p class="auth-desc">Tạo tài khoản quản trị viên điều khiển hạ tầng đám mây</p>
+    </div>
+
+    <!-- On-screen Alert Box -->
+    <div id="registerErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 13px; line-height: 1.4;"></div>
+
+    <form id="authRegisterForm" onsubmit="handleRegisterPageSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Họ và Tên (Full Name)</label>
+        <input type="text" class="form-input" id="regFullName" required placeholder="Nguyễn Văn A">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tên Đăng Nhập (Username) *</label>
+        <input type="text" class="form-input" id="regUsername" required placeholder="devops_user" autocomplete="username">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label">Mật Khẩu *</label>
+          <input type="password" class="form-input" id="regPassword" required placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Xác Nhận Mật Khẩu *</label>
+          <input type="password" class="form-input" id="regConfirmPassword" required placeholder="••••••••" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Vai Trò Phân Quyền (Role)</label>
+        <select class="form-select" id="regRole">
+          <option value="ROLE_ADMIN">Compute Administrator (Toàn quyền)</option>
+          <option value="ROLE_USER">DevOps Engineer</option>
+        </select>
+      </div>
+
+      <button type="submit" id="regBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 14px; margin-top: 8px;">
+        Tạo Tài Khoản
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <div>Đã có tài khoản? <a href="/login.html">Đăng nhập ngay</a></div>
+      <div style="margin-top: 10px;"><a href="/index.html" style="color: var(--text-muted); font-size: 12px;">← Quay về Trang chủ Overview</a></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    async function handleRegisterPageSubmit(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('registerErrorBox');
+      errBox.style.display = 'none';
+
+      const pass = document.getElementById('regPassword').value;
+      const confirmPass = document.getElementById('regConfirmPassword').value;
+      if (pass !== confirmPass) {
+        errBox.innerHTML = '<strong>❌ Lỗi:</strong> Mật khẩu xác nhận không trùng khớp!';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      const btn = document.getElementById('regBtn');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Đang đăng ký...';
+
+      const payload = {
+        fullName: document.getElementById('regFullName').value.trim(),
+        username: document.getElementById('regUsername').value.trim(),
+        password: pass,
+        role: document.getElementById('regRole').value
+      };
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showToast('Đăng ký tài khoản thành công! Đang chuyển sang trang Đăng nhập...', 'success');
+          setTimeout(() => {
+            window.location.href = '/login.html';
+          }, 1000);
+        } else {
+          throw new Error(data.message || 'Đăng ký không thành công.');
+        }
+      } catch (err) {
+        errBox.innerHTML = `<strong>❌ Lỗi đăng ký:</strong> ${err.message}`;
+        errBox.style.display = 'block';
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+  </script>
+</body>
+</html>
+

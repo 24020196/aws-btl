@@ -8,6 +8,9 @@ spring:
     name: xregion
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:cloud}
+  devtools:
+    restart:
+      enabled: false
   main:
     banner-mode: console
 

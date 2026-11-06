@@ -2,6 +2,7 @@ package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
+import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
@@ -33,12 +34,18 @@ public class InstanceService {
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to scan instances from AWS DynamoDB: {}", e.getMessage());
-            return Collections.emptyList();
+            throw new AppException("Lỗi kết nối AWS DynamoDB khi đọc danh sách máy ảo: " + e.getMessage());
         }
     }
 
     public InstanceResponse getInstanceById(String id) {
-        InstanceEntity entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
+        }
         if (entity == null) {
             throw new ResourceNotFoundException("Instance not found in AWS DynamoDB: " + id);
         }
@@ -50,7 +57,8 @@ public class InstanceService {
         long now = System.currentTimeMillis();
 
         String region = request.getRegion();
-        String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150)) : "10.1.1." + (100 + new Random().nextInt(150));
+        String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
+                : "10.1.1." + (100 + new Random().nextInt(150));
         String elasticIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
 
         InstanceEntity entity = InstanceEntity.builder()
@@ -67,15 +75,28 @@ public class InstanceService {
                 .lastMigrationTimestamp(now)
                 .build();
 
-        instancesTable.putItem(entity);
-        auditLogService.logAction("LAUNCH_VM", "INSTANCE", id, 
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to put instance into AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
+        }
+
+        auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
 
         return mapToResponse(entity);
     }
 
     public InstanceResponse executeAction(String id, InstanceActionRequest request) {
-        InstanceEntity entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
+        }
+
         if (entity == null) {
             throw new ResourceNotFoundException("Instance not found: " + id);
         }
@@ -96,21 +117,36 @@ public class InstanceService {
                     @Override
                     public void run() {
                         entity.setCurrentStatus("RUNNING");
-                        instancesTable.putItem(entity);
+                        try {
+                            instancesTable.putItem(entity);
+                        } catch (Exception e) {
+                            log.error("Failed to update reboot status in DynamoDB: {}", e.getMessage());
+                        }
                     }
                 }, 3000);
                 break;
             case "TERMINATE":
             case "DELETE":
-                instancesTable.deleteItem(Key.builder().partitionValue(id).build());
+                try {
+                    instancesTable.deleteItem(Key.builder().partitionValue(id).build());
+                } catch (Exception e) {
+                    log.error("Failed to delete instance from AWS DynamoDB: {}", e.getMessage());
+                    throw new AppException("Lỗi xóa máy ảo trên AWS DynamoDB: " + e.getMessage());
+                }
                 auditLogService.logAction("TERMINATE_VM", "INSTANCE", id, "Terminated instance " + id);
                 return mapToResponse(entity);
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
         }
 
-        instancesTable.putItem(entity);
-        auditLogService.logAction(action + "_VM", "INSTANCE", id, 
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to update instance on AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi cập nhật trạng thái máy ảo trên AWS DynamoDB: " + e.getMessage());
+        }
+
+        auditLogService.logAction(action + "_VM", "INSTANCE", id,
                 "Changed status from " + currentStatus + " to " + entity.getCurrentStatus());
 
         return mapToResponse(entity);
@@ -124,14 +160,15 @@ public class InstanceService {
         String uiStatus = "ACTIVE";
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "MIGRATING";
-        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus()) || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
+        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "SHUTOFF";
         } else if ("REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())) {
             uiStatus = "REBOOTING";
         }
 
-        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0 
-                ? entity.getLastMigrationTimestamp() 
+        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0
+                ? entity.getLastMigrationTimestamp()
                 : System.currentTimeMillis();
 
         return InstanceResponse.builder()
@@ -139,11 +176,12 @@ public class InstanceService {
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)
                 .regionName(regionType.getDisplayName())
-                .flavor(entity.getFlavor() != null ? entity.getFlavor() : "2 vCPU / 4 GB RAM")
+                .flavor(entity.getFlavor() != null ? entity.getFlavor() : "m1.medium")
                 .status(uiStatus)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
-                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net")
+                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net"
+                        : "app.xregion.net")
                 .imageId("img-u22")
                 .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())

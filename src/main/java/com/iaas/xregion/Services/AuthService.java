@@ -31,8 +31,7 @@ public class AuthService {
     public JwtResponse login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String token = tokenProvider.generateToken(authentication);
@@ -85,8 +84,7 @@ public class AuthService {
         auditLogService.logAction("REGISTER", "USER", username, "Registered new user account in XRegion-Users");
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(username, request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = tokenProvider.generateToken(authentication);
 
@@ -100,4 +98,3 @@ public class AuthService {
                 .build();
     }
 }
-
