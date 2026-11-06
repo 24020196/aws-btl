@@ -90,6 +90,14 @@
 
       <main class="content">
         <div class="demo-banner" id="demoBanner" hidden><svg class="icon icon-sm"><use href="#i-info"/></svg><span>Bản xem trước giao diện, dữ liệu là mẫu và không kết nối tới hạ tầng thật.</span></div>
+        <div class="api-banner" id="apiBanner" role="alert" hidden>
+          <svg class="icon"><use href="#i-alert"/></svg>
+          <div>
+            <div class="api-banner-title" id="apiBannerTitle">Không gọi được máy chủ</div>
+            <div class="api-banner-msg" id="apiBannerMsg"></div>
+          </div>
+          <button class="btn btn-sm" onclick="retryCurrentTab()">Thử lại</button>
+        </div>
 
         <!-- PAGE: COMPUTE -->
         <section class="page" id="tab-compute">
@@ -155,6 +163,156 @@
                   </tr>
                 </thead>
                 <tbody id="instanceTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: LAUNCH (layout adapted from anhtd/ui launch.html) -->
+        <section class="page" id="tab-launch">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Tạo máy ảo</h1>
+              <p class="page-desc">Máy ảo được tạo trên EC2 Bare Metal ở vùng bạn chọn, kèm một ổ EBS gp3 riêng để sau này có thể chuyển sang vùng còn lại.</p>
+            </div>
+          </div>
+
+          <form class="launch-page" id="launchForm" onsubmit="submitLaunch(event)">
+            <div class="launch-steps">
+              <section class="panel step">
+                <div class="panel-head"><div class="panel-title"><span class="step-no">1</span>Tên máy ảo</div></div>
+                <div class="panel-body">
+                  <label class="field">
+                    <span class="field-label">Tên máy ảo</span>
+                    <input type="text" class="input" id="instName" required placeholder="web-prod-01" pattern="[A-Za-z0-9][A-Za-z0-9-]*" title="Chỉ dùng chữ, số và dấu gạch ngang" oninput="updateLaunchSummary()">
+                    <span class="field-hint">Chỉ dùng chữ, số và dấu gạch ngang. Tên này cũng là tên miền mặc định.</span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="panel step">
+                <div class="panel-head"><div class="panel-title"><span class="step-no">2</span>Vùng ban đầu</div></div>
+                <div class="panel-body"><div class="choice-group" id="instRegionGroup"></div></div>
+              </section>
+
+              <section class="panel step">
+                <div class="panel-head"><div class="panel-title"><span class="step-no">3</span>Hệ điều hành</div></div>
+                <div class="panel-body"><div class="os-grid" id="instImageGroup"></div></div>
+              </section>
+
+              <section class="panel step">
+                <div class="panel-head">
+                  <div class="panel-title"><span class="step-no">4</span>Cấu hình (flavor)</div>
+                  <div class="segmented" id="flavorSeries" role="group" aria-label="Dòng flavor">
+                    <button type="button" class="active" data-value="m1">Tiêu chuẩn m1</button>
+                    <button type="button" data-value="h1">Hiệu năng cao h1</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table class="table flavor-table">
+                    <thead><tr><th></th><th>Flavor</th><th class="num">vCPU</th><th class="num">RAM</th><th class="num">Giá ước tính</th></tr></thead>
+                    <tbody id="flavorTableBody"></tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="panel step">
+                <div class="panel-head"><div class="panel-title"><span class="step-no">5</span>Ổ đĩa và tên miền</div></div>
+                <div class="panel-body fields">
+                  <div class="field-row">
+                    <label class="field">
+                      <span class="field-label">Ổ đĩa EBS gp3 (GB)</span>
+                      <input type="number" class="input" id="instEbsSize" value="10" min="10" max="1000" oninput="updateLaunchSummary()">
+                      <span class="field-hint">3.000 IOPS, 125 MB/s, mã hóa sẵn.</span>
+                    </label>
+                    <label class="field">
+                      <span class="field-label">Tên miền</span>
+                      <input type="text" class="input" id="instDomain" placeholder="tên-máy-ảo.xregion.net" oninput="updateLaunchSummary()">
+                      <span class="field-hint">Bản ghi A tự trỏ sang Elastic IP mới sau mỗi lần chuyển vùng.</span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside class="summary launch-summary" aria-live="polite">
+              <div class="summary-title">Tóm tắt</div>
+              <dl class="kv">
+                <dt>Tên</dt><dd id="sumNameText">–</dd>
+                <dt>Vùng</dt><dd id="sumRegionText">–</dd>
+                <dt>Hệ điều hành</dt><dd id="sumOsText">–</dd>
+                <dt>Tài nguyên</dt><dd id="sumSpecsText">–</dd>
+                <dt>Tên miền</dt><dd id="sumDomainText">–</dd>
+                <dt>Mạng</dt><dd>Hệ thống tự cấu hình, mở cổng 22, 80, 443</dd>
+              </dl>
+              <div class="price">
+                <div class="field-hint">Chi phí ước tính</div>
+                <div class="price-value"><span id="sumCostHour">$0.000</span> <small>/ giờ</small></div>
+                <div class="price-month" id="sumCostMonth">khoảng $0 / tháng</div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Tạo máy ảo</button>
+              <button type="button" class="btn btn-block" onclick="switchTab('compute')">Hủy</button>
+            </aside>
+          </form>
+        </section>
+
+        <!-- PAGE: INSTANCE DETAIL (content adapted from anhtd/ui instance-detail.html) -->
+        <section class="page" id="tab-instance">
+          <div class="page-head">
+            <div>
+              <div class="crumb-back"><button class="link-btn" onclick="switchTab('compute')">Máy ảo</button> / <span id="detCrumb" class="mono">–</span></div>
+              <div class="detail-title-row">
+                <h1 class="page-title" id="detName">–</h1>
+                <span id="detStatus"></span>
+              </div>
+              <p class="page-desc" id="detSub">–</p>
+            </div>
+            <div class="page-actions" id="detActions"></div>
+          </div>
+
+          <div class="stats" id="detStats">
+            <div class="stat"><div class="stat-label">CPU</div><div class="stat-value" id="detCpu">–</div></div>
+            <div class="stat"><div class="stat-label">RAM</div><div class="stat-value" id="detRam">–</div></div>
+            <div class="stat"><div class="stat-label">Mạng vào</div><div class="stat-value" id="detNetIn">–</div></div>
+            <div class="stat"><div class="stat-label">Mạng ra</div><div class="stat-value" id="detNetOut">–</div></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-head"><div class="panel-title">Cấu hình</div></div>
+              <div class="panel-body"><dl class="kv kv-loose" id="detConfig"></dl></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div class="panel-title">Mạng &amp; DNS</div></div>
+              <div class="panel-body"><dl class="kv kv-loose" id="detNetwork"></dl></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Ổ đĩa đang gắn</div>
+              <button class="btn btn-sm" onclick="switchTab('storage')">Quản lý ổ đĩa</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Ổ đĩa</th><th class="num">Dung lượng</th><th>Thiết bị</th><th>Vùng</th><th>Trạng thái</th></tr></thead>
+                <tbody id="detVolumes"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Chuyển vùng</div>
+                <div class="panel-sub" id="detMigrationSub">–</div>
+              </div>
+              <button class="btn btn-sm" onclick="openScenarioModal(currentInstanceId)">Tạo kịch bản cho máy này</button>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Kịch bản</th><th>Hướng chuyển</th><th>Kích hoạt</th><th>Lần chạy gần nhất</th><th class="num">Thao tác</th></tr></thead>
+                <tbody id="detScenarios"></tbody>
               </table>
             </div>
           </div>
@@ -400,77 +558,6 @@
         </section>
       </main>
     </div>
-  </div>
-
-  <!-- MODAL: LAUNCH INSTANCE -->
-  <div class="modal-overlay" id="launchModal" role="dialog" aria-modal="true" aria-labelledby="launchTitle">
-    <form class="modal wide" id="launchForm" onsubmit="submitLaunch(event)">
-      <div class="modal-head">
-        <div class="modal-title" id="launchTitle">Tạo máy ảo</div>
-        <button type="button" class="btn btn-ghost btn-icon" onclick="closeModal('launchModal')" aria-label="Đóng"><svg class="icon"><use href="#i-x"/></svg></button>
-      </div>
-      <div class="modal-body">
-        <div class="launch-layout">
-          <div class="fields">
-            <label class="field">
-              <span class="field-label">Tên máy ảo</span>
-              <input type="text" class="input" id="instName" required placeholder="web-prod-01" oninput="updateLaunchSummary()">
-            </label>
-            <div class="field">
-              <span class="field-label">Vùng ban đầu</span>
-              <div class="choice-group" id="instRegionGroup"></div>
-            </div>
-            <label class="field">
-              <span class="field-label">Hệ điều hành</span>
-              <select class="select" id="instImage" onchange="updateLaunchSummary()">
-                <option value="img-u22">Ubuntu Server 22.04 LTS</option>
-                <option value="img-deb12">Debian 12 Bookworm</option>
-                <option value="img-rocky9">Rocky Linux 9</option>
-                <option value="img-alp319">Alpine Linux 3.19</option>
-              </select>
-            </label>
-            <div class="field-row">
-              <label class="field">
-                <span class="field-label">Cấu hình</span>
-                <select class="select" id="instFlavor" onchange="updateLaunchSummary()">
-                  <option value="m1.small">m1.small · 1 vCPU, 2 GB</option>
-                  <option value="m1.medium" selected>m1.medium · 2 vCPU, 4 GB</option>
-                  <option value="c5.large">c5.large · 4 vCPU, 8 GB</option>
-                </select>
-              </label>
-              <label class="field">
-                <span class="field-label">Ổ đĩa EBS gp3 (GB)</span>
-                <input type="number" class="input" id="instEbsSize" value="50" min="10" max="1000" oninput="updateLaunchSummary()">
-              </label>
-            </div>
-            <label class="field">
-              <span class="field-label">Tên miền</span>
-              <input type="text" class="input" id="instDomain" placeholder="Để trống để dùng tên-máy-ảo.xregion.net">
-              <span class="field-hint">Hệ thống tự gắn bản ghi A vào Elastic IP của máy ảo và cập nhật sau mỗi lần chuyển vùng.</span>
-            </label>
-          </div>
-
-          <aside class="summary" aria-live="polite">
-            <div class="summary-title">Tóm tắt</div>
-            <dl class="kv">
-              <dt>Vùng</dt><dd id="sumRegionText">–</dd>
-              <dt>Hệ điều hành</dt><dd id="sumOsText">–</dd>
-              <dt>Tài nguyên</dt><dd id="sumSpecsText">–</dd>
-              <dt>Mạng</dt><dd>Hệ thống tự cấu hình, mở cổng 22, 80, 443</dd>
-            </dl>
-            <div class="price">
-              <div class="field-hint">Chi phí ước tính</div>
-              <div class="price-value"><span id="sumCostHour">$0.000</span> <small>/ giờ</small></div>
-              <div class="price-month" id="sumCostMonth">khoảng $0 / tháng</div>
-            </div>
-          </aside>
-        </div>
-      </div>
-      <div class="modal-foot">
-        <button type="button" class="btn" onclick="closeModal('launchModal')">Hủy</button>
-        <button type="submit" class="btn btn-primary">Tạo máy ảo</button>
-      </div>
-    </form>
   </div>
 
   <!-- MODAL: CREATE VOLUME -->

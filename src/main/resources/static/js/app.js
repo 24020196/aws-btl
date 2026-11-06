@@ -18,21 +18,39 @@ const TABS = {
   images: 'Image',
   network: 'Mạng & DNS',
   migration: 'Chuyển vùng',
-  monitoring: 'Giám sát & nhật ký'
+  monitoring: 'Giám sát & nhật ký',
+  launch: 'Tạo máy ảo',
+  instance: 'Chi tiết máy ảo'
 };
+// Pages that are not in the sidebar highlight their parent item.
+const NAV_PARENT = { launch: 'compute', instance: 'compute' };
 
+// OpenStack flavors: standard m1 and high-performance h1 series (list from anhtd/ui).
+// hourly is a demo estimate in USD before the region price factor.
 const FLAVORS = {
-  'm1.small': { cpu: 1, ram: 2, hourly: 0.04 },
-  'm1.medium': { cpu: 2, ram: 4, hourly: 0.08 },
-  'c5.large': { cpu: 4, ram: 8, hourly: 0.16 }
+  'm1.tiny': { series: 'm1', cpu: 1, ram: 0.5, hourly: 0.01 },
+  'm1.small': { series: 'm1', cpu: 1, ram: 2, hourly: 0.04 },
+  'm1.medium': { series: 'm1', cpu: 2, ram: 4, hourly: 0.08 },
+  'm1.large': { series: 'm1', cpu: 4, ram: 8, hourly: 0.16 },
+  'm1.xlarge': { series: 'm1', cpu: 8, ram: 16, hourly: 0.32 },
+  'h1.medium': { series: 'h1', cpu: 8, ram: 16, hourly: 0.38 },
+  'h1.large': { series: 'h1', cpu: 16, ram: 32, hourly: 0.76 },
+  'h1.xlarge': { series: 'h1', cpu: 32, ram: 64, hourly: 1.52 },
+  'c5.large': { series: 'legacy', cpu: 4, ram: 8, hourly: 0.16 }
 };
+const DEFAULT_FLAVOR = { m1: 'm1.medium', h1: 'h1.medium' };
 
-const OS_NAMES = {
-  'img-u22': 'Ubuntu Server 22.04 LTS',
-  'img-deb12': 'Debian 12 Bookworm',
-  'img-rocky9': 'Rocky Linux 9',
-  'img-alp319': 'Alpine Linux 3.19'
-};
+const OS_IMAGES = [
+  { id: 'img-u22', name: 'Ubuntu', version: '22.04 LTS' },
+  { id: 'img-deb12', name: 'Debian', version: '12 Bookworm' },
+  { id: 'img-rocky9', name: 'Rocky Linux', version: '9' },
+  { id: 'img-alp319', name: 'Alpine Linux', version: '3.19' }
+];
+const OS_NAMES = Object.fromEntries(OS_IMAGES.map(o => [o.id, `${o.name} ${o.version}`]));
+
+function fmtRam(gb) {
+  return gb < 1 ? `${gb * 1024} MB` : `${gb} GB`;
+}
 
 const STATUS_VIEW = {
   ACTIVE: { cls: 'ok', text: 'Đang chạy' },
@@ -61,6 +79,8 @@ let cachedInstances = [];
 let cachedVolumes = [];
 let cachedSeries = null;
 let currentTab = 'compute';
+let currentInstanceId = null;
+let selectedFlavor = 'm1.medium';
 
 // ---------- Small helpers ----------
 function storageGet(key) {
@@ -231,16 +251,21 @@ function setSegValue(id, value) {
 
 // ---------- Navigation ----------
 function switchTab(tabId) {
-  if (!TABS[tabId]) tabId = 'compute';
+  if (!TABS[tabId] || (tabId === 'instance' && !currentInstanceId)) tabId = 'compute';
   currentTab = tabId;
+  const navTab = NAV_PARENT[tabId] || tabId;
 
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('active', el.id === 'tab-' + tabId));
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === tabId));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === navTab));
   $('crumbTitle').textContent = TABS[tabId];
-  if (location.hash !== '#' + tabId) history.replaceState(null, '', '#' + tabId);
+  const hash = tabId === 'instance' ? 'vm-' + currentInstanceId : tabId;
+  if (location.hash !== '#' + hash) history.replaceState(null, '', '#' + hash);
   toggleNav(false);
+  window.scrollTo(0, 0);
 
   if (!authToken) return;
+  if (tabId === 'launch') initLaunchPage();
+  if (tabId === 'instance') loadInstanceDetail(currentInstanceId);
   if (tabId === 'compute') loadInstances();
   if (tabId === 'storage') loadVolumes();
   if (tabId === 'images') loadImages();
@@ -250,6 +275,20 @@ function switchTab(tabId) {
     loadMonitoringOverview();
     loadAuditLogs();
   }
+}
+
+function retryCurrentTab() {
+  hideApiBanner();
+  switchTab(currentTab);
+}
+
+function routeFromHash() {
+  const h = (location.hash || '').replace('#', '');
+  if (h.startsWith('vm-') && h.length > 3) {
+    currentInstanceId = h.slice(3);
+    return 'instance';
+  }
+  return TABS[h] && h !== 'instance' ? h : 'compute';
 }
 
 function toggleNav(force) {
@@ -290,7 +329,7 @@ async function apiRequest(endpoint, options = {}) {
   try {
     res = await fetch(API_BASE + endpoint, { ...fetchOptions, headers });
   } catch (err) {
-    if (!silent) toast('bad', 'Không kết nối được máy chủ', 'Kiểm tra backend đang chạy rồi thử lại.');
+    showApiBanner('Không kết nối được máy chủ', 'Kiểm tra backend Spring Boot đang chạy và trình duyệt mở đúng địa chỉ, rồi bấm Thử lại.');
     throw err;
   }
 
@@ -304,6 +343,15 @@ async function apiRequest(endpoint, options = {}) {
   let data = {};
   try { data = await res.json(); } catch (e) { /* empty body */ }
 
+  if (res.status >= 500) {
+    const msg = data.message || `Máy chủ trả về lỗi ${res.status}.`;
+    showApiBanner(`Lỗi máy chủ khi gọi ${endpoint.split('?')[0]}`, msg + ' Nếu lỗi nhắc tới DynamoDB, kiểm tra thông tin AWS trong file .env hoặc DynamoDB Local.');
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  hideApiBanner();
+
   if (!res.ok) {
     const msg = data.message || `Máy chủ trả về lỗi ${res.status}.`;
     if (!silent) toast(res.status === 409 ? 'warn' : 'bad', res.status === 409 ? 'Đang bị khóa' : 'Không thực hiện được', msg);
@@ -312,6 +360,20 @@ async function apiRequest(endpoint, options = {}) {
     throw err;
   }
   return data.data;
+}
+
+// Persistent banner for backend or DynamoDB failures (idea from anhtd/ui).
+function showApiBanner(title, message) {
+  const b = $('apiBanner');
+  if (!b) return;
+  $('apiBannerTitle').textContent = title;
+  $('apiBannerMsg').textContent = message;
+  b.hidden = false;
+}
+
+function hideApiBanner() {
+  const b = $('apiBanner');
+  if (b) b.hidden = true;
 }
 
 // ---------- Auth ----------
@@ -452,7 +514,7 @@ function renderRegionChoices() {
   group.innerHTML = REGION_CODES.map((code, i) => {
     const r = REGIONS[code];
     return `<label class="choice ${r.cls}">
-      <input type="radio" name="instRegion" value="${code}" ${i === 0 ? 'checked' : ''} onchange="updateLaunchSummary()">
+      <input type="radio" name="instRegion" value="${code}" ${i === 0 ? 'checked' : ''} onchange="renderFlavorTable(); updateLaunchSummary()">
       <span class="choice-title">${esc(r.label)} · ${esc(r.city)}</span>
       <span class="choice-sub mono">${esc(code)}</span>
     </label>`;
@@ -530,9 +592,9 @@ function filterInstancesUI() {
     const running = inst.status === 'ACTIVE';
     const target = otherRegion(inst.region);
     return `<tr>
-      <td><div class="cell-main">${esc(inst.name)}</div><div class="cell-sub">${esc(inst.id)}</div></td>
+      <td><button class="instance-link" onclick="openInstance('${esc(inst.id)}')">${esc(inst.name)}</button><div class="cell-sub">${esc(inst.id)}</div></td>
       <td>${regionTag(inst.region)}</td>
-      <td><span class="tag">${esc(inst.flavor)}</span>${f ? ` <span class="panel-sub">${f.cpu} vCPU · ${f.ram} GB</span>` : ''}</td>
+      <td><span class="tag">${esc(inst.flavor)}</span>${f ? ` <span class="panel-sub">${f.cpu} vCPU · ${fmtRam(f.ram)}</span>` : ''}</td>
       <td><div><code>${esc(inst.publicIp || 'Chưa gán')}</code></div><div class="cell-sub">${esc(inst.privateIp || '–')}</div></td>
       <td>${inst.dnsDomain ? `<span class="mono-link">${esc(inst.dnsDomain)}</span>` : '<span class="panel-sub">–</span>'}</td>
       <td>${statusTag(inst.status)}</td>
@@ -550,10 +612,47 @@ function filterInstancesUI() {
   }).join('');
 }
 
+// ---------- PAGE: LAUNCH ----------
 function openLaunchModal() {
+  switchTab('launch');
+}
+
+function initLaunchPage() {
   $('launchForm').reset();
   renderRegionChoices();
-  openModal('launchModal');
+  $('instImageGroup').innerHTML = OS_IMAGES.map((os, i) => `
+    <label class="os-card">
+      <input type="radio" name="instImage" value="${os.id}" ${i === 0 ? 'checked' : ''} onchange="updateLaunchSummary()">
+      <span class="os-badge">${esc(os.name[0])}</span>
+      <span><span class="os-name">${esc(os.name)}</span><br><span class="os-ver">${esc(os.version)}</span></span>
+    </label>`).join('');
+  setSegValue('flavorSeries', 'm1');
+  selectedFlavor = DEFAULT_FLAVOR.m1;
+  renderFlavorTable();
+  updateLaunchSummary();
+  setTimeout(() => $('instName').focus(), 30);
+}
+
+function renderFlavorTable() {
+  const series = segValue('flavorSeries') || 'm1';
+  const r = regionInfo(selectedLaunchRegion());
+  $('flavorTableBody').innerHTML = Object.entries(FLAVORS)
+    .filter(([, f]) => f.series === series)
+    .map(([name, f]) => {
+      const sel = name === selectedFlavor;
+      return `<tr class="${sel ? 'selected' : ''}" onclick="selectFlavor('${name}')">
+        <td><input type="radio" name="instFlavor" value="${name}" ${sel ? 'checked' : ''} aria-label="${name}"></td>
+        <td><span class="tag">${name}</span>${name === DEFAULT_FLAVOR[series] ? ' <span class="panel-sub">mặc định</span>' : ''}</td>
+        <td class="num">${f.cpu}</td>
+        <td class="num">${fmtRam(f.ram)}</td>
+        <td class="num">$${(f.hourly * r.priceFactor).toFixed(3)} / giờ</td>
+      </tr>`;
+    }).join('');
+}
+
+function selectFlavor(name) {
+  selectedFlavor = name;
+  renderFlavorTable();
   updateLaunchSummary();
 }
 
@@ -562,19 +661,28 @@ function selectedLaunchRegion() {
   return checked ? checked.value : REGION_CODES[0];
 }
 
+function selectedImage() {
+  const checked = document.querySelector('input[name="instImage"]:checked');
+  return checked ? checked.value : OS_IMAGES[0].id;
+}
+
 function updateLaunchSummary() {
+  if (!$('instEbsSize')) return;
   const region = selectedLaunchRegion();
   const r = regionInfo(region);
-  const flavor = FLAVORS[$('instFlavor').value] || FLAVORS['m1.medium'];
-  const ebsSize = parseInt($('instEbsSize').value, 10) || 50;
+  const flavor = FLAVORS[selectedFlavor] || FLAVORS['m1.medium'];
+  const ebsSize = parseInt($('instEbsSize').value, 10) || 10;
+  const name = $('instName').value.trim();
 
   const ebsHourly = (ebsSize * 0.08) / 720.0;
   const totalHourly = flavor.hourly * r.priceFactor + ebsHourly;
   const totalMonthly = totalHourly * 720.0;
 
+  $('sumNameText').textContent = name || '–';
   $('sumRegionText').innerHTML = regionTag(region);
-  $('sumOsText').textContent = OS_NAMES[$('instImage').value] || $('instImage').value;
-  $('sumSpecsText').textContent = `${flavor.cpu} vCPU, ${flavor.ram} GB RAM, ${ebsSize} GB gp3`;
+  $('sumOsText').textContent = OS_NAMES[selectedImage()] || selectedImage();
+  $('sumSpecsText').textContent = `${selectedFlavor} · ${flavor.cpu} vCPU, ${fmtRam(flavor.ram)} RAM, ${ebsSize} GB gp3`;
+  $('sumDomainText').textContent = $('instDomain').value.trim() || (name ? `${name.toLowerCase()}.xregion.net` : '–');
   $('sumCostHour').textContent = '$' + totalHourly.toFixed(3);
   $('sumCostMonth').textContent = `khoảng ${fmtMoney(totalMonthly)} / tháng (720 giờ)`;
 }
@@ -608,7 +716,11 @@ async function instanceAction(id, action) {
       body: JSON.stringify({ action })
     });
     toast('ok', labels[action] || 'Đã thực hiện', name);
-    loadInstances(true);
+    await loadInstances(true);
+    if (currentTab === 'instance') {
+      if (action === 'TERMINATE') switchTab('compute');
+      else loadInstanceDetail(id);
+    }
   } catch (err) { /* toast already shown */ }
 }
 
@@ -617,21 +729,115 @@ async function submitLaunch(e) {
   const body = {
     name: $('instName').value.trim(),
     region: selectedLaunchRegion(),
-    flavor: $('instFlavor').value,
-    imageId: $('instImage').value,
-    ebsSizeGb: parseInt($('instEbsSize').value, 10) || 50,
+    flavor: selectedFlavor,
+    imageId: selectedImage(),
+    ebsSizeGb: parseInt($('instEbsSize').value, 10) || 10,
     domainName: $('instDomain').value.trim()
   };
 
   const btn = e.submitter;
   if (btn) btn.disabled = true;
   try {
-    await apiRequest('/instances', { method: 'POST', body: JSON.stringify(body) });
-    closeModal('launchModal');
-    toast('ok', 'Đang tạo máy ảo', `${body.name} ở ${regionInfo(body.region).city}`);
-    loadInstances(true);
+    const created = await apiRequest('/instances', { method: 'POST', body: JSON.stringify(body) });
+    toast('ok', 'Đã tạo máy ảo', `${body.name} ở ${regionInfo(body.region).city}`);
+    await loadInstances(true);
+    if (created && created.id) openInstance(created.id);
+    else switchTab('compute');
   } catch (err) { /* toast already shown */ }
   finally { if (btn) btn.disabled = false; }
+}
+
+// ---------- PAGE: INSTANCE DETAIL ----------
+function openInstance(id) {
+  currentInstanceId = id;
+  switchTab('instance');
+}
+
+async function loadInstanceDetail(id) {
+  if (!id) return;
+  $('detCrumb').textContent = id;
+  let inst;
+  try {
+    inst = await apiRequest(`/instances/${encodeURIComponent(id)}`);
+  } catch (err) {
+    if (err.status === 404) {
+      toast('warn', 'Không tìm thấy máy ảo', `${id} có thể đã bị xóa.`);
+      switchTab('compute');
+    }
+    return;
+  }
+
+  const r = regionInfo(inst.region);
+  const f = FLAVORS[inst.flavor];
+  const busy = inst.status === 'MIGRATING';
+  const running = inst.status === 'ACTIVE';
+  const target = otherRegion(inst.region);
+
+  $('detName').textContent = inst.name;
+  $('detStatus').innerHTML = statusTag(inst.status);
+  $('detSub').innerHTML = `${regionTag(inst.region)} · <code>${esc(inst.id)}</code>`;
+  $('detActions').innerHTML = `
+    ${running
+      ? `<button class="btn" onclick="instanceAction('${esc(inst.id)}', 'STOP')" ${busy ? 'disabled' : ''}>${icon('stop')}Dừng</button>`
+      : `<button class="btn" onclick="instanceAction('${esc(inst.id)}', 'START')" ${busy ? 'disabled' : ''}>${icon('play')}Khởi động</button>`}
+    <button class="btn" onclick="instanceAction('${esc(inst.id)}', 'REBOOT')" ${busy || !running ? 'disabled' : ''}>${icon('reboot')}Khởi động lại</button>
+    <button class="btn btn-primary" onclick="triggerDirectMigration('${esc(inst.id)}')" ${busy ? 'disabled' : ''}>${icon('migrate')}Chuyển sang ${esc(regionInfo(target).city)}</button>
+    <button class="btn btn-danger" onclick="instanceAction('${esc(inst.id)}', 'TERMINATE')" ${busy ? 'disabled' : ''}>${icon('trash')}Xóa</button>`;
+
+  $('detConfig').innerHTML = `
+    <dt>Flavor</dt><dd><span class="tag">${esc(inst.flavor)}</span>${f ? ` ${f.cpu} vCPU · ${fmtRam(f.ram)} RAM` : ''}</dd>
+    <dt>Hệ điều hành</dt><dd>${esc(inst.imageName || OS_NAMES[inst.imageId] || inst.imageId || '–')}</dd>
+    <dt>Ảo hóa</dt><dd>KVM trên EC2 Bare Metal, boot từ ổ EBS gp3</dd>
+    <dt>Khóa chuyển vùng</dt><dd>${busy ? statusTag('MIGRATING') : 'Không khóa, có thể chuyển vùng'}</dd>
+    <dt>Cập nhật lần cuối</dt><dd>${esc(fmtTime(inst.updatedAt))}</dd>`;
+
+  $('detNetwork').innerHTML = `
+    <dt>Vùng</dt><dd>${regionTag(inst.region)}</dd>
+    <dt>Elastic IP</dt><dd><code>${esc(inst.publicIp || 'Chưa gán')}</code></dd>
+    <dt>IP private</dt><dd><code>${esc(inst.privateIp || '–')}</code></dd>
+    <dt>Tên miền</dt><dd>${inst.dnsDomain ? `<span class="mono-link">${esc(inst.dnsDomain)}</span> · TTL 60 giây` : '–'}</dd>
+    <dt>Cổng mở</dt><dd>22 (SSH), 80 (HTTP), 443 (HTTPS)</dd>`;
+
+  $('detMigrationSub').textContent = busy
+    ? `Đang chuyển từ ${r.city} sang ${regionInfo(target).city}.`
+    : `Đang chạy ở ${r.city}. Lần chuyển tiếp theo sẽ đưa máy sang ${regionInfo(target).city}.`;
+
+  setLoadingRows('detVolumes', 5, 1);
+  setLoadingRows('detScenarios', 5, 1);
+  const [vols, scs, metrics] = await Promise.all([
+    apiRequest('/volumes', { silent: true }).catch(() => null),
+    apiRequest('/migrations/scenarios', { silent: true }).catch(() => null),
+    apiRequest(`/metrics/instances/${encodeURIComponent(id)}`, { silent: true }).catch(() => null)
+  ]);
+  if (currentInstanceId !== id) return;
+
+  const myVols = (vols || []).filter(v => v.attachedInstanceId === id || v.attachedInstanceName === inst.name);
+  $('detVolumes').innerHTML = myVols.length ? myVols.map(v => `<tr>
+      <td><div class="cell-main">${esc(v.name)}</div><div class="cell-sub">${esc(v.id)}</div></td>
+      <td class="num">${esc(v.sizeGb)} GB</td>
+      <td><code>${esc(v.device || '–')}</code></td>
+      <td>${regionTag(v.region, false)}</td>
+      <td>${statusTag(v.status)}</td>
+    </tr>`).join('')
+    : emptyRow(5, 'Chưa có ổ dữ liệu nào được gắn', ' Ổ gốc của máy ảo do hệ thống quản lý. Gắn thêm ổ ở trang Ổ đĩa & snapshot.');
+
+  cachedScenarios = scs || cachedScenarios;
+  const mine = (scs || []).filter(s => s.targetInstanceId === id);
+  $('detScenarios').innerHTML = mine.length ? mine.map(sc => `<tr>
+      <td><div class="cell-main">${esc(sc.name)}</div><div class="cell-sub">${esc(sc.id)}</div></td>
+      <td>${routeTag(sc.sourceRegion, sc.destRegion)}</td>
+      <td>${sc.triggerType === 'SCHEDULED' ? `Theo lịch <code>${esc(sc.cronExpression)}</code>` : 'Thủ công'}</td>
+      <td>${sc.status ? statusTag(sc.status) : '<span class="panel-sub">Chưa chạy</span>'}</td>
+      <td><div class="row-actions"><button class="btn btn-sm btn-primary" onclick="triggerDirectMigration('${esc(sc.id)}')" ${busy ? 'disabled' : ''}>${icon('play')}Chạy ngay</button></div></td>
+    </tr>`).join('')
+    : emptyRow(5, 'Chưa có kịch bản nào cho máy này', ' Tạo kịch bản để chuyển vùng theo lịch hoặc khi cần.');
+
+  const pct = v => (v === undefined || v === null) ? '–' : `${Number(v).toFixed(1)}<span class="stat-unit">%</span>`;
+  const mbps = v => (v === undefined || v === null) ? '–' : `${Math.round(v)}<span class="stat-unit">Mbps</span>`;
+  $('detCpu').innerHTML = pct(metrics && metrics.currentCpuUsage);
+  $('detRam').innerHTML = pct(metrics && metrics.currentRamUsage);
+  $('detNetIn').innerHTML = mbps(metrics && metrics.currentNetworkIn);
+  $('detNetOut').innerHTML = mbps(metrics && metrics.currentNetworkOut);
 }
 
 // ---------- TAB: STORAGE ----------
@@ -935,7 +1141,7 @@ async function loadScenarios() {
   }
 }
 
-async function openScenarioModal() {
+async function openScenarioModal(preselectId) {
   if (!cachedInstances.length) await loadInstances(true);
   $('scenarioForm').reset();
   setSegValue('scTriggerType', 'MANUAL');
@@ -943,6 +1149,7 @@ async function openScenarioModal() {
   $('scInstanceSelect').innerHTML = cachedInstances.length
     ? cachedInstances.map(i => `<option value="${esc(i.id)}">${esc(i.name)} (${esc(i.id)}) · ${esc(regionInfo(i.region).city)}</option>`).join('')
     : '<option value="">Chưa có máy ảo</option>';
+  if (typeof preselectId === 'string' && cachedInstances.some(i => i.id === preselectId)) $('scInstanceSelect').value = preselectId;
   syncScenarioRegions();
   openModal('scenarioModal');
 }
@@ -975,7 +1182,8 @@ async function submitCreateScenario(e) {
     await apiRequest('/migrations/scenarios', { method: 'POST', body: JSON.stringify(body) });
     closeModal('scenarioModal');
     toast('ok', 'Đã lưu kịch bản', body.name);
-    loadScenarios();
+    if (currentTab === 'instance') loadInstanceDetail(currentInstanceId);
+    else loadScenarios();
   } catch (err) { /* toast already shown */ }
 }
 
@@ -1244,15 +1452,16 @@ window.addEventListener('DOMContentLoaded', () => {
   initSegmented('instanceStatusFilter', () => filterInstancesUI());
   initSegmented('chartMode', () => { if (cachedSeries) renderPerformanceChart(cachedSeries); });
   initSegmented('scTriggerType', (v) => { $('scCronField').hidden = v !== 'SCHEDULED'; });
+  initSegmented('flavorSeries', (v) => { selectedFlavor = DEFAULT_FLAVOR[v]; renderFlavorTable(); updateLaunchSummary(); });
 
   renderRegionClocks();
   setInterval(renderRegionClocks, 30000);
 
-  const fromHash = (location.hash || '').replace('#', '');
-  currentTab = TABS[fromHash] ? fromHash : 'compute';
+  currentTab = routeFromHash();
   window.addEventListener('hashchange', () => {
-    const h = location.hash.replace('#', '');
-    if (TABS[h] && h !== currentTab) switchTab(h);
+    const prevVm = currentInstanceId;
+    const tab = routeFromHash();
+    if (tab !== currentTab || (tab === 'instance' && currentInstanceId !== prevVm)) switchTab(tab);
   });
 
   setUser(storageGet('xregion_user'));
