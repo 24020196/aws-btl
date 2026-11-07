@@ -1,0 +1,86 @@
+/* Dùng chung mọi trang — Pipeline 6 bước và cửa sổ terminal. Sửa file này phải báo cả nhóm. */
+
+/* 6-Step Visualizer Pipeline */
+.pipeline-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 10px;
+  position: relative;
+  margin: 20px 0;
+}
+
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+  text-align: center;
+  max-width: 130px;
+}
+
+.step-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-muted);
+  transition: all 0.3s;
+}
+
+.step-circle.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: white;
+  box-shadow: 0 0 15px #0284c7;
+}
+
+.step-circle.completed {
+  background: #059669;
+  border-color: #34d399;
+  color: white;
+}
+
+.step-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pipeline-line {
+  position: absolute;
+  top: 45px;
+  left: 5%;
+  right: 5%;
+  height: 4px;
+  background: var(--border-color);
+  z-index: 1;
+}
+
+.pipeline-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7, #10b981);
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
+/* Terminal Console View */
+.terminal-window {
+  background: #090d16;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  color: #38bdf8;
+  height: 220px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
