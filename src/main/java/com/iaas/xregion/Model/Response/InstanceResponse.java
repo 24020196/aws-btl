@@ -26,4 +26,5 @@ public class InstanceResponse {
     private long updatedAt;
     private String consoleUrl;
     private String keyName;
+    private Integer cooldownSeconds;
 }

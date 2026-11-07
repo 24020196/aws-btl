@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chỉnh Sửa Máy Ảo (Modify Instance) - XRegion-EC2</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Global</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer"></div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+    <a href="/account-tokens.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Tài Khoản & API Token
+    </a>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <div class="breadcrumb">
+      <a href="/index.html">XRegion-EC2</a>
+      <span>/</span>
+      <a href="/instances.html">Instances</a>
+      <span>/</span>
+      <a href="#" id="editBreadcrumbDetailLink" style="color: var(--accent-cyan); font-family: monospace;">--</a>
+      <span>/</span>
+      <span>Modify Instance Settings</span>
+    </div>
+
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <h1 style="font-size: 24px; font-weight: 800; color: #fff;">Chỉnh Sửa Thông Tin Máy Ảo (Modify Instance)</h1>
+          <span class="badge" id="editInstStatusBadge" style="font-size: 12px; padding: 4px 10px;">LOADING</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+          Thay đổi tên định danh, gói cấu hình phần cứng (Instance Type / Flavor), khóa SSH Key Pair và tham số an toàn chuyển vùng tương tự AWS EC2.
+        </p>
+      </div>
+      <a href="/instances.html" id="btnBackToDetail" class="btn btn-secondary">← Quay lại chi tiết máy ảo</a>
+    </div>
+
+    <form id="editInstancePageForm" autocomplete="off" onsubmit="handleEditInstanceSubmit(event)">
+      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
+
+        <!-- Left Column: Editable Sections -->
+        <div>
+          <!-- Section 1: Read-only Instance Identity & Network -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">ℹ</span>
+              Định Danh Hạ Tầng Hiện Tại (Read-Only)
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted);">INSTANCE ID</div>
+                <div id="editRoInstanceId" style="font-family: monospace; font-weight: 700; color: var(--accent-cyan); margin-top: 4px;">--</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted);">VÙNG HIỆN TẠI (REGION)</div>
+                <div id="editRoRegion" style="font-weight: 700; color: #fff; margin-top: 4px;">--</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted);">PRIVATE IP</div>
+                <div id="editRoPrivateIp" style="font-family: monospace; color: #cbd5e1; margin-top: 4px;">--</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted);">ELASTIC / PUBLIC IP</div>
+                <div id="editRoPublicIp" style="font-family: monospace; color: #34d399; margin-top: 4px;">--</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Edit Instance Name -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">1</span>
+              Tên Máy Ảo (Instance Name & Route 53 Hostname)
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên Máy Ảo Mới *</label>
+              <input type="text" class="form-input" id="editInstName" required placeholder="vd: web-prod-01" oninput="updateEditInstanceSummary()">
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                Tên miền DNS tự động cập nhật theo tên máy ảo: <code id="editDnsPreview" style="color: var(--accent-cyan);">app.xregion.net</code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Change Instance Type (Flavor) -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">2</span>
+              Thay Đổi Gói Cấu Hình Phần Cứng (Change Instance Type / Flavor)
+            </div>
+            <div class="form-group">
+              <label class="form-label">Chọn Flavor Mới *</label>
+              <select class="form-select" id="editInstFlavor" onchange="updateEditInstanceSummary()">
+                <optgroup label="── Dòng Tiêu Chuẩn (m1) ──">
+                  <option value="m1.tiny">m1.tiny — 1 vCPU • 512 MB RAM • 10 GB Root Disk</option>
+                  <option value="m1.small">m1.small — 1 vCPU • 2048 MB RAM (2 GB) • 10 GB Root Disk</option>
+                  <option value="m1.medium">m1.medium — 2 vCPUs • 4096 MB RAM (4 GB) • 10 GB Root Disk</option>
+                  <option value="m1.large">m1.large — 4 vCPUs • 8192 MB RAM (8 GB) • 10 GB Root Disk</option>
+                  <option value="m1.xlarge">m1.xlarge — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
+                </optgroup>
+                <optgroup label="── Dòng Hiệu Năng Cao (h1) ──">
+                  <option value="h1.medium">h1.medium — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
+                  <option value="h1.large">h1.large — 16 vCPUs • 32768 MB RAM (32 GB) • 10 GB Root Disk</option>
+                  <option value="h1.xlarge">h1.xlarge — 32 vCPUs • 65536 MB RAM (64 GB) • 10 GB Root Disk</option>
+                </optgroup>
+              </select>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);">
+              💡 Tương tự AWS EC2 <em>Change Instance Type</em>: việc nâng/hạ cấp vCPU & RAM sẽ đồng bộ xuống cụm Bare Metal qua EventBridge.
+            </div>
+          </div>
+
+          <!-- Section 4: SSH Key Pair -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">3</span>
+              Khóa Xác Thực SSH (Key Pair)
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Chọn Key Pair Đính Kèm</label>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;" onchange="updateEditInstanceSummary()">
+                  <option value="xregion-key">xregion-key</option>
+                </select>
+                <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()" style="padding: 10px 16px; white-space: nowrap;">
+                  🔑 + Tạo Key Pair Mới (.pem)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Migration Cooldown Setting -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">4</span>
+              Cấu Hình Khóa An Toàn Di Trú (Migration Cooldown)
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Thời Gian Cooldown Giữa 2 Lần Chuyển Vùng (Giây)</label>
+              <input type="number" class="form-input" id="editInstCooldown" value="300" min="0" max="86400" oninput="updateEditInstanceSummary()">
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                Thời gian khóa bảo vệ sau khi máy ảo hoàn tất di trú liên vùng (mặc định: <code>300</code> giây = 5 phút).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Sticky Before vs After Summary -->
+        <div style="position: sticky; top: 80px;">
+          <div class="card" style="padding: 22px; border-color: var(--accent-cyan); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+              Tóm Tắt Thay Đổi (Review Changes)
+            </div>
+
+            <div id="editErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 12px; line-height: 1.4;"></div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">TÊN MÁY ẢO</div>
+              <div id="sumEditName" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">--</div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">GÓI CẤU HÌNH (FLAVOR)</div>
+              <div id="sumEditFlavor" style="font-size: 13px; font-weight: 700; color: var(--accent-cyan); margin-top: 3px;">--</div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">SSH KEY PAIR</div>
+              <div id="sumEditKey" style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 3px; font-family: monospace;">--</div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">COOLDOWN BẢO VỆ</div>
+              <div id="sumEditCooldown" style="font-size: 13px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">300 giây</div>
+            </div>
+
+            <button type="submit" id="btnSaveEditInstance" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; font-weight: 800; background: #f59e0b; color: #0a0f1d; border: none; margin-bottom: 10px;">
+              💾 Lưu Thay Đổi (Save Changes)
+            </button>
+            <a href="/instances.html" id="btnCancelEditInstance" class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 10px;">
+              Hủy bỏ (Cancel)
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </main>
+
+  <!-- MODAL: CREATE KEY PAIR -->
+  <div class="modal-overlay" id="createKeyModal">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="card-header">
+        <div class="card-title">🔑 Tạo SSH Key Pair Mới</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">✕</button>
+      </div>
+      <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+          Hệ thống sẽ sinh cặp khóa <strong>RSA 2048-bit</strong> chuẩn PKCS#1. Khóa công khai được lưu trên tài khoản của bạn, còn file <code>.pem</code> sẽ tự động tải xuống máy của bạn.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên Key Pair (Key pair name) *</label>
+          <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: nmcuong, web-prod-key..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Loại Khóa (Key pair type)</label>
+          <input type="text" class="form-input" value="RSA (2048-bit) — Định dạng .pem (OpenSSH / EC2)" disabled>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')">Hủy</button>
+          <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary" style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700;">
+            ⬇ Tạo Key Pair & Tải .pem
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initEditInstancePage();
+    });
+  </script>
+</body>
+</html>
+

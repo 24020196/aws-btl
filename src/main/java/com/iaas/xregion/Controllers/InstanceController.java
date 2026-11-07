@@ -2,6 +2,7 @@ package com.iaas.xregion.Controllers;
 
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
+import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.ApiResponse;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Services.InstanceService;
@@ -33,6 +34,14 @@ public class InstanceController {
     public ResponseEntity<ApiResponse<InstanceResponse>> launchInstance(@Valid @RequestBody LaunchInstanceRequest request) {
         InstanceResponse response = instanceService.launchInstance(request);
         return ResponseEntity.ok(ApiResponse.ok("Instance launched successfully", response));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<InstanceResponse>> updateInstance(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateInstanceRequest request) {
+        InstanceResponse response = instanceService.updateInstance(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin máy ảo thành công", response));
     }
 
     @PostMapping("/{id}/actions")

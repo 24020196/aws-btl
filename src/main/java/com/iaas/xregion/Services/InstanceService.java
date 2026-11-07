@@ -7,6 +7,7 @@ import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
+import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -113,6 +114,61 @@ public class InstanceService {
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
+        }
+
+        return mapToResponse(entity);
+    }
+
+    public InstanceResponse updateInstance(String id, UpdateInstanceRequest request) {
+        String currentUser = getCurrentUsername();
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
+        }
+
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
+            throw new ResourceNotFoundException("Instance not found: " + id);
+        }
+
+        if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
+            throw new AppException("Máy ảo đang trong quá trình chuyển vùng (MIGRATING), không thể chỉnh sửa cấu hình lúc này.");
+        }
+
+        String oldName = entity.getInstanceName();
+        String oldFlavor = entity.getFlavor();
+        String oldKey = entity.getKeyName();
+
+        entity.setInstanceName(request.getName().trim());
+        entity.setFlavor(request.getFlavor().trim());
+        if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
+            entity.setKeyName(request.getKeyPairName().trim());
+        }
+        if (request.getCooldownSeconds() != null && request.getCooldownSeconds() >= 0) {
+            entity.setCooldownSeconds(request.getCooldownSeconds());
+        }
+        entity.setLastMigrationTimestamp(System.currentTimeMillis());
+
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to update instance in AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi cập nhật thông tin máy ảo vào AWS DynamoDB: " + e.getMessage());
+        }
+
+        auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
+                String.format("Updated instance [%s -> %s], flavor [%s -> %s], key [%s -> %s]",
+                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(), oldKey, entity.getKeyName()));
+
+        try {
+            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
+                    "MODIFY", id, entity.getInstanceName(), entity.getFlavor(),
+                    entity.getCurrentRegion(), entity.getKeyName(), currentUser
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi sự kiện MODIFY qua API Gateway EventBridge: {}", e.getMessage());
         }
 
         return mapToResponse(entity);
@@ -229,6 +285,7 @@ public class InstanceService {
                 .createdAt(timestamp)
                 .updatedAt(timestamp)
                 .keyName(entity.getKeyName() != null ? entity.getKeyName() : "xregion-key")
+                .cooldownSeconds(entity.getCooldownSeconds() != null ? entity.getCooldownSeconds() : 300)
                 .build();
     }
 }
