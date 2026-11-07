@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.ApiTokenItem;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
@@ -20,6 +21,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -35,16 +39,36 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    public UserEntity findUserByUsername(String username) {
+        if (username == null)
+            return null;
+        try {
+            UserEntity user = usersTable.index("username-index")
+                    .query(QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
+                    .stream()
+                    .flatMap(page -> page.items().stream())
+                    .findFirst()
+                    .orElse(null);
+            if (user != null)
+                return user;
+        } catch (Exception ex) {
+            log.debug("GSI lookup error for {}: {}", username, ex.getMessage());
+        }
+        String userId = username.startsWith("usr-") ? username : "usr-" + username;
+        return usersTable.getItem(Key.builder().partitionValue(userId).build());
+    }
+
     public JwtResponse login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String token = tokenProvider.generateToken(authentication);
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-            auditLogService.logAction("LOGIN", "USER", userDetails.getUsername(), "Successful JWT login");
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            long expMs = tokenProvider.getExpirationMs();
+
+            auditLogService.logAction("LOGIN", "USER", userDetails.getUsername(), "User logged in successfully");
 
             return JwtResponse.builder()
                     .token(token)
@@ -52,10 +76,12 @@ public class AuthService {
                     .username(userDetails.getUsername())
                     .fullName(userDetails.getFullName())
                     .role(userDetails.getRole())
-                    .expiresIn(tokenProvider.getExpirationMs() / 1000)
+                    .expiresIn(expMs / 1000)
+                    .expiresAt(TimeSyncUtil.nowEpochMillis() + expMs)
                     .build();
         } catch (Exception e) {
-            throw new AppException("Authentication failed: " + e.getMessage());
+            log.error("Login failed for user {}: {}", request.getUsername(), e.getMessage());
+            throw new AppException("Tên đăng nhập hoặc mật khẩu không chính xác!");
         }
     }
 
@@ -77,6 +103,7 @@ public class AuthService {
                 ? request.getRole().trim()
                 : "ROLE_USER";
 
+        String userId = "usr-" + username;
         UserEntity newUser = UserEntity.builder()
                 .userId("usr-" + username.toLowerCase())
                 .username(username)
@@ -95,13 +122,15 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = tokenProvider.generateToken(authentication);
 
+        long expMs = tokenProvider.getExpirationMs();
         return JwtResponse.builder()
                 .token(token)
                 .type("Bearer")
                 .username(username)
                 .fullName(fullName)
                 .role(role)
-                .expiresIn(tokenProvider.getExpirationMs() / 1000)
+                .expiresIn(expMs / 1000)
+                .expiresAt(TimeSyncUtil.nowEpochMillis() + expMs)
                 .build();
     }
 
@@ -114,7 +143,8 @@ public class AuthService {
         UserEntity user = getOrInitUser(username);
 
         String tokenId = "tok-" + UUID.randomUUID().toString().substring(0, 8);
-        String encodedUser = Base64.getUrlEncoder().withoutPadding().encodeToString(username.getBytes(StandardCharsets.UTF_8));
+        String encodedUser = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(username.getBytes(StandardCharsets.UTF_8));
         String randomSecret = UUID.randomUUID().toString().replace("-", "") + Long.toHexString(System.nanoTime());
         String fullToken = "xreg_" + encodedUser + "_" + randomSecret;
 
@@ -144,7 +174,8 @@ public class AuthService {
 
         userRepository.save(user);
         auditLogService.logAction("CREATE_API_TOKEN", "USER", username,
-                "Tạo API Token [" + request.getName() + "], hạn dùng: " + (months > 0 ? months + " tháng" : "Không thời hạn"));
+                "Tạo API Token [" + request.getName() + "], hạn dùng: "
+                        + (months > 0 ? months + " tháng" : "Không thời hạn"));
 
         return tokenItem;
     }

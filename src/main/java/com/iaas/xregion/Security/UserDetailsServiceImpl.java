@@ -31,7 +31,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 Optional<UserEntity> userOpt = userRepository.findByUsername("admin");
                 if (userOpt.isPresent()) {
                     UserEntity u = userOpt.get();
-                    if (u.getPassword() != null && (u.getPassword().startsWith("$2a$") || u.getPassword().startsWith("$2b$") || u.getPassword().startsWith("$2y$"))) {
+                    if (u.getPassword() != null && (u.getPassword().startsWith("$2a$")
+                            || u.getPassword().startsWith("$2b$") || u.getPassword().startsWith("$2y$"))) {
                         pass = u.getPassword();
                     }
                     if (u.getFullName() != null && !u.getFullName().trim().isEmpty()) {

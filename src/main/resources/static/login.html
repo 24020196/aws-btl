@@ -1,78 +1,709 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng Nhập - XRegion-EC2 Cloud Console</title>
+  <title>Đăng nhập — XRegion Cloud Console</title>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    :root {
+      --xr-bg: #070d18;
+      --xr-card-bg: rgba(15, 23, 42, 0.78);
+      --xr-card-border: rgba(56, 189, 248, 0.22);
+      --xr-text: #f8fafc;
+      --xr-muted: #94a3b8;
+      --xr-input-bg: rgba(15, 23, 42, 0.85);
+      --xr-input-border: #334155;
+      --xr-cyan: #38bdf8;
+      --xr-blue: #0284c7;
+      --xr-orange: #ff9900;
+      --xr-orange-hover: #ec7211;
+      --xr-purple: #a855f7;
+      --xr-error-bg: rgba(239, 68, 68, 0.15);
+      --xr-error-border: #ef4444;
+      --xr-error-text: #fca5a5;
+    }
+
+    body.xr-cyber-body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--xr-bg);
+      color: var(--xr-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Cyber Tech Grid Background Layer */
+    .cyber-grid-overlay {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Neon Gradient Horizon Glow */
+    .cyber-glow-layer {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.16) 0%, transparent 60%),
+        radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 15% 85%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top Bar */
+    .xr-top-bar {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 2;
+    }
+
+    .xr-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .xr-brand-logo {
+      background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+      color: #070d18;
+      font-weight: 900;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    .xr-brand-sub {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--xr-muted);
+      letter-spacing: 0.2px;
+    }
+
+    .xr-lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--xr-card-border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .xr-lang-switch select {
+      border: none;
+      background: transparent;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .xr-lang-switch select option {
+      background: #0f172a;
+      color: #f8fafc;
+    }
+
+    /* Main 2-Column Container */
+    .xr-main-wrapper {
+      max-width: 880px;
+      width: calc(100% - 48px);
+      margin: 40px auto;
+      display: grid;
+      grid-template-columns: 370px 1fr;
+      gap: 36px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (max-width: 860px) {
+      .xr-main-wrapper {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+      }
+
+      .xr-promo-box {
+        display: none;
+      }
+    }
+
+    /* Left Sign-in Card: Cyber Glassmorphism */
+    .xr-card {
+      background: var(--xr-card-bg);
+      border: 1px solid var(--xr-card-border);
+      border-radius: 18px;
+      padding: 32px 30px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(56, 189, 248, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .xr-card-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.3px;
+    }
+
+    .xr-card-desc {
+      font-size: 13px;
+      color: var(--xr-muted);
+      margin: 0 0 24px 0;
+      line-height: 1.45;
+    }
+
+    .xr-field-group {
+      margin-bottom: 16px;
+    }
+
+    .xr-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    .xr-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #f8fafc;
+      background-color: var(--xr-input-bg);
+      border: 1.5px solid var(--xr-input-border);
+      border-radius: 10px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .xr-input:focus {
+      border-color: var(--xr-cyan);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2), 0 0 16px rgba(56, 189, 248, 0.15);
+      background-color: rgba(15, 23, 42, 0.95);
+    }
+
+    .xr-checkbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 18px;
+      font-size: 13px;
+    }
+
+    .xr-checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      color: #cbd5e1;
+    }
+
+    .xr-checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--xr-cyan);
+      cursor: pointer;
+    }
+
+    .xr-link {
+      color: var(--xr-cyan);
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .xr-link:hover {
+      color: #7dd3fc;
+      text-decoration: underline;
+    }
+
+    /* Action Buttons */
+    .xr-btn-orange {
+      width: 100%;
+      padding: 11px 18px;
+      border-radius: 999px;
+      border: 1px solid #f59e0b;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+      color: #070d18;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 4px;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+    }
+
+    .xr-btn-orange:hover {
+      background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .xr-btn-orange:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .xr-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 20px 0 16px;
+      color: var(--xr-muted);
+      font-size: 12.5px;
+    }
+
+    .xr-divider::before,
+    .xr-divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .xr-divider span {
+      padding: 0 12px;
+    }
+
+    .xr-btn-outline {
+      width: 100%;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1.5px solid var(--xr-cyan);
+      background: rgba(56, 189, 248, 0.08);
+      color: var(--xr-cyan);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-block;
+      text-align: center;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+
+    .xr-btn-outline:hover {
+      background: rgba(56, 189, 248, 0.18);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+      color: #ffffff;
+    }
+
+    /* Error & Hint Box */
+    .xr-error-alert {
+      display: none;
+      background: var(--xr-error-bg);
+      border: 1.5px solid var(--xr-error-border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 16px;
+      color: var(--xr-error-text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .xr-trouble-box {
+      display: none;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px dashed var(--xr-cyan);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.55;
+    }
+
+    /* Right Promotional Card: Cyber Glass */
+    .xr-promo-box {
+      border-radius: 18px;
+      padding: 44px 38px;
+      min-height: 380px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(168, 85, 247, 0.12);
+      backdrop-filter: blur(20px);
+    }
+
+    .xr-promo-box::before {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .xr-promo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .xr-promo-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    .xr-promo-headline {
+      font-size: 27px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin: 0 0 16px 0;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .xr-promo-subtext {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #cbd5e1;
+      margin: 0 0 28px 0;
+    }
+
+    .xr-promo-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--xr-cyan);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: gap 0.2s;
+    }
+
+    .xr-promo-cta:hover {
+      gap: 12px;
+      color: #7dd3fc;
+    }
+
+    /* Footer */
+    .xr-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 16px 24px;
+      font-size: 12px;
+      color: var(--xr-muted);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+      background: rgba(7, 13, 24, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .xr-footer a {
+      color: var(--xr-cyan);
+      text-decoration: none;
+    }
+
+    .xr-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
-<body class="auth-page">
 
-  <div class="auth-card">
-    <div class="auth-header">
-      <div class="auth-logo-badge">XREGION-EC2</div>
-      <h1 class="auth-title">Đăng Nhập Quản Trị</h1>
-      <p class="auth-desc">Nền tảng IaaS tự động chuyển vùng máy ảo (Multi-Region Cloud)</p>
+<body class="xr-cyber-body">
+
+  <!-- Cyberpunk Tech Grid & Horizon Glow Layers -->
+  <div class="cyber-grid-overlay"></div>
+  <div class="cyber-glow-layer"></div>
+
+  <!-- Top Header: Brand + Language Selector -->
+  <header class="xr-top-bar">
+    <div class="xr-brand">
+      <div class="xr-brand-logo">XREGION</div>
+      <span class="xr-brand-sub" data-i18n="brandSubtitle">Hệ Thống Quản Trị Máy Ảo Đa Vùng</span>
     </div>
 
-    <!-- On-screen Alert Box -->
-    <div id="loginErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 13px; line-height: 1.4;"></div>
-
-    <form id="authLoginForm" onsubmit="handleLoginPageSubmit(event)">
-      <div class="form-group">
-        <label class="form-label">Tên Đăng Nhập (Username)</label>
-        <input type="text" class="form-input" id="authUsername" value="admin" required placeholder="admin" autocomplete="username">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Mật Khẩu (Password)</label>
-        <input type="password" class="form-input" id="authPassword" value="admin123" required placeholder="••••••••" autocomplete="current-password">
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 12px; color: var(--text-muted);">
-        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-          <input type="checkbox" id="rememberMe" checked> Ghi nhớ đăng nhập
-        </label>
-        <span style="color: var(--accent-cyan); font-family: monospace;">Mặc định: admin / admin123</span>
-      </div>
-
-      <button type="submit" id="loginBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 14px;">
-        Đăng Nhập vào Console
-      </button>
-    </form>
-
-    <div class="auth-footer">
-      <div>Chưa có tài khoản quản trị? <a href="/register.html">Đăng ký tài khoản mới</a></div>
-      <div style="margin-top: 10px;"><a href="/index.html" style="color: var(--text-muted); font-size: 12px;">← Quay về Trang chủ Overview</a></div>
+    <div class="xr-lang-switch" title="Chọn ngôn ngữ / Select Language">
+      <span>🌐</span>
+      <select id="xrLangSelect" onchange="changeXrLanguage(this.value)">
+        <option value="vi">Tiếng Việt (VN)</option>
+        <option value="en">English (US)</option>
+      </select>
     </div>
-  </div>
+  </header>
+
+  <!-- Main 2-Column Sign-In Area -->
+  <main class="xr-main-wrapper">
+    <!-- Left Column: Friendly User Sign-in Card -->
+    <div class="xr-card">
+      <h1 class="xr-card-title" data-i18n="signInHeading">Đăng nhập người dùng</h1>
+      <p class="xr-card-desc" data-i18n="signInDesc">Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn</p>
+
+      <!-- Error Box -->
+      <div id="loginErrorBox" class="xr-error-alert"></div>
+
+      <!-- Quick Hint Box -->
+      <div id="troubleHintBox" class="xr-trouble-box">
+        <strong data-i18n="troubleTitle">Tài khoản mặc định để thử nghiệm:</strong><br>
+        • Username: <code>admin</code> | Password: <code>admin123</code><br>
+        <a class="xr-link" onclick="fillDefaultAdminCredentials()" data-i18n="troubleAutoFill">Bấm vào đây để tự động
+          điền</a>
+      </div>
+
+      <form id="authLoginForm" onsubmit="handleLoginPageSubmit(event)">
+        <!-- Username -->
+        <div class="xr-field-group">
+          <label class="xr-label" for="authUsername" data-i18n="labelUsername">Tên đăng nhập</label>
+          <input type="text" class="xr-input" id="authUsername" value="admin" required placeholder="Nhập tên đăng nhập"
+            autocomplete="username">
+        </div>
+
+        <div class="xr-checkbox-row" style="margin-top: 4px; margin-bottom: 14px;">
+          <label class="xr-checkbox-label">
+            <input type="checkbox" id="rememberAccountBox" checked>
+            <span data-i18n="rememberAccount">Ghi nhớ tài khoản này</span>
+          </label>
+        </div>
+
+        <!-- Password -->
+        <div class="xr-field-group" style="margin-bottom: 8px;">
+          <label class="xr-label" for="authPassword" data-i18n="labelPassword">Mật khẩu</label>
+          <input type="password" class="xr-input" id="authPassword" value="admin123" required placeholder="••••••••••••"
+            autocomplete="current-password">
+        </div>
+
+        <!-- Show Password & Help -->
+        <div class="xr-checkbox-row">
+          <label class="xr-checkbox-label">
+            <input type="checkbox" id="showPasswordCheck" onchange="toggleShowLoginPassword(this.checked)">
+            <span data-i18n="showPassword">Hiển thị mật khẩu</span>
+          </label>
+          <a class="xr-link" onclick="toggleTroubleBox()" data-i18n="havingTrouble">Tài khoản mẫu?</a>
+        </div>
+
+        <!-- Sign in Button -->
+        <button type="submit" id="loginBtn" class="xr-btn-orange" data-i18n="signInBtn">
+          Đăng nhập
+        </button>
+
+        <div class="xr-divider">
+          <span data-i18n="orDivider">Chưa có tài khoản?</span>
+        </div>
+
+        <!-- Create new account -->
+        <a href="/register.html" class="xr-btn-outline" data-i18n="createAccountLink">
+          Tạo tài khoản mới
+        </a>
+      </form>
+    </div>
+
+    <!-- Right Column: Clean Promo Box -->
+    <div class="xr-promo-box">
+      <div class="xr-promo-badge">
+        <span class="xr-promo-badge-dot"></span>
+        <span>Multi-Region Cloud</span>
+      </div>
+      <h2 class="xr-promo-headline" data-i18n="promoHeadline">
+        Triển khai & chuyển vùng máy ảo chỉ trong vài phút.
+      </h2>
+      <p class="xr-promo-subtext" data-i18n="promoSubtext">
+        Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ
+        tầng.
+      </p>
+      <a href="/register.html" class="xr-promo-cta">
+        <span data-i18n="promoCta">Bắt đầu trải nghiệm ngay</span>
+        <span>→</span>
+      </a>
+    </div>
+  </main>
+
+  <!-- Bottom Footer -->
+  <footer class="xr-footer">
+    <span>© 2026 XRegion Cloud Platform</span>
+    <a href="javascript:void(0)" data-i18n="footerPrivacy">Bảo mật</a>
+    <a href="javascript:void(0)" data-i18n="footerTerms">Điều khoản sử dụng</a>
+    <a href="javascript:void(0)"
+      onclick="changeXrLanguage(document.getElementById('xrLangSelect').value === 'vi' ? 'en' : 'vi')"
+      data-i18n="footerSwitchLang">
+      🌐 Switch to English
+    </a>
+  </footer>
 
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
   <script>
-    // Nếu người dùng đã có token hợp lệ, tự động chuyển vào Dashboard
-    (function checkAlreadyLoggedIn() {
+    (function () {
       const existingToken = localStorage.getItem('xregion_jwt');
-      if (existingToken) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUrl = urlParams.get('redirect') || '/instances.html';
-        window.location.replace(targetUrl);
+      const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
+      if (existingToken && (!expAt || Date.now() < expAt)) {
+        window.location.replace('/index.html');
+      }
+
+      const savedUser = localStorage.getItem('xregion_last_username');
+      if (savedUser) {
+        document.getElementById('authUsername').value = savedUser;
       }
     })();
 
+    const LOGIN_I18N = {
+      vi: {
+        brandSubtitle: 'Hệ Thống Quản Trị Máy Ảo Đa Vùng',
+        signInHeading: 'Đăng nhập người dùng',
+        signInDesc: 'Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn',
+        troubleTitle: 'Tài khoản mặc định để thử nghiệm:',
+        troubleAutoFill: 'Bấm vào đây để tự động điền admin / admin123',
+        labelUsername: 'Tên đăng nhập',
+        rememberAccount: 'Ghi nhớ tài khoản này',
+        labelPassword: 'Mật khẩu',
+        showPassword: 'Hiển thị mật khẩu',
+        havingTrouble: 'Tài khoản mẫu?',
+        signInBtn: 'Đăng nhập',
+        signingInBtn: 'Đang đăng nhập...',
+        orDivider: 'Chưa có tài khoản?',
+        createAccountLink: 'Tạo tài khoản mới',
+        promoHeadline: 'Triển khai & chuyển vùng máy ảo chỉ trong vài phút.',
+        promoSubtext: 'Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ tầng.',
+        promoCta: 'Bắt đầu trải nghiệm ngay',
+        footerPrivacy: 'Bảo mật',
+        footerTerms: 'Điều khoản sử dụng',
+        footerSwitchLang: '🌐 Switch to English',
+        loginSuccessToast: 'Đăng nhập thành công! Đang chuyển hướng...',
+        loginErrorPrefix: 'Lỗi đăng nhập:'
+      },
+      en: {
+        brandSubtitle: 'Multi-Region Cloud Console',
+        signInHeading: 'User sign in',
+        signInDesc: 'Sign in to manage your virtual machines and cloud infrastructure',
+        troubleTitle: 'Default demo credentials:',
+        troubleAutoFill: 'Click here to auto-fill admin / admin123',
+        labelUsername: 'Username',
+        rememberAccount: 'Remember this account',
+        labelPassword: 'Password',
+        showPassword: 'Show Password',
+        havingTrouble: 'Demo account?',
+        signInBtn: 'Sign in',
+        signingInBtn: 'Signing in...',
+        orDivider: 'New to XRegion?',
+        createAccountLink: 'Create a new account',
+        promoHeadline: 'Deploy & migrate virtual machines in minutes.',
+        promoSubtext: 'Manage VM lifecycles intuitively with automated disk replication and instant cross-region failover.',
+        promoCta: 'Get started now',
+        footerPrivacy: 'Privacy',
+        footerTerms: 'Terms of Use',
+        footerSwitchLang: '🌐 Chuyển sang Tiếng Việt',
+        loginSuccessToast: 'Signed in successfully! Redirecting...',
+        loginErrorPrefix: 'Sign-in error:'
+      }
+    };
+
+    function changeXrLanguage(lang) {
+      const targetLang = LOGIN_I18N[lang] ? lang : 'vi';
+      localStorage.setItem('xregion_lang', targetLang);
+      const select = document.getElementById('xrLangSelect');
+      if (select) select.value = targetLang;
+
+      const dict = LOGIN_I18N[targetLang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.innerHTML = dict[key];
+        }
+      });
+    }
+
+    function toggleShowLoginPassword(show) {
+      const passInput = document.getElementById('authPassword');
+      if (passInput) {
+        passInput.type = show ? 'text' : 'password';
+      }
+    }
+
+    function toggleTroubleBox() {
+      const box = document.getElementById('troubleHintBox');
+      if (box) {
+        box.style.display = box.style.display === 'block' ? 'none' : 'block';
+      }
+    }
+
+    function fillDefaultAdminCredentials() {
+      document.getElementById('authUsername').value = 'admin';
+      document.getElementById('authPassword').value = 'admin123';
+      showToast('Đã điền tài khoản mặc định: admin / admin123', 'success');
+    }
+
+    changeXrLanguage(localStorage.getItem('xregion_lang') || 'vi');
+
     async function handleLoginPageSubmit(e) {
       e.preventDefault();
+      const lang = localStorage.getItem('xregion_lang') || 'vi';
+      const dict = LOGIN_I18N[lang] || LOGIN_I18N.vi;
+
       const errBox = document.getElementById('loginErrorBox');
       errBox.style.display = 'none';
 
       const btn = document.getElementById('loginBtn');
-      const origText = btn.innerHTML;
+      const origText = dict.signInBtn;
       btn.disabled = true;
-      btn.innerHTML = '⏳ Đang xác thực...';
+      btn.textContent = dict.signingInBtn;
 
       const username = document.getElementById('authUsername').value.trim();
       const password = document.getElementById('authPassword').value;
+      const remember = document.getElementById('rememberAccountBox').checked;
+
+      if (remember) {
+        localStorage.setItem('xregion_last_username', username);
+      } else {
+        localStorage.removeItem('xregion_last_username');
+      }
 
       try {
         const res = await fetch('/api/auth/login', {
@@ -83,28 +714,27 @@
         const data = await res.json();
 
         if (res.ok && data.data && data.data.token) {
+          const expiresAt = data.data.expiresAt || (Date.now() + (data.data.expiresIn || 86400) * 1000);
           localStorage.setItem('xregion_jwt', data.data.token);
           localStorage.setItem('xregion_user', data.data.fullName || username);
-          showToast('Đăng nhập thành công! Đang chuyển hướng...', 'success');
-
-          const urlParams = new URLSearchParams(window.location.search);
-          const targetUrl = urlParams.get('redirect') || '/instances.html';
+          localStorage.setItem('xregion_jwt_expires_at', String(expiresAt));
+          showToast(dict.loginSuccessToast, 'success');
           setTimeout(() => {
-            window.location.replace(targetUrl);
+            window.location.replace('/index.html');
           }, 500);
         } else {
-          throw new Error(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+          throw new Error(data.message || 'Sai tên đăng nhập hoặc mật khẩu.');
         }
       } catch (err) {
-        errBox.innerHTML = `<strong>❌ Lỗi đăng nhập:</strong> ${err.message}`;
+        errBox.innerHTML = `<strong>⚠️ ${dict.loginErrorPrefix}</strong> ${err.message}`;
         errBox.style.display = 'block';
         showToast(err.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = origText;
+        btn.textContent = origText;
       }
     }
   </script>
 </body>
-</html>
 
+</html>

@@ -48,6 +48,26 @@ public class KeyService {
         return "admin";
     }
 
+    private UserEntity findUserByUsername(String username) {
+        if (username == null)
+            return null;
+        try {
+            UserEntity user = usersTable.index("username-index")
+                    .query(software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
+                            .keyEqualTo(Key.builder().partitionValue(username).build()))
+                    .stream()
+                    .flatMap(page -> page.items().stream())
+                    .findFirst()
+                    .orElse(null);
+            if (user != null)
+                return user;
+        } catch (Exception ex) {
+            log.debug("GSI lookup error in KeyService: {}", ex.getMessage());
+        }
+        String userId = username.startsWith("usr-") ? username : "usr-" + username;
+        return usersTable.getItem(Key.builder().partitionValue(userId).build());
+    }
+
     private List<KeyPairItem> loadUserKeyItems(String username) {
         try {
             UserEntity user = userRepository.findByUsername(username).orElse(null);
@@ -68,6 +88,7 @@ public class KeyService {
         try {
             UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user == null) {
+                String userId = username.startsWith("usr-") ? username : "usr-" + username;
                 user = UserEntity.builder()
                         .userId("usr-" + username.toLowerCase())
                         .username(username)
@@ -140,7 +161,8 @@ public class KeyService {
             publicKeyStr = request.getPublicKey().trim();
             fingerprint = generateFingerprint(publicKeyStr.getBytes(StandardCharsets.UTF_8));
         } else {
-            // Sinh cặp khóa RSA 2048 chuẩn PKCS#1 PEM (-----BEGIN RSA PRIVATE KEY-----) giống hệt AWS EC2
+            // Sinh cặp khóa RSA 2048 chuẩn PKCS#1 PEM (-----BEGIN RSA PRIVATE KEY-----)
+            // giống hệt AWS EC2
             try {
                 KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
                 kpg.initialize(2048);
@@ -150,7 +172,7 @@ public class KeyService {
                 RSAPublicKey pubKey = (RSAPublicKey) kp.getPublic();
 
                 byte[] pkcs1Bytes = encodePkcs1PrivateKey(privKey);
-                Base64.Encoder mimeEncoder = Base64.getMimeEncoder(64, new byte[]{'\n'});
+                Base64.Encoder mimeEncoder = Base64.getMimeEncoder(64, new byte[] { '\n' });
                 privateKeyPem = "-----BEGIN RSA PRIVATE KEY-----\n"
                         + mimeEncoder.encodeToString(pkcs1Bytes)
                         + "\n-----END RSA PRIVATE KEY-----";
@@ -181,9 +203,11 @@ public class KeyService {
         userKeys.add(itemToSave);
         saveUserKeyItems(currentUser, userKeys);
 
-        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name, "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
+        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name,
+                "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
 
-        // Đồng bộ Public Key sang EventBridge bất đồng bộ để phản hồi tải file .pem tức thì
+        // Đồng bộ Public Key sang EventBridge bất đồng bộ để phản hồi tải file .pem tức
+        // thì
         final String syncPubKey = publicKeyStr;
         final String syncFp = fingerprint;
         CompletableFuture.runAsync(() -> {
@@ -194,8 +218,7 @@ public class KeyService {
                         syncPubKey,
                         syncFp,
                         List.of("ap-southeast-2", "us-east-1"),
-                        currentUser
-                );
+                        currentUser);
             } catch (Exception e) {
                 log.warn("Không thể gửi sự kiện đồng bộ SSH Key qua API Gateway EventBridge: {}", e.getMessage());
             }
@@ -225,7 +248,8 @@ public class KeyService {
     }
 
     /**
-     * Mã hóa chuẩn ASN.1 DER PKCS#1 RSAPrivateKey (MIIEp...) khớp 100% cấu trúc file .pem của AWS EC2 / OpenSSH
+     * Mã hóa chuẩn ASN.1 DER PKCS#1 RSAPrivateKey (MIIEp...) khớp 100% cấu trúc
+     * file .pem của AWS EC2 / OpenSSH
      */
     private byte[] encodePkcs1PrivateKey(RSAPrivateCrtKey key) throws IOException {
         ByteArrayOutputStream seq = new ByteArrayOutputStream();
@@ -296,7 +320,8 @@ public class KeyService {
             byte[] digest = md.digest(data);
             StringBuilder sb = new StringBuilder("SHA256:");
             for (int i = 0; i < Math.min(16, digest.length); i++) {
-                if (i > 0) sb.append(":");
+                if (i > 0)
+                    sb.append(":");
                 sb.append(String.format("%02x", digest[i]));
             }
             return sb.toString();

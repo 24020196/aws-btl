@@ -69,6 +69,71 @@ function formatSyncedDateTime(rawTs) {
 // Khởi chạy đồng bộ thời gian ngay khi tải script
 syncServerClock();
 
+// ============================================================
+// SESSION GUARD, AUTO-LOGOUT & REQUIRE AUTH ON ALL PAGES (INCLUDING /index.html)
+// ============================================================
+function isJwtTokenExpired() {
+  const token = localStorage.getItem('xregion_jwt');
+  if (!token) return true;
+  const expiresAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
+  if (expiresAt > 0 && getSyncedNowMs() >= expiresAt) {
+    return true;
+  }
+  // Fallback: giải mã payload JWT (`exp` tính bằng giây) nếu chưa có `xregion_jwt_expires_at`
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.exp && getSyncedNowSec() >= payload.exp) {
+        return true;
+      }
+    }
+  } catch (e) {
+    // ignore decode errors
+  }
+  return false;
+}
+
+function enforceAuthGuard() {
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html');
+  const token = localStorage.getItem('xregion_jwt');
+  const expired = isJwtTokenExpired();
+
+  if (token && expired) {
+    localStorage.removeItem('xregion_jwt');
+    localStorage.removeItem('xregion_user');
+    localStorage.removeItem('xregion_jwt_expires_at');
+    authToken = '';
+    if (!isAuthPage) {
+      alert('Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại!');
+      window.location.replace('/login.html');
+    }
+    return;
+  }
+
+  // Nếu chưa đăng nhập thì chặn toàn bộ trang (bao gồm cả / và /index.html) và đẩy về /login.html
+  if (!isAuthPage && !token) {
+    window.location.replace('/login.html');
+  }
+}
+
+enforceAuthGuard();
+setInterval(() => {
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html');
+  if (!isAuthPage && isJwtTokenExpired()) {
+    localStorage.removeItem('xregion_jwt');
+    localStorage.removeItem('xregion_user');
+    localStorage.removeItem('xregion_jwt_expires_at');
+    authToken = '';
+    showToast('Phiên đăng nhập đã hết hạn, đang tự động đăng xuất...', 'error');
+    setTimeout(() => {
+      window.location.replace('/login.html');
+    }, 600);
+  }
+}, 5000);
+
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
   'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
@@ -233,7 +298,10 @@ async function submitLogin(e) {
     const data = await res.json();
     if (res.ok && data.data && data.data.token) {
       authToken = data.data.token;
+      const expiresAt = data.data.expiresAt || (getSyncedNowMs() + (data.data.expiresIn || 86400) * 1000);
       localStorage.setItem('xregion_jwt', authToken);
+      localStorage.setItem('xregion_user', data.data.fullName || username);
+      localStorage.setItem('xregion_jwt_expires_at', String(expiresAt));
       document.getElementById('userNameDisplay').textContent = data.data.fullName || username;
       closeModal('loginModal');
       clearApiError();
@@ -253,10 +321,11 @@ async function submitLogin(e) {
 function logout() {
   localStorage.removeItem('xregion_jwt');
   localStorage.removeItem('xregion_user');
+  localStorage.removeItem('xregion_jwt_expires_at');
   authToken = '';
   showToast('Đã đăng xuất khỏi hệ thống', 'success');
   setTimeout(() => {
-    window.location.href = '/login.html';
+    window.location.replace('/login.html');
   }, 400);
 }
 
@@ -523,6 +592,81 @@ function filterInstancesUI() {
     tbody.appendChild(tr);
   });
 }
+
+function renderRowEc2ActionsDropdown(inst) {
+  const isStopped = (inst.status === 'SHUTOFF' || inst.status === 'STOPPED');
+  const menuId = `rowActionsList-${inst.id}`;
+  const itemLink = (sec, labelVi, labelEn, needStop = false, immutableMsgVi = '', immutableMsgEn = '') => {
+    const label = t(labelVi, labelEn);
+    if (immutableMsgVi) {
+      const msg = t(immutableMsgVi, immutableMsgEn || immutableMsgVi);
+      return `<span class="ec2-actions-item is-disabled" data-tooltip="${msg}" title="${msg}">${label}</span>`;
+    }
+    if (needStop && !isStopped) {
+      const msg = t(`Cần dừng máy ảo (Stop instance) trước khi ${labelVi}`, `Stop the instance before using "${labelEn}"`);
+      return `<span class="ec2-actions-item is-disabled" data-tooltip="${msg}" title="${msg}">${label}</span>`;
+    }
+    return `<a href="/instance-edit.html?id=${encodeURIComponent(inst.id)}&section=${sec}" class="ec2-actions-item">${label}</a>`;
+  };
+  return `
+    <div class="ec2-actions-menu">
+      <button type="button" class="btn btn-secondary btn-sm" style="padding:4px 8px; color:var(--accent-cyan);" onclick="toggleRowActionsMenu('${menuId}', event)">${t('Hành động ▾', 'Actions ▾')}</button>
+      <div class="ec2-actions-list" id="${menuId}" hidden>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Quản lý vòng đời & Nhãn', 'Protection and lifecycle management')}</div>
+            ${itemLink('tags', 'Đổi tên máy ảo & nhãn (Tags)', 'Change instance name & tags', false)}
+            ${itemLink('cooldown', 'Đổi thời gian chờ Cooldown', 'Change migration cooldown', false)}
+            <div class="ec2-actions-sep"></div>
+            <div class="ec2-actions-subhead">${t('Cấu hình phần cứng', 'Instance configuration')}</div>
+            ${itemLink('instance-type', 'Đổi loại máy ảo (Instance type)', 'Change instance type', true)}
+            ${itemLink('cpu-options', 'Tùy chọn vi xử lý (CPU options)', 'Change CPU options', true, 'Cần dừng máy ảo (Stop instance) để cấu hình CPU options', 'Instance must be stopped to modify CPU options')}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Mạng (Networking)', 'Networking')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Địa chỉ IP & Tên miền', 'IP & DNS configuration')}</div>
+            ${itemLink('elastic-ip', 'Quản lý địa chỉ Elastic IP', 'Manage Elastic IP address', false)}
+            ${itemLink('dns', 'Cập nhật tên miền Route 53 DNS', 'Change Route 53 DNS record', false)}
+            ${itemLink('vpc', 'Đổi mạng VPC / Subnet', 'Change VPC / Subnet', false, 'Không thể đổi trực tiếp VPC/Subnet. Vui lòng dùng Fast Migrate X-Region để chuyển vùng', 'VPC/Subnet cannot be changed directly. Use Fast Migrate X-Region instead')}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Bảo mật (Security)', 'Security')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
+            ${itemLink('security-groups', 'Đổi nhóm bảo mật (Security groups)', 'Change security groups', false)}
+            ${itemLink('key-pair', 'Đổi khóa truy cập SSH Key Pair', 'Change SSH key pair', false)}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Lưu trữ (Storage)', 'Storage')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Ổ đĩa EBS Elastic Volumes', 'EBS Elastic Volumes')}</div>
+            ${itemLink('storage', 'Mở rộng ổ cứng gốc EBS (gp3)', 'Modify EBS root volume (gp3)', false)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleRowActionsMenu(menuId, ev) {
+  if (ev) ev.stopPropagation();
+  const target = document.getElementById(menuId);
+  document.querySelectorAll('.ec2-actions-list').forEach(el => {
+    if (el.id !== menuId) el.hidden = true;
+  });
+  if (target) target.hidden = !target.hidden;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ec2-actions-menu')) {
+    document.querySelectorAll('.ec2-actions-list').forEach(el => { el.hidden = true; });
+  }
+});
 
 function openLaunchModal() {
   const errBox = document.getElementById('launchErrorBox');
@@ -1138,26 +1282,340 @@ async function loadAuditLogs() {
 }
 
 // ============================================================
-// GLOBAL USER BADGE & AUTH STATUS
+// GLOBAL LANGUAGE (i18n: Tiếng Việt & English) & USER BADGE
 // ============================================================
+function getLang() {
+  return localStorage.getItem('xregion_lang') === 'en' ? 'en' : 'vi';
+}
+
+function t(viText, enText) {
+  return getLang() === 'en' ? enText : viText;
+}
+
+// Comprehensive Bidirectional Phrase Dictionary for DOM Text Nodes & Placeholders across all pages
+const I18N_PAIRS = [
+  // --- index.html (Overview) ---
+  ['Tổng Quan Hạ Tầng Điện Toán Đa Vùng', 'Multi-Region Cloud Compute Infrastructure Overview'],
+  ['Quản lý vòng đời máy ảo NovaVM trên máy chủ Bare Metal, tự động sao chép ổ đĩa EBS gp3 và cắt chuyển định tuyến Route 53 DNS xuyên vùng không gián đoạn.', 'Manage NovaVM instances on Bare Metal hosts with automated EBS gp3 snapshot replication and seamless cross-region Route 53 DNS cutover.'],
+  ['+ Khởi Tạo Máy Ảo', '+ Launch Instance'],
+  ['Quản Lý Máy Ảo →', 'Manage Instances →'],
+  ['Tổng số máy ảo', 'Total Compute Instances'],
+  ['Vùng AWS đã kết nối', 'Connected AWS Regions'],
+  ['Tổng dung lượng EBS', 'Total EBS Storage'],
+  ['Sức khỏe hệ thống', 'Fleet Health Rate'],
+  ['Hoạt động tốt', 'Operational'],
+  ['• Mã vùng:', '• Region code:'],
+  ['• Vai trò: Active Primary Production', '• Role: Active Primary Production'],
+  ['• Định tuyến mạng: VPC Subnet', '• Network routing: VPC Subnet'],
+  ['• Vai trò: Standby Secondary & Disaster Recovery', '• Role: Standby Secondary & Disaster Recovery'],
+  ['Máy ảo tại vùng:', 'Instances in region:'],
+  ['Chuyển vùng xuyên vùng (Cross-Region Migration)', 'Cross-Region Migration'],
+  ['Tổng hợp từ bảng XRegion-Migrations cho các máy ảo của bạn.', 'Aggregated from XRegion-Migrations table for your instances.'],
+  ['Chọn máy để chuyển vùng →', 'Select instance to migrate →'],
+  ['Thành công', 'Completed'],
+  ['Thất bại / rollback', 'Failed / Rollback'],
+  ['Khóa được nhả tự động', 'Lock auto-released'],
+  ['Đang chạy', 'Running'],
+  ['Downtime TB (RTO)', 'Avg Downtime (RTO)'],
+  ['Từ lúc dừng VM nguồn tới khi DNS đổi IP', 'From source VM stop to Route 53 DNS cutover'],
+  ['Lần chuyển vùng gần nhất', 'Latest Cross-Region Migration'],
+  ['Máy đang giữ migration_lock', 'Instances Holding migration_lock'],
+  ['Đang tải…', 'Loading…'],
+  ['Máy Ảo Đang Hoạt Động (Active Instances)', 'Active Compute Instances'],
+  ['Xem Toàn Bộ Máy Ảo →', 'View All Instances →'],
+  ['TÊN MÁY ẢO', 'INSTANCE NAME'],
+  ['VÙNG HIỆN TẠI', 'CURRENT REGION'],
+  ['DNS TÊN MIỀN', 'ROUTE 53 DNS'],
+  ['TRẠNG THÁI', 'STATE'],
+  ['CHI TIẾT', 'DETAILS'],
+  ['THAO TÁC', 'ACTIONS'],
+  ['IP NỘI BỘ', 'PRIVATE IP'],
+  ['Đang tải dữ liệu máy ảo...', 'Loading compute instances...'],
+  ['Nhật Ký Thao Tác Hệ Thống (Recent Audit Logs)', 'Recent System Audit Logs'],
+  ['THỜI GIAN', 'TIMESTAMP'],
+  ['NGƯỜI THỰC HIỆN', 'ACTOR'],
+  ['HÀNH ĐỘNG', 'ACTION'],
+  ['ĐỐI TƯỢNG', 'RESOURCE'],
+  ['CHI TIẾT NHẬT KÝ', 'AUDIT DETAILS'],
+  ['Đang tải nhật ký...', 'Loading audit logs...'],
+
+  // --- instances.html ---
+  ['Tổng số máy ảo', 'Total Instances'],
+  ['Đang dừng', 'Stopped'],
+  ['Đang chuyển vùng', 'Migrating'],
+  ['Tất cả trạng thái', 'All statuses'],
+  ['Đang chạy (ACTIVE)', 'Running (ACTIVE)'],
+  ['Đã dừng (SHUTOFF)', 'Stopped (SHUTOFF)'],
+  ['Đang chuyển vùng (MIGRATING)', 'Migrating'],
+  ['Làm mới', 'Refresh'],
+  ['Đang tải danh sách máy ảo...', 'Loading instances...'],
+  ['Tìm theo tên hoặc ID...', 'Search by instance name or ID...'],
+
+  // --- instance-detail.html ---
+  ['Vùng:', 'Region:'],
+  ['Trạng thái', 'Instance state'],
+  ['Vùng hiện tại', 'Current region'],
+  ['Khóa chuyển vùng', 'Migration lock'],
+  ['Chi tiết', 'Details'],
+  ['Bảo mật & Mạng', 'Security & Networking'],
+  ['Lưu trữ', 'Storage'],
+  ['Giám sát', 'Monitoring'],
+  ['Chuyển vùng', 'Cross-Region Migration'],
+  ['Phần cứng & Hệ điều hành', 'Hardware & OS Configuration'],
+  ['Hệ điều hành', 'Operating System'],
+  ['Nền tảng', 'Platform'],
+  ['Ảo hóa', 'Virtualization'],
+  ['KVM (OpenStack Nova) trên EC2 Bare Metal', 'KVM (OpenStack Nova) on EC2 Bare Metal'],
+  ['Định danh & Truy cập', 'Identity & Access'],
+  ['Tên máy ảo', 'Instance name'],
+  ['Chủ sở hữu', 'Owner'],
+  ['Trạng thái hiện tại', 'Current state'],
+  ['User đăng nhập', 'SSH login user'],
+  ['Kết nối', 'Connection'],
+  ['Xem lệnh SSH', 'View SSH command'],
+  ['Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.', 'Virtual firewall attached to the instance ENI. Traffic is permitted only when matching at least one rule.'],
+  ['Đổi Security Group', 'Change Security Group'],
+  ['+ Tạo Security Group', '+ Create Security Group'],
+  ['+ Thêm rule', '+ Add rule'],
+  ['+ Thêm outbound rule', '+ Add outbound rule'],
+  ['Loại', 'Type'],
+  ['Giao thức', 'Protocol'],
+  ['Cổng', 'Port range'],
+  ['Nguồn', 'Source'],
+  ['Đích', 'Destination'],
+  ['Mô tả', 'Description'],
+  ['Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.', 'The VM uses a secondary private IP on the EC2 Bare Metal host ENI with 1:1 Elastic IP NAT mapping.'],
+  ['Gắn vào', 'Attached to'],
+  ['Secondary IP (máy ảo)', 'Secondary IP (VM)'],
+  ['Mạng & Route 53', 'VPC Network & Route 53'],
+  ['Cập nhật Route 53 DNS', 'Update Route 53 DNS'],
+  ['Tên miền', 'Domain name'],
+  ['Bản ghi A đang trỏ tới', 'A-Record target IP'],
+  ['Đồng bộ với Elastic IP', 'Synced with Elastic IP'],
+  ['Thiết bị gốc (Root device)', 'Root Device Configuration'],
+  ['Tên thiết bị gốc', 'Root device name'],
+  ['Loại thiết bị', 'Device type'],
+  ['Loại ổ đĩa', 'Volume type'],
+  ['Dung lượng', 'Size'],
+  ['Hiệu năng', 'Performance'],
+  ['Block devices đang gắn', 'Attached Block Devices'],
+  ['Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.', 'During cross-region migration, the root volume is snapshotted and replicated to the destination region.'],
+  ['Tên', 'Name'],
+  ['Thiết bị', 'Device'],
+  ['Tự làm mới mỗi phút', 'Auto-refresh every minute'],
+  ['Hướng chuyển tiếp theo', 'Next migration route'],
+  ['Tiến trình chuyển vùng (6 bước)', 'Cross-Region Migration Pipeline (6 Steps)'],
+  ['Chưa có lần chuyển vùng nào đang chạy.', 'No active migration in progress.'],
+  ['Dừng máy nguồn', 'Stop source VM'],
+  ['Sao chép liên vùng', 'Cross-region copy'],
+  ['Tạo volume đích', 'Create target volume'],
+  ['Khởi động NovaVM', 'Boot target NovaVM'],
+  ['Chuyển DNS', 'Cutover Route 53 DNS'],
+  ['Log thời gian thực', 'Real-time migration log'],
+  ['Đang chờ', 'Idle'],
+  ['Log của từng bước sẽ hiện ở đây khi bạn bấm Fast Migrate.', 'Step-by-step execution logs will appear here when you trigger Fast Migrate.'],
+  ['Lịch sử chuyển vùng', 'Migration History'],
+  ['Bấm vào một dòng để xem lại log 6 bước của lần đó.', 'Click any row to inspect the detailed 6-step execution log.'],
+  ['Vùng nguồn → Vùng đích', 'Source → Destination'],
+  ['Bắt đầu', 'Started at'],
+  ['Hoàn tất', 'Completed at'],
+  ['Thời lượng', 'Duration'],
+
+  // --- launch.html ---
+  ['Khởi Tạo Máy Ảo Mới', 'Launch New Instance'],
+  ['Cấu hình máy chủ ảo hóa liên vùng. Sau khi khởi tạo, dữ liệu có thể tự động sao chép và di chuyển giữa các vùng hạ tầng theo kịch bản.', 'Configure a cross-region compute instance with automated EBS gp3 replication and Route 53 DNS failover.'],
+  ['Tên Máy Ảo (Instance Name)', 'Instance Name & Tags'],
+  ['Tên Máy Ảo *', 'Instance Name *'],
+  ['vd: my-web-server', 'e.g. my-web-server'],
+  ['Vùng Cấp Phát (Target Region)', 'Target AWS Region'],
+  ['Mã vùng:', 'Region code:'],
+  ['Ảnh Hệ Điều Hành (Application and OS Images)', 'Application and OS Images (AMI / Glance)'],
+  ['Chọn ảnh máy ảo hệ điều hành (Glance OS Image) lưu trữ trên cụm Bare Metal:', 'Select a base operating system image (Glance OS Image) for your instance:'],
+  ['Gói Cấu Hình Máy Ảo (Flavor)', 'Instance Type (Flavor)'],
+  ['Chọn Flavor:', 'Select Instance Type:'],
+  ['📋 Danh Sách Flavor Cho Phép', '📋 Available Instance Types'],
+  ['Dòng', 'Series'],
+  ['Tên Flavor', 'Instance Type'],
+  ['Tiêu chuẩn (m1)', 'General Purpose (m1)'],
+  ['Hiệu năng cao (h1)', 'High Performance (h1)'],
+  ['Khóa Xác Thực SSH (Key Pair - Login)', 'Key Pair (SSH Login)'],
+  ['Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file', 'Select an existing SSH key pair or create a new key pair to download the'],
+  ['Tên Key Pair *', 'Key Pair Name *'],
+  ['🔑 + Tạo Key Pair Mới (.pem)', '🔑 + Create New Key Pair (.pem)'],
+  ['Ổ Đĩa Root EBS & Tên Miền DNS', 'Root EBS Volume & Route 53 DNS'],
+  ['Loại Ổ Đĩa', 'Volume Type'],
+  ['Dung Lượng Root Disk (GB) *', 'Root Volume Size (GiB) *'],
+  ['Tên Miền Route 53 DNS', 'Route 53 DNS Domain'],
+  ['vd: my-app.xregion.net', 'e.g. my-app.xregion.net'],
+  ['Tóm Tắt Cấu Hình', 'Summary'],
+  ['VÙNG ĐÃ CHỌN', 'TARGET REGION'],
+  ['HỆ ĐIỀU HÀNH (OS)', 'OPERATING SYSTEM (AMI)'],
+  ['KHÓA XÁC THỰC (KEY PAIR)', 'SSH KEY PAIR'],
+  ['THÔNG SỐ PHẦN CỨNG', 'INSTANCE SPECIFICATIONS'],
+  ['🚀 Khởi Tạo Máy Ảo', '🚀 Launch Instance'],
+  ['Hủy bỏ (Cancel)', 'Cancel'],
+
+  // --- account-tokens.html ---
+  ['Quản Lý Tài Khoản & API Token Xác Thực', 'Account Profile & API Access Tokens'],
+  ['Thông Tin Tài Khoản', 'Account Information'],
+  ['Tên đăng nhập:', 'Username:'],
+  ['Họ và tên:', 'Full name:'],
+  ['Vai trò (Role):', 'Role:'],
+  ['Ngày khởi tạo:', 'Created at:'],
+  ['Đổi Mật Khẩu', 'Change Password'],
+  ['Mật khẩu hiện tại', 'Current password'],
+  ['Nhập mật khẩu hiện tại', 'Enter current password'],
+  ['Mật khẩu mới', 'New password'],
+  ['Nhập mật khẩu mới', 'Enter new password'],
+  ['Cập Nhật Mật Khẩu', 'Update Password'],
+  ['Tạo API Token Xác Thực Mới', 'Generate New Personal Access Token'],
+  ['API Token được tạo riêng biệt với phiên đăng nhập Web Dashboard, lưu trữ vào DynamoDB và dùng để gọi trực tiếp các dịch vụ qua AWS API Gateway (Edge-Optimized).', 'Personal API tokens are stored in DynamoDB and used to authenticate direct API requests via AWS API Gateway (Edge-Optimized).'],
+  ['Tên gợi nhớ của Token', 'Token description / name'],
+  ['Ví dụ: CI/CD Deployment, CLI Tool, Monitoring System', 'e.g. CI/CD Deployment, CLI Tool, Monitoring System'],
+  ['Thời hạn hiệu lực', 'Expiration'],
+  ['1 Tháng (30 ngày)', '1 Month (30 days)'],
+  ['3 Tháng (90 ngày)', '3 Months (90 days)'],
+  ['6 Tháng (180 ngày)', '6 Months (180 days)'],
+  ['Không thời hạn (No Date / Vĩnh viễn)', 'No Expiration (Never expires)'],
+  ['+ Sinh API Token Mới', '+ Generate New Token'],
+  ['API Token của bạn đã được khởi tạo thành công!', 'Your new API token has been generated!'],
+  ['Sao Chép Token', 'Copy Token'],
+  ['Danh Sách API Token Đã Cấp Phát', 'Issued API Access Tokens'],
+  ['Làm Mới', 'Refresh'],
+  ['TÊN TOKEN', 'TOKEN NAME'],
+  ['MÃ TOKEN (TRÍCH XUẤT)', 'TOKEN PREFIX'],
+  ['NGÀY TẠO', 'CREATED AT'],
+  ['HẠN DÙNG', 'EXPIRES AT'],
+  ['Hướng Dẫn Gọi AWS API Gateway (Edge-Optimized)', 'AWS API Gateway (Edge-Optimized) cURL Guide'],
+  ['Endpoint đã được tối ưu hóa toàn cầu qua mạng CloudFront Edge. Sử dụng lệnh cURL sau để gửi sự kiện vào Amazon EventBridge:', 'Global edge-optimized endpoint via CloudFront. Use the following cURL command to publish lifecycle events to Amazon EventBridge:']
+];
+
+const VI_TO_EN_DICT = new Map();
+const EN_TO_VI_DICT = new Map();
+I18N_PAIRS.forEach(([vi, en]) => {
+  VI_TO_EN_DICT.set(vi.trim(), en);
+  EN_TO_VI_DICT.set(en.trim(), vi);
+});
+
+function setGlobalLang(lang) {
+  const normalized = lang === 'en' ? 'en' : 'vi';
+  localStorage.setItem('xregion_lang', normalized);
+  renderUserBadge();
+  applyPageTranslations();
+
+  // Refresh dynamic views on whichever page is currently open
+  if (typeof refreshEditSectionLabels === 'function' && document.getElementById('editInstanceForm')) {
+    refreshEditSectionLabels();
+    if (typeof updateEditInstanceSummary === 'function') updateEditInstanceSummary();
+  }
+  if (document.getElementById('overviewTotalInstances') && typeof initOverviewPage === 'function') {
+    initOverviewPage();
+    if (typeof loadMigrationSummary === 'function') loadMigrationSummary();
+  }
+  if (typeof filterInstancesUI === 'function' && document.getElementById('instanceTableBody')) {
+    loadInstances();
+  }
+  if (typeof det !== 'undefined' && det && det.inst && typeof renderInstance === 'function') {
+    det.actionsKey = '';
+    renderInstance();
+    if (typeof renderSecurityGroups === 'function') renderSecurityGroups();
+    if (typeof renderNetwork === 'function') renderNetwork();
+    if (typeof loadMigrationHistory === 'function') loadMigrationHistory();
+  }
+  if (typeof updatePageLaunchSummary === 'function' && document.getElementById('launchInstancePageForm')) {
+    updatePageLaunchSummary();
+  }
+}
+
+function applyPageTranslations() {
+  const isEn = getLang() === 'en';
+  document.documentElement.lang = isEn ? 'en' : 'vi';
+
+  // 1. Translate all elements with explicit data-i18n-vi / data-i18n-en
+  document.querySelectorAll('[data-i18n-vi]').forEach(el => {
+    const txt = isEn ? el.getAttribute('data-i18n-en') : el.getAttribute('data-i18n-vi');
+    if (txt !== null) el.textContent = txt;
+  });
+
+  // 2. Translate top sub-navigation links across all pages
+  const navMap = [
+    { href: '/index.html', vi: 'Trang Chủ Tổng Quan', en: 'Overview Dashboard' },
+    { href: '/instances.html', vi: 'Danh Sách Máy Ảo', en: 'Instances' },
+    { href: '/launch.html', vi: 'Khởi Tạo Máy Ảo (+ Launch VM)', en: 'Launch Instance (+ Launch VM)' },
+    { href: '/account-tokens.html', vi: 'Tài Khoản & API Token', en: 'Account & API Tokens' }
+  ];
+  navMap.forEach(item => {
+    document.querySelectorAll(`.sub-nav a[href="${item.href}"]`).forEach(a => {
+      const svg = a.querySelector('svg');
+      const label = isEn ? item.en : item.vi;
+      if (svg) {
+        a.innerHTML = '';
+        a.appendChild(svg);
+        a.appendChild(document.createTextNode(' ' + label));
+      } else {
+        a.textContent = label;
+      }
+    });
+  });
+
+  // 3. Walk DOM text nodes and translate matching phrases losslessly
+  if (document.body) {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const parentTag = node.parentElement ? node.parentElement.tagName : '';
+      if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'CODE') continue;
+      const raw = node.nodeValue;
+      const trimmed = raw.trim().replace(/\s+/g, ' ');
+      if (!trimmed) continue;
+      if (isEn && VI_TO_EN_DICT.has(trimmed)) {
+        node.nodeValue = VI_TO_EN_DICT.get(trimmed);
+      } else if (!isEn && EN_TO_VI_DICT.has(trimmed)) {
+        node.nodeValue = EN_TO_VI_DICT.get(trimmed);
+      }
+    }
+
+    // 4. Translate input placeholders
+    document.querySelectorAll('input[placeholder]').forEach(inp => {
+      const p = inp.getAttribute('placeholder').trim();
+      if (isEn && VI_TO_EN_DICT.has(p)) {
+        inp.setAttribute('placeholder', VI_TO_EN_DICT.get(p));
+      } else if (!isEn && EN_TO_VI_DICT.has(p)) {
+        inp.setAttribute('placeholder', EN_TO_VI_DICT.get(p));
+      }
+    });
+  }
+}
+
 function renderUserBadge() {
   const container = document.getElementById('userBadgeContainer');
   if (!container) return;
 
   const token = localStorage.getItem('xregion_jwt');
   const user = localStorage.getItem('xregion_user') || 'Admin';
+  const lang = getLang();
+
+  const langSelectorHtml = `
+    <select class="header-lang-select" onchange="setGlobalLang(this.value)" aria-label="Language">
+      <option value="vi" ${lang === 'vi' ? 'selected' : ''}>🌐 Tiếng Việt (VN)</option>
+      <option value="en" ${lang === 'en' ? 'selected' : ''}>🌐 English (US)</option>
+    </select>
+  `;
 
   if (token) {
     container.innerHTML = `
+      ${langSelectorHtml}
       <span style="font-weight: 600; color: #fff;">👤 ${user}</span>
-      <button class="btn btn-secondary btn-sm" onclick="logout()" style="padding: 4px 10px; font-size: 11px;">Đăng xuất</button>
+      <button class="btn btn-secondary btn-sm" onclick="logout()" style="padding: 4px 10px; font-size: 11px;">${t('Đăng xuất', 'Sign out')}</button>
     `;
   } else {
     container.innerHTML = `
-      <a href="/login.html" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">Đăng Nhập</a>
-      <a href="/register.html" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none; margin-left: 6px;">Đăng Ký</a>
+      ${langSelectorHtml}
+      <a href="/login.html" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">${t('Đăng Nhập', 'Sign in')}</a>
+      <a href="/register.html" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none; margin-left: 6px;">${t('Đăng Ký', 'Sign up')}</a>
     `;
   }
+  applyPageTranslations();
 }
 
 // ============================================================
@@ -1191,13 +1649,13 @@ async function initOverviewPage() {
     const regB = list.filter(i => (i.region || '').includes('us-east')).length;
 
     if (elTotal) elTotal.textContent = total;
-    if (elRun) elRun.textContent = `${running} Running`;
-    if (elRegA) elRegA.textContent = `${regA} máy ảo`;
-    if (elRegB) elRegB.textContent = `${regB} máy ảo`;
+    if (elRun) elRun.textContent = t(`${running} Đang chạy`, `${running} Running`);
+    if (elRegA) elRegA.textContent = t(`${regA} máy ảo`, `${regA} instance${regA === 1 ? '' : 's'}`);
+    if (elRegB) elRegB.textContent = t(`${regB} máy ảo`, `${regB} instance${regB === 1 ? '' : 's'}`);
 
     if (tbodyInst) {
       if (list.length === 0) {
-        tbodyInst.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Chưa có máy ảo nào. <a href="/launch.html" style="color: var(--accent-cyan); font-weight: 700;">+ Khởi tạo ngay</a></td></tr>';
+        tbodyInst.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">${t('Chưa có máy ảo nào.', 'No instances found.')} <a href="/launch.html" style="color: var(--accent-cyan); font-weight: 700;">${t('+ Khởi tạo ngay', '+ Launch now')}</a></td></tr>`;
       } else {
         tbodyInst.innerHTML = '';
         list.slice(0, 5).forEach(inst => {
@@ -1208,7 +1666,7 @@ async function initOverviewPage() {
             <td><strong>${inst.name}</strong></td>
             <td>${inst.regionName || inst.region}</td>
             <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
-            <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
+            <td><code>${inst.publicIp || t('Chưa gán', 'None')}</code></td>
             <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
             <td><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></td>
             <td><a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; text-decoration:none;">Xem Chi Tiết →</a></td>
@@ -1706,8 +2164,171 @@ async function handleLaunchPageSubmit(e) {
   }
 }
 
-// 5. MODIFY / EDIT INSTANCE PAGE (instance-edit.html)
+// 5. MODIFY / EDIT INSTANCE PAGE (instance-edit.html?id=...&section=...) - AWS EC2 Dedicated Setting Pages
 let currentEditingInstance = null;
+let currentEditSection = 'instance-type';
+
+const EC2_EDIT_SECTIONS = {
+  'instance-type': {
+    titleVi: 'Đổi loại máy ảo (Change instance type)',
+    titleEn: 'Change instance type',
+    subtitleVi: 'Bạn chỉ có thể đổi sang loại máy ảo tương thích với kiến trúc hiện tại và khi máy ảo đã dừng (Stopped).',
+    subtitleEn: 'You can change the instance type only if the current instance type and the instance type that you want are compatible.',
+    btnVi: 'Thay đổi (Change)',
+    btnEn: 'Change',
+    requiresStop: true
+  },
+  'security-groups': {
+    titleVi: 'Đổi nhóm bảo mật (Change security groups)',
+    titleEn: 'Change security groups',
+    subtitleVi: 'Security Group đóng vai trò tường lửa ảo kiểm soát lưu lượng mạng ra vào card mạng (ENI) của máy ảo.',
+    subtitleEn: 'Security groups act as a virtual firewall for your instance to control inbound and outbound traffic.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  },
+  'elastic-ip': {
+    titleVi: 'Quản lý địa chỉ Elastic IP',
+    titleEn: 'Manage Elastic IP address',
+    subtitleVi: 'Cấp phát địa chỉ IPv4 công khai tĩnh mới từ vùng hiện tại hoặc gỡ bỏ địa chỉ IP hiện tại khỏi máy ảo.',
+    subtitleEn: 'Associate a static Public IPv4 address from the regional pool or disassociate the current address.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  },
+  'dns': {
+    titleVi: 'Cập nhật tên miền Route 53 DNS',
+    titleEn: 'Change Route 53 DNS record',
+    subtitleVi: 'Cập nhật bản ghi tên miền định tuyến đa vùng Route 53 Hosted Zone gắn với máy ảo.',
+    subtitleEn: 'Update the Route 53 Hosted Zone A-Record associated with this compute instance.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  },
+  'storage': {
+    titleVi: 'Mở rộng ổ cứng gốc EBS (Modify EBS volume)',
+    titleEn: 'Modify EBS root volume',
+    subtitleVi: 'Tăng dung lượng ổ đĩa gốc EBS (gp3) trực tiếp khi máy đang hoạt động mà không cần dừng máy.',
+    subtitleEn: 'Expand the root EBS Elastic Volume (gp3) capacity online without stopping the instance.',
+    btnVi: 'Mở rộng ổ đĩa',
+    btnEn: 'Modify',
+    requiresStop: false
+  },
+  'key-pair': {
+    titleVi: 'Đổi khóa truy cập SSH Key Pair',
+    titleEn: 'Change SSH key pair',
+    subtitleVi: 'Chọn một khóa RSA hiện có hoặc tạo khóa .pem mới để đăng nhập SSH vào máy ảo.',
+    subtitleEn: 'Select an existing RSA key pair or create a new .pem key pair for SSH access.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  },
+  'tags': {
+    titleVi: 'Đổi tên máy ảo & nhãn (Change instance name & tags)',
+    titleEn: 'Change instance name & tags',
+    subtitleVi: 'Nhãn (Tag) giúp định danh và quản lý tài nguyên máy ảo xuyên vùng trên bảng điều khiển.',
+    subtitleEn: 'A tag is a label that you assign to an AWS resource. Each tag consists of a key and an optional value.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  },
+  'cooldown': {
+    titleVi: 'Đổi thời gian chờ Cooldown chuyển vùng',
+    titleEn: 'Change migration cooldown',
+    subtitleVi: 'Cấu hình thời gian nghỉ tối thiểu giữa hai lần di trú máy ảo liên vùng liên tiếp.',
+    subtitleEn: 'Configure the minimum cooldown duration between consecutive cross-region migrations.',
+    btnVi: 'Lưu thay đổi',
+    btnEn: 'Save',
+    requiresStop: false
+  }
+};
+
+function getFlavorSeriesLabel(flavor) {
+  if (!flavor) return t('Tiêu chuẩn đa dụng (M1 Series)', 'General Purpose (M1 Series)');
+  if (flavor.startsWith('h1.')) return t('Bộ nhớ & Hiệu năng cao (H1 Series)', 'High Memory / Compute (H1 Series)');
+  return t('Tiêu chuẩn đa dụng (M1 Series)', 'General Purpose (M1 Series)');
+}
+
+function toggleFlavorComparison() {
+  const box = document.getElementById('flavorComparisonBox');
+  const icon = document.getElementById('cmpToggleIcon');
+  if (!box) return;
+  const hidden = box.style.display === 'none';
+  box.style.display = hidden ? 'block' : 'none';
+  if (icon) icon.textContent = hidden ? '▼' : '▶';
+}
+
+function refreshEditSectionLabels() {
+  const secMeta = EC2_EDIT_SECTIONS[currentEditSection] || EC2_EDIT_SECTIONS['instance-type'];
+  const title = t(secMeta.titleVi, secMeta.titleEn);
+  const subtitle = t(secMeta.subtitleVi, secMeta.subtitleEn);
+  const btnText = t(secMeta.btnVi, secMeta.btnEn);
+
+  const titleEl = document.getElementById('editPageTitle');
+  if (titleEl) titleEl.textContent = title;
+  const subEl = document.getElementById('editPageSubtitle');
+  if (subEl) subEl.textContent = subtitle;
+  const bcActionEl = document.getElementById('editBreadcrumbActionName');
+  if (bcActionEl) bcActionEl.textContent = title;
+  const saveBtn = document.getElementById('btnSaveEditInstance');
+  if (saveBtn) saveBtn.textContent = btnText;
+  document.title = `${title} - XRegion-EC2`;
+
+  if (currentEditingInstance) {
+    applyEditInstanceStateLock(currentEditingInstance.status);
+  }
+}
+
+function applyEditInstanceStateLock(status) {
+  const isStopped = (status === 'SHUTOFF' || status === 'STOPPED');
+  const badge = document.getElementById('editInstStatusBadge');
+  if (badge) {
+    badge.textContent = isStopped ? t('Đã dừng (Stopped)', 'Stopped') : (status === 'ACTIVE' ? t('Đang chạy (Running)', 'Running') : status);
+    badge.className = 'badge ' + (status === 'ACTIVE' ? 'badge-active' :
+                                   status === 'MIGRATING' ? 'badge-migrating' :
+                                   isStopped ? 'badge-shutoff' : 'badge-error');
+  }
+
+  const secMeta = EC2_EDIT_SECTIONS[currentEditSection] || EC2_EDIT_SECTIONS['instance-type'];
+  const flavorSelect = document.getElementById('editInstFlavor');
+  const flavorWrap = document.getElementById('flavorSelectWrap');
+  const saveBtn = document.getElementById('btnSaveEditInstance');
+  const saveWrap = document.getElementById('saveBtnWrap');
+  const stopTooltip = t(
+    'Cần dừng máy ảo (Stop instance) trước khi thay đổi Instance type',
+    'The instance must be stopped before changing its instance type'
+  );
+
+  if (flavorSelect) {
+    flavorSelect.disabled = !isStopped;
+    flavorSelect.style.opacity = isStopped ? '1' : '0.55';
+    flavorSelect.style.cursor = isStopped ? 'pointer' : 'not-allowed';
+    flavorSelect.title = isStopped ? '' : stopTooltip;
+  }
+  if (flavorWrap) {
+    flavorWrap.classList.toggle('is-stop-locked', !isStopped);
+    if (!isStopped) {
+      flavorWrap.setAttribute('data-tooltip', stopTooltip);
+    } else {
+      flavorWrap.removeAttribute('data-tooltip');
+    }
+  }
+
+  if (secMeta.requiresStop) {
+    if (saveBtn) {
+      saveBtn.disabled = !isStopped;
+      saveBtn.title = isStopped ? '' : stopTooltip;
+    }
+    if (saveWrap) {
+      saveWrap.classList.toggle('is-stop-locked', !isStopped);
+      if (!isStopped) {
+        saveWrap.setAttribute('data-tooltip', stopTooltip);
+      } else {
+        saveWrap.removeAttribute('data-tooltip');
+      }
+    }
+  }
+}
 
 async function initEditInstancePage() {
   if (!requireAuthGuard()) return;
@@ -1716,21 +2337,31 @@ async function initEditInstancePage() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const instanceId = urlParams.get('id');
+  const rawSec = urlParams.get('section') || 'instance-type';
+  currentEditSection = EC2_EDIT_SECTIONS[rawSec] ? rawSec : 'instance-type';
+
+  // Activate only the requested section panel
+  document.querySelectorAll('.ec2-sec-panel').forEach(p => {
+    p.classList.toggle('active', p.id === `panel-${currentEditSection}`);
+  });
+
+  refreshEditSectionLabels();
 
   if (!instanceId) {
     showApiError('/instances/{id}', 'Không tìm thấy tham số ID máy ảo cần chỉnh sửa trên URL.');
     return;
   }
 
+  const detailUrl = `/instance-detail.html?id=${encodeURIComponent(instanceId)}`;
   const bcLink = document.getElementById('editBreadcrumbDetailLink');
   if (bcLink) {
     bcLink.textContent = instanceId;
-    bcLink.href = `/instance-detail.html?id=${instanceId}`;
+    bcLink.href = detailUrl;
   }
-  const backBtn = document.getElementById('btnBackToDetail');
-  if (backBtn) backBtn.href = `/instance-detail.html?id=${instanceId}`;
+  const cardIdLink = document.getElementById('editCardInstanceLink');
+  if (cardIdLink) cardIdLink.href = detailUrl;
   const cancelBtn = document.getElementById('btnCancelEditInstance');
-  if (cancelBtn) cancelBtn.href = `/instance-detail.html?id=${instanceId}`;
+  if (cancelBtn) cancelBtn.href = detailUrl;
 
   try {
     const inst = await apiRequest(`/instances/${instanceId}`);
@@ -1740,38 +2371,83 @@ async function initEditInstancePage() {
     currentEditingInstance = inst;
 
     document.getElementById('editRoInstanceId').textContent = inst.id;
-    document.getElementById('editRoRegion').textContent = `${inst.regionName || inst.region} (${inst.region})`;
-    document.getElementById('editRoPrivateIp').textContent = inst.privateIp || '10.0.1.10';
-    document.getElementById('editRoPublicIp').textContent = inst.publicIp || 'Chưa gán';
+    const nameParen = document.getElementById('editRoInstanceNameParen');
+    if (nameParen) nameParen.textContent = `(${inst.name || inst.id})`;
+    const roReg = document.getElementById('editRoRegion');
+    if (roReg) roReg.textContent = `${inst.regionName || inst.region} (${inst.region})`;
+    const roPriv = document.getElementById('editRoPrivateIp');
+    if (roPriv) roPriv.textContent = inst.privateIp || '10.0.1.10';
+    const roVol = document.getElementById('editRoVolumeId');
+    if (roVol) roVol.textContent = inst.volumeId || 'vol-default';
+    const roPubIp = document.getElementById('editRoPublicIp');
+    if (roPubIp) roPubIp.textContent = inst.publicIp || '–';
 
-    const badge = document.getElementById('editInstStatusBadge');
-    if (badge) {
-      badge.textContent = inst.status;
-      badge.className = 'badge ' + (inst.status === 'ACTIVE' ? 'badge-active' :
-                                    inst.status === 'MIGRATING' ? 'badge-migrating' :
-                                    inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error');
-    }
-
-    document.getElementById('editInstName').value = inst.name || inst.id;
-    const domainInput = document.getElementById('editInstDomain');
-    if (domainInput) {
-      domainInput.value = inst.dnsDomain || `${(inst.name || inst.id).toLowerCase()}.xregion.net`;
+    // Populate Instance Type fields
+    const curFlavorSpec = FLAVOR_SPECS[inst.flavor] || FLAVOR_SPECS['m1.medium'];
+    const curFlavorDisp = document.getElementById('editCurrentFlavorDisplay');
+    if (curFlavorDisp) {
+      curFlavorDisp.textContent = inst.flavor || 'm1.medium';
     }
     const flavorSelect = document.getElementById('editInstFlavor');
     if (flavorSelect && inst.flavor) {
       flavorSelect.value = inst.flavor;
     }
+    applyEditInstanceStateLock(inst.status);
+
+    // Populate Name, DNS, Security Group, Elastic IP, EBS, Key Pair, Cooldown
+    const nameInput = document.getElementById('editInstName');
+    if (nameInput) nameInput.value = inst.name || inst.id;
+
+    const curDnsDisp = document.getElementById('editCurrentDnsDisplay');
+    if (curDnsDisp) curDnsDisp.textContent = inst.dnsDomain || `${(inst.name || inst.id).toLowerCase()}.xregion.net`;
+    const domainInput = document.getElementById('editInstDomain');
+    if (domainInput) {
+      domainInput.value = inst.dnsDomain || `${(inst.name || inst.id).toLowerCase()}.xregion.net`;
+    }
+
+    const curSgDisp = document.getElementById('editCurrentSgDisplay');
+    if (curSgDisp) curSgDisp.textContent = inst.securityGroupId || 'sg-default';
+    const sgSelect = document.getElementById('editInstSecurityGroup');
+    if (sgSelect && inst.securityGroupId) {
+      if (!Array.from(sgSelect.options).some(o => o.value === inst.securityGroupId)) {
+        const opt = document.createElement('option');
+        opt.value = inst.securityGroupId;
+        opt.textContent = `${inst.securityGroupId} (Attached to ENI)`;
+        sgSelect.prepend(opt);
+      }
+      sgSelect.value = inst.securityGroupId;
+    }
+
+    const eipSelect = document.getElementById('editInstElasticIpAction');
+    if (eipSelect) {
+      eipSelect.value = 'KEEP';
+    }
+
+    const currentEbsGb = inst.ebsSizeGb || curFlavorSpec.defaultDisk || 20;
+    currentEditingInstance.ebsSizeGb = currentEbsGb;
+    const curEbsDisp = document.getElementById('editCurrentEbsDisplay');
+    if (curEbsDisp) {
+      curEbsDisp.textContent = `${currentEbsGb} GiB`;
+    }
+    const ebsInput = document.getElementById('editInstEbsSize');
+    if (ebsInput) {
+      ebsInput.value = currentEbsGb;
+      ebsInput.min = currentEbsGb;
+    }
+
     const cooldownInput = document.getElementById('editInstCooldown');
     if (cooldownInput) {
       cooldownInput.value = inst.cooldownSeconds != null ? inst.cooldownSeconds : 300;
     }
 
+    const curKeyDisp = document.getElementById('editCurrentKeyDisplay');
+    if (curKeyDisp) curKeyDisp.textContent = inst.keyName || 'xregion-key';
     await loadKeyPairsDropdown(inst.keyName || 'xregion-key');
     const keySelect = document.getElementById('instKeyPair');
     if (keySelect && inst.keyName && !Array.from(keySelect.options).some(o => o.value === inst.keyName)) {
       const opt = document.createElement('option');
       opt.value = inst.keyName;
-      opt.textContent = `${inst.keyName} (Đang gán trên máy ảo)`;
+      opt.textContent = `${inst.keyName} (Current instance key)`;
       keySelect.prepend(opt);
       keySelect.value = inst.keyName;
     }
@@ -1786,49 +2462,51 @@ async function initEditInstancePage() {
 function updateEditInstanceSummary() {
   const nameEl = document.getElementById('editInstName');
   const flavorEl = document.getElementById('editInstFlavor');
-  const keyEl = document.getElementById('instKeyPair');
-  const cooldownEl = document.getElementById('editInstCooldown');
+  const ebsEl = document.getElementById('editInstEbsSize');
   if (!nameEl || !flavorEl) return;
 
   const newName = nameEl.value.trim() || (currentEditingInstance ? currentEditingInstance.name : '--');
   const newFlavor = flavorEl.value;
-  const newKey = (keyEl && keyEl.value) ? keyEl.value : (currentEditingInstance?.keyName || 'xregion-key');
-  const newCooldown = cooldownEl ? (parseInt(cooldownEl.value) || 0) : 300;
+  const oldEbs = currentEditingInstance?.ebsSizeGb || 20;
+  const newEbs = ebsEl ? (parseInt(ebsEl.value) || oldEbs) : oldEbs;
 
   const dnsPreview = document.getElementById('editDnsPreview');
   if (dnsPreview) {
     dnsPreview.textContent = `${newName.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.xregion.net`;
   }
 
-  const spec = FLAVOR_SPECS[newFlavor] || FLAVOR_SPECS['m1.medium'];
-  const oldName = currentEditingInstance?.name;
-  const oldFlavor = currentEditingInstance?.flavor;
-  const oldKey = currentEditingInstance?.keyName;
+  // Validate EBS Elastic Volume No-Downsize rule when on storage section
+  if (currentEditSection === 'storage') {
+    const downsizeWarn = document.getElementById('ebsDownsizeWarning');
+    const minEbsSpan = document.getElementById('minAllowedEbsGb');
+    const saveBtn = document.getElementById('btnSaveEditInstance');
+    if (minEbsSpan) minEbsSpan.textContent = oldEbs;
+    if (newEbs < oldEbs) {
+      if (downsizeWarn) downsizeWarn.style.display = 'block';
+      if (saveBtn) saveBtn.disabled = true;
+    } else {
+      if (downsizeWarn) downsizeWarn.style.display = 'none';
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
 
-  const sumName = document.getElementById('sumEditName');
-  const sumFlavor = document.getElementById('sumEditFlavor');
-  const sumKey = document.getElementById('sumEditKey');
-  const sumCooldown = document.getElementById('sumEditCooldown');
+  // Update Instance Type Comparison Table (AWS EC2 style)
+  const oldFlavor = currentEditingInstance?.flavor || 'm1.medium';
+  const oldSpec = FLAVOR_SPECS[oldFlavor] || FLAVOR_SPECS['m1.medium'];
+  const newSpec = FLAVOR_SPECS[newFlavor] || FLAVOR_SPECS['m1.medium'];
 
-  if (sumName) {
-    sumName.innerHTML = (oldName && oldName !== newName)
-      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldName}</span> ➔ <span style="color:#fbbf24;">${newName}</span>`
-      : newName;
-  }
-  if (sumFlavor) {
-    const desc = `${newFlavor} (${spec.vcpu} vCPU • ${spec.ramDisplay})`;
-    sumFlavor.innerHTML = (oldFlavor && oldFlavor !== newFlavor)
-      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldFlavor}</span> ➔ <span style="color:#fbbf24;">${desc}</span>`
-      : desc;
-  }
-  if (sumKey) {
-    sumKey.innerHTML = (oldKey && oldKey !== newKey)
-      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldKey}</span> ➔ <span style="color:#fbbf24;">${newKey}</span>`
-      : newKey;
-  }
-  if (sumCooldown) {
-    sumCooldown.textContent = `${newCooldown} giây`;
-  }
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+  setText('cmpHeaderCurrent', oldFlavor);
+  setText('cmpHeaderNew', newFlavor);
+  setText('cmpSeriesCurrent', getFlavorSeriesLabel(oldFlavor));
+  setText('cmpSeriesNew', getFlavorSeriesLabel(newFlavor));
+  setText('cmpVcpuCurrent', `${oldSpec.vcpu} (${oldSpec.vcpu} core${oldSpec.vcpu > 1 ? 's' : ''})`);
+  setText('cmpVcpuNew', `${newSpec.vcpu} (${newSpec.vcpu} core${newSpec.vcpu > 1 ? 's' : ''})`);
+  setText('cmpRamCurrent', oldSpec.ramDisplay.replace('GB', 'GiB'));
+  setText('cmpRamNew', newSpec.ramDisplay.replace('GB', 'GiB'));
 }
 
 async function handleEditInstanceSubmit(e) {
@@ -1838,11 +2516,26 @@ async function handleEditInstanceSubmit(e) {
   const errBox = document.getElementById('editErrorBox');
   if (errBox) errBox.style.display = 'none';
 
+  const isStopped = (currentEditingInstance.status === 'SHUTOFF' || currentEditingInstance.status === 'STOPPED');
+  if (currentEditSection === 'instance-type' && !isStopped) {
+    showToast('Cần dừng máy ảo (Stop instance) trước khi thay đổi Instance type!', 'error');
+    return;
+  }
+
+  const oldEbs = currentEditingInstance.ebsSizeGb || 20;
+  const newEbs = parseInt(document.getElementById('editInstEbsSize')?.value) || oldEbs;
+  if (currentEditSection === 'storage' && newEbs < oldEbs) {
+    showToast(`AWS EBS không cho phép giảm dung lượng ổ đĩa xuống dưới ${oldEbs} GiB!`, 'error');
+    return;
+  }
+
+  const secMeta = EC2_EDIT_SECTIONS[currentEditSection] || EC2_EDIT_SECTIONS['instance-type'];
+  const secTitle = t(secMeta.titleVi, secMeta.titleEn);
   const btn = document.getElementById('btnSaveEditInstance');
-  const origText = btn ? btn.innerHTML : '💾 Lưu Thay Đổi (Save Changes)';
+  const origText = btn ? btn.innerHTML : t(secMeta.btnVi, secMeta.btnEn);
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '⏳ Đang lưu thay đổi lên AWS DynamoDB...';
+    btn.innerHTML = t('Đang lưu...', 'Saving...');
   }
 
   const payload = {
@@ -1850,7 +2543,10 @@ async function handleEditInstanceSubmit(e) {
     flavor: document.getElementById('editInstFlavor').value,
     keyPairName: document.getElementById('instKeyPair')?.value || currentEditingInstance.keyName || 'xregion-key',
     domainName: document.getElementById('editInstDomain')?.value.trim() || '',
-    cooldownSeconds: parseInt(document.getElementById('editInstCooldown')?.value) || 300
+    cooldownSeconds: parseInt(document.getElementById('editInstCooldown')?.value) || 300,
+    securityGroupId: document.getElementById('editInstSecurityGroup')?.value || currentEditingInstance.securityGroupId || 'sg-default',
+    elasticIpAction: document.getElementById('editInstElasticIpAction')?.value || 'KEEP',
+    ebsSizeGb: newEbs
   };
 
   try {
@@ -1858,13 +2554,13 @@ async function handleEditInstanceSubmit(e) {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
-    showToast(`Đã cập nhật thông tin máy ảo [${payload.name}] thành công!`, 'success');
+    showToast(t(`Đã cập nhật [${secTitle}] cho máy ảo ${currentEditingInstance.id} thành công!`, `Successfully updated [${secTitle}] for instance ${currentEditingInstance.id}!`), 'success');
     setTimeout(() => {
       window.location.replace(`/instance-detail.html?id=${currentEditingInstance.id}`);
-    }, 800);
+    }, 600);
   } catch (err) {
     if (errBox) {
-      errBox.innerHTML = `<strong>❌ Lỗi cập nhật máy ảo:</strong><br>${err.message}`;
+      errBox.innerHTML = `<strong>❌ Lỗi cập nhật:</strong><br>${err.message}`;
       errBox.style.display = 'block';
     }
     showToast(`Lỗi cập nhật: ${err.message}`, 'error');

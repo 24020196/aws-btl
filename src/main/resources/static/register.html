@@ -3,87 +3,645 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng Ký - XRegion-EC2 Cloud Console</title>
+  <title>Đăng ký tài khoản — XRegion Cloud Console</title>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    :root {
+      --xr-bg: #070d18;
+      --xr-card-bg: rgba(15, 23, 42, 0.78);
+      --xr-card-border: rgba(56, 189, 248, 0.22);
+      --xr-text: #f8fafc;
+      --xr-muted: #94a3b8;
+      --xr-input-bg: rgba(15, 23, 42, 0.85);
+      --xr-input-border: #334155;
+      --xr-cyan: #38bdf8;
+      --xr-blue: #0284c7;
+      --xr-orange: #ff9900;
+      --xr-orange-hover: #ec7211;
+      --xr-purple: #a855f7;
+      --xr-error-bg: rgba(239, 68, 68, 0.15);
+      --xr-error-border: #ef4444;
+      --xr-error-text: #fca5a5;
+    }
+
+    body.xr-cyber-body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--xr-bg);
+      color: var(--xr-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Cyber Tech Grid Background Layer */
+    .cyber-grid-overlay {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Neon Gradient Horizon Glow */
+    .cyber-glow-layer {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.16) 0%, transparent 60%),
+                  radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+                  radial-gradient(circle at 15% 85%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top Bar */
+    .xr-top-bar {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 22px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 2;
+    }
+
+    .xr-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .xr-brand-logo {
+      background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+      color: #070d18;
+      font-weight: 900;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      letter-spacing: 1px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+    }
+
+    .xr-brand-sub {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--xr-muted);
+      letter-spacing: 0.2px;
+    }
+
+    .xr-lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--xr-card-border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .xr-lang-switch select {
+      border: none;
+      background: transparent;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .xr-lang-switch select option {
+      background: #0f172a;
+      color: #f8fafc;
+    }
+
+    /* Main 2-Column Container */
+    .xr-main-wrapper {
+      max-width: 900px;
+      width: calc(100% - 48px);
+      margin: 36px auto;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 36px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (max-width: 860px) {
+      .xr-main-wrapper {
+        grid-template-columns: 1fr;
+        max-width: 440px;
+      }
+      .xr-promo-box {
+        display: none;
+      }
+    }
+
+    .xr-card {
+      background: var(--xr-card-bg);
+      border: 1px solid var(--xr-card-border);
+      border-radius: 18px;
+      padding: 30px 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(56, 189, 248, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .xr-card-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0 0 6px 0;
+      letter-spacing: -0.3px;
+    }
+
+    .xr-card-subtitle {
+      font-size: 13px;
+      color: var(--xr-muted);
+      margin: 0 0 20px 0;
+      line-height: 1.45;
+    }
+
+    .xr-field-group {
+      margin-bottom: 14px;
+    }
+
+    .xr-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 5px;
+    }
+
+    .xr-input, .xr-select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 9px 13px;
+      font-size: 14px;
+      color: #f8fafc;
+      background-color: var(--xr-input-bg);
+      border: 1.5px solid var(--xr-input-border);
+      border-radius: 10px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .xr-input:focus, .xr-select:focus {
+      border-color: var(--xr-cyan);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2), 0 0 16px rgba(56, 189, 248, 0.15);
+      background-color: rgba(15, 23, 42, 0.95);
+    }
+
+    .xr-checkbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 16px;
+      font-size: 13px;
+    }
+
+    .xr-checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      color: #cbd5e1;
+    }
+
+    .xr-checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--xr-cyan);
+      cursor: pointer;
+    }
+
+    .xr-btn-orange {
+      width: 100%;
+      padding: 11px 18px;
+      border-radius: 999px;
+      border: 1px solid #f59e0b;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+      color: #070d18;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 4px;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+    }
+
+    .xr-btn-orange:hover {
+      background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .xr-btn-orange:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .xr-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 18px 0 14px;
+      color: var(--xr-muted);
+      font-size: 12.5px;
+    }
+
+    .xr-divider::before,
+    .xr-divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .xr-divider span {
+      padding: 0 12px;
+    }
+
+    .xr-btn-outline {
+      width: 100%;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1.5px solid var(--xr-cyan);
+      background: rgba(56, 189, 248, 0.08);
+      color: var(--xr-cyan);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-block;
+      text-align: center;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+
+    .xr-btn-outline:hover {
+      background: rgba(56, 189, 248, 0.18);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+      color: #ffffff;
+    }
+
+    .xr-error-alert {
+      display: none;
+      background: var(--xr-error-bg);
+      border: 1.5px solid var(--xr-error-border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 16px;
+      color: var(--xr-error-text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .xr-promo-box {
+      border-radius: 18px;
+      padding: 44px 38px;
+      min-height: 390px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(168, 85, 247, 0.12);
+      backdrop-filter: blur(20px);
+    }
+
+    .xr-promo-box::before {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .xr-promo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .xr-promo-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    .xr-promo-headline {
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin: 0 0 14px 0;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .xr-promo-subtext {
+      font-size: 14.5px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      margin: 0 0 18px 0;
+    }
+
+    .xr-promo-checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 13.5px;
+      line-height: 1.85;
+      color: #e2e8f0;
+    }
+
+    .xr-footer {
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 16px 24px;
+      font-size: 12px;
+      color: var(--xr-muted);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 2;
+      background: rgba(7, 13, 24, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .xr-footer a {
+      color: var(--xr-cyan);
+      text-decoration: none;
+    }
+
+    .xr-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
-<body class="auth-page">
+<body class="xr-cyber-body">
 
-  <div class="auth-card" style="max-width: 480px;">
-    <div class="auth-header">
-      <div class="auth-logo-badge">XREGION-EC2</div>
-      <h1 class="auth-title">Đăng Ký Tài Khoản</h1>
-      <p class="auth-desc">Tạo tài khoản quản trị viên điều khiển hạ tầng đám mây</p>
+  <!-- Cyberpunk Tech Grid & Horizon Glow Layers -->
+  <div class="cyber-grid-overlay"></div>
+  <div class="cyber-glow-layer"></div>
+
+  <!-- Top Header -->
+  <header class="xr-top-bar">
+    <div class="xr-brand">
+      <div class="xr-brand-logo">XREGION</div>
+      <span class="xr-brand-sub" data-i18n="brandSubtitle">Hệ Thống Quản Trị Máy Ảo Đa Vùng</span>
     </div>
 
-    <!-- On-screen Alert Box -->
-    <div id="registerErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 16px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 13px; line-height: 1.4;"></div>
-
-    <form id="authRegisterForm" onsubmit="handleRegisterPageSubmit(event)">
-      <div class="form-group">
-        <label class="form-label">Họ và Tên (Full Name)</label>
-        <input type="text" class="form-input" id="regFullName" required placeholder="Nguyễn Văn A">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Tên Đăng Nhập (Username) *</label>
-        <input type="text" class="form-input" id="regUsername" required placeholder="devops_user" autocomplete="username">
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-        <div class="form-group">
-          <label class="form-label">Mật Khẩu *</label>
-          <input type="password" class="form-input" id="regPassword" required placeholder="••••••••" autocomplete="new-password">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Xác Nhận Mật Khẩu *</label>
-          <input type="password" class="form-input" id="regConfirmPassword" required placeholder="••••••••" autocomplete="new-password">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Vai Trò Phân Quyền (Role)</label>
-        <select class="form-select" id="regRole">
-          <option value="ROLE_ADMIN">Compute Administrator (Toàn quyền)</option>
-          <option value="ROLE_USER">DevOps Engineer</option>
-        </select>
-      </div>
-
-      <button type="submit" id="regBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 14px; margin-top: 8px;">
-        Tạo Tài Khoản
-      </button>
-    </form>
-
-    <div class="auth-footer">
-      <div>Đã có tài khoản? <a href="/login.html">Đăng nhập ngay</a></div>
-      <div style="margin-top: 10px;"><a href="/index.html" style="color: var(--text-muted); font-size: 12px;">← Quay về Trang chủ Overview</a></div>
+    <div class="xr-lang-switch" title="Chọn ngôn ngữ / Select Language">
+      <span>🌐</span>
+      <select id="xrLangSelect" onchange="changeXrRegisterLanguage(this.value)">
+        <option value="vi">Tiếng Việt (VN)</option>
+        <option value="en">English (US)</option>
+      </select>
     </div>
-  </div>
+  </header>
+
+  <!-- Main 2-Column Wrapper -->
+  <main class="xr-main-wrapper">
+    <!-- Left Column: Sign up Form -->
+    <div class="xr-card">
+      <h1 class="xr-card-title" data-i18n="regHeading">Đăng ký người dùng</h1>
+      <p class="xr-card-subtitle" data-i18n="regSubheading">
+        Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn
+      </p>
+
+      <!-- Error Alert Box -->
+      <div id="registerErrorBox" class="xr-error-alert"></div>
+
+      <form id="authRegisterForm" onsubmit="handleRegisterPageSubmit(event)">
+        <div class="xr-field-group">
+          <label class="xr-label" for="regFullName" data-i18n="labelFullName">Họ và tên</label>
+          <input type="text" class="xr-input" id="regFullName" required placeholder="VD: Nguyễn Mạnh Cường">
+        </div>
+
+        <div class="xr-field-group">
+          <label class="xr-label" for="regUsername" data-i18n="labelUsername">Tên đăng nhập *</label>
+          <input type="text" class="xr-input" id="regUsername" required placeholder="VD: cuong_admin" autocomplete="username">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="xr-field-group" style="margin-bottom: 6px;">
+            <label class="xr-label" for="regPassword" data-i18n="labelPassword">Mật khẩu *</label>
+            <input type="password" class="xr-input" id="regPassword" required placeholder="••••••••" autocomplete="new-password">
+          </div>
+          <div class="xr-field-group" style="margin-bottom: 6px;">
+            <label class="xr-label" for="regConfirmPassword" data-i18n="labelConfirmPassword">Nhập lại mật khẩu *</label>
+            <input type="password" class="xr-input" id="regConfirmPassword" required placeholder="••••••••" autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="xr-checkbox-row">
+          <label class="xr-checkbox-label">
+            <input type="checkbox" onchange="toggleShowRegPasswords(this.checked)">
+            <span data-i18n="showPassword">Hiển thị mật khẩu</span>
+          </label>
+        </div>
+
+        <div class="xr-field-group">
+          <label class="xr-label" for="regRole" data-i18n="labelRole">Vai trò người dùng</label>
+          <select class="xr-select" id="regRole">
+            <option value="ROLE_ADMIN">Quản trị viên (Toàn quyền)</option>
+            <option value="ROLE_USER">Kỹ sư vận hành (DevOps User)</option>
+          </select>
+        </div>
+
+        <button type="submit" id="regBtn" class="xr-btn-orange" data-i18n="createBtn">
+          Đăng ký tài khoản
+        </button>
+
+        <div class="xr-divider">
+          <span data-i18n="orDivider">Đã có tài khoản?</span>
+        </div>
+
+        <a href="/login.html" class="xr-btn-outline" data-i18n="signInExistingBtn">
+          Quay lại đăng nhập
+        </a>
+      </form>
+    </div>
+
+    <!-- Right Column: Clean Promo Card -->
+    <div class="xr-promo-box">
+      <div class="xr-promo-badge">
+        <span class="xr-promo-badge-dot"></span>
+        <span>XRegion Cloud</span>
+      </div>
+      <h2 class="xr-promo-headline" data-i18n="promoHeadline">
+        Không gian hạ tầng máy ảo độc lập cho từng tài khoản.
+      </h2>
+      <p class="xr-promo-subtext" data-i18n="promoSubtext">
+        Sau khi tạo tài khoản, bạn có thể sử dụng đầy đủ các tính năng:
+      </p>
+      <ul class="xr-promo-checklist">
+        <li data-i18n="feat1">✓ Quản lý danh sách máy ảo riêng biệt theo tài khoản</li>
+        <li data-i18n="feat2">✓ Tạo cặp khóa bảo mật SSH (tự động tải file .pem)</li>
+        <li data-i18n="feat3">✓ Di chuyển máy ảo liên vùng không gián đoạn</li>
+        <li data-i18n="feat4">✓ Cấp phát và quản lý mã API Token cá nhân</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer class="xr-footer">
+    <span>© 2026 XRegion Cloud Platform</span>
+    <a href="javascript:void(0)" data-i18n="footerPrivacy">Bảo mật</a>
+    <a href="javascript:void(0)" data-i18n="footerTerms">Điều khoản sử dụng</a>
+    <a href="javascript:void(0)" onclick="changeXrRegisterLanguage(document.getElementById('xrLangSelect').value === 'vi' ? 'en' : 'vi')" data-i18n="footerSwitchLang">
+      🌐 Switch to English
+    </a>
+  </footer>
 
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
   <script>
+    const REG_I18N = {
+      vi: {
+        brandSubtitle: 'Hệ Thống Quản Trị Máy Ảo Đa Vùng',
+        regHeading: 'Đăng ký người dùng',
+        regSubheading: 'Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn',
+        labelFullName: 'Họ và tên',
+        labelUsername: 'Tên đăng nhập *',
+        labelPassword: 'Mật khẩu *',
+        labelConfirmPassword: 'Nhập lại mật khẩu *',
+        showPassword: 'Hiển thị mật khẩu',
+        labelRole: 'Vai trò người dùng',
+        createBtn: 'Đăng ký tài khoản',
+        creatingBtn: 'Đang tạo tài khoản...',
+        orDivider: 'Đã có tài khoản?',
+        signInExistingBtn: 'Quay lại đăng nhập',
+        promoHeadline: 'Không gian hạ tầng máy ảo độc lập cho từng tài khoản.',
+        promoSubtext: 'Sau khi tạo tài khoản, bạn có thể sử dụng đầy đủ các tính năng:',
+        feat1: '✓ Quản lý danh sách máy ảo riêng biệt theo tài khoản',
+        feat2: '✓ Tạo cặp khóa bảo mật SSH (tự động tải file .pem)',
+        feat3: '✓ Di chuyển máy ảo liên vùng không gián đoạn',
+        feat4: '✓ Cấp phát và quản lý mã API Token cá nhân',
+        footerPrivacy: 'Bảo mật',
+        footerTerms: 'Điều khoản sử dụng',
+        footerSwitchLang: '🌐 Switch to English',
+        errPassMismatch: 'Mật khẩu xác nhận không trùng khớp!',
+        regSuccessToast: 'Đăng ký tài khoản thành công! Đang chuyển sang trang Đăng nhập...',
+        regErrorPrefix: 'Lỗi đăng ký:'
+      },
+      en: {
+        brandSubtitle: 'Multi-Region Cloud Console',
+        regHeading: 'User sign up',
+        regSubheading: 'Create a new account to launch and manage your virtual machines',
+        labelFullName: 'Full Name',
+        labelUsername: 'Username *',
+        labelPassword: 'Password *',
+        labelConfirmPassword: 'Confirm password *',
+        showPassword: 'Show Password',
+        labelRole: 'User Role',
+        createBtn: 'Create account',
+        creatingBtn: 'Creating account...',
+        orDivider: 'Already have an account?',
+        signInExistingBtn: 'Back to sign in',
+        promoHeadline: 'Isolated virtual machine workspace for every account.',
+        promoSubtext: 'Once registered, you have full access to:',
+        feat1: '✓ Per-user isolated virtual machine instances',
+        feat2: '✓ SSH RSA 2048-bit key pair generation (.pem download)',
+        feat3: '✓ Seamless cross-region live migration',
+        feat4: '✓ Personal API Token management',
+        footerPrivacy: 'Privacy',
+        footerTerms: 'Terms of Use',
+        footerSwitchLang: '🌐 Chuyển sang Tiếng Việt',
+        errPassMismatch: 'Password confirmation does not match!',
+        regSuccessToast: 'Account created successfully! Redirecting to Sign in...',
+        regErrorPrefix: 'Registration error:'
+      }
+    };
+
+    function changeXrRegisterLanguage(lang) {
+      const targetLang = REG_I18N[lang] ? lang : 'vi';
+      localStorage.setItem('xregion_lang', targetLang);
+      const select = document.getElementById('xrLangSelect');
+      if (select) select.value = targetLang;
+
+      const dict = REG_I18N[targetLang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.innerHTML = dict[key];
+        }
+      });
+    }
+
+    function toggleShowRegPasswords(show) {
+      const p1 = document.getElementById('regPassword');
+      const p2 = document.getElementById('regConfirmPassword');
+      if (p1) p1.type = show ? 'text' : 'password';
+      if (p2) p2.type = show ? 'text' : 'password';
+    }
+
+    changeXrRegisterLanguage(localStorage.getItem('xregion_lang') || 'vi');
+
     async function handleRegisterPageSubmit(e) {
       e.preventDefault();
+      const lang = localStorage.getItem('xregion_lang') || 'vi';
+      const dict = REG_I18N[lang] || REG_I18N.vi;
+
       const errBox = document.getElementById('registerErrorBox');
       errBox.style.display = 'none';
 
       const pass = document.getElementById('regPassword').value;
       const confirmPass = document.getElementById('regConfirmPassword').value;
       if (pass !== confirmPass) {
-        errBox.innerHTML = '<strong>❌ Lỗi:</strong> Mật khẩu xác nhận không trùng khớp!';
+        errBox.innerHTML = `<strong>⚠️ ${dict.regErrorPrefix}</strong> ${dict.errPassMismatch}`;
         errBox.style.display = 'block';
         return;
       }
 
       const btn = document.getElementById('regBtn');
-      const origText = btn.innerHTML;
+      const origText = dict.createBtn;
       btn.disabled = true;
-      btn.innerHTML = '⏳ Đang đăng ký...';
+      btn.textContent = dict.creatingBtn;
 
+      const username = document.getElementById('regUsername').value.trim();
       const payload = {
         fullName: document.getElementById('regFullName').value.trim(),
-        username: document.getElementById('regUsername').value.trim(),
+        username: username,
         password: pass,
         role: document.getElementById('regRole').value
       };
@@ -97,23 +655,23 @@
         const data = await res.json();
 
         if (res.ok) {
-          showToast('Đăng ký tài khoản thành công! Đang chuyển sang trang Đăng nhập...', 'success');
+          localStorage.setItem('xregion_last_username', username);
+          showToast(dict.regSuccessToast, 'success');
           setTimeout(() => {
-            window.location.href = '/login.html';
-          }, 1000);
+            window.location.replace('/login.html');
+          }, 800);
         } else {
           throw new Error(data.message || 'Đăng ký không thành công.');
         }
       } catch (err) {
-        errBox.innerHTML = `<strong>❌ Lỗi đăng ký:</strong> ${err.message}`;
+        errBox.innerHTML = `<strong>⚠️ ${dict.regErrorPrefix}</strong> ${err.message}`;
         errBox.style.display = 'block';
         showToast(err.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = origText;
+        btn.textContent = origText;
       }
     }
   </script>
 </body>
 </html>
-

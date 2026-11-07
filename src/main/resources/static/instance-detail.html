@@ -91,11 +91,11 @@
     <!-- On-screen API Error Banner -->
     <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
-    <!-- Detail Header & Lifecycle Actions Toolbar -->
+    <!-- Header: name, EC2 state, lifecycle actions -->
     <div class="detail-header">
       <div class="detail-info">
         <div>
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="det-title-row">
             <h1 class="detail-title" id="detInstanceName">Đang tải...</h1>
             <span class="badge" id="detStatusBadge" style="font-size: 13px; padding: 4px 10px;">UNKNOWN</span>
             <!-- Top Action Bar & Instance Title -->
@@ -583,9 +583,197 @@
                                 </div>
   </main>
 
+  <!-- MODAL: confirm migration -->
+  <div class="modal-overlay" id="migrateModal" role="dialog" aria-modal="true" aria-labelledby="migrateModalTitle">
+    <div class="modal-card" style="max-width: 520px;">
+      <h2 class="modal-title" id="migrateModalTitle">Chuyển vùng máy ảo?</h2>
+      <p class="modal-text" id="migrateModalText"></p>
+      <ul class="modal-list">
+        <li>Máy nguồn dừng trong lúc tạo snapshot cuối, dịch vụ tạm gián đoạn.</li>
+        <li>Elastic IP mới được cấp ở vùng đích, bản ghi Route 53 tự trỏ sang.</li>
+        <li>Nếu một bước lỗi, hệ thống nhả khóa và giữ máy ở vùng nguồn.</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('migrateModal')">Hủy</button>
+        <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()">⚡ Bắt đầu chuyển vùng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: add rule -->
+  <div class="modal-overlay" id="addRuleModal" role="dialog" aria-modal="true" aria-labelledby="addRuleTitle">
+    <form class="modal-card" style="max-width: 560px;" onsubmit="submitAddRule(event)">
+      <h2 class="modal-title" id="addRuleTitle">Thêm rule</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="ruleDirection">Chiều</label>
+          <select class="form-select" id="ruleDirection">
+            <option value="inbound">Inbound (vào máy)</option>
+            <option value="outbound">Outbound (ra ngoài)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ruleGroup">Security Group</label>
+          <select class="form-select" id="ruleGroup" required></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="ruleType">Loại</label>
+          <select class="form-select" id="ruleType" onchange="applyRulePreset()">
+            <option value="ssh">SSH (TCP 22)</option>
+            <option value="http">HTTP (TCP 80)</option>
+            <option value="https">HTTPS (TCP 443)</option>
+            <option value="mysql">MySQL/Aurora (TCP 3306)</option>
+            <option value="postgres">PostgreSQL (TCP 5432)</option>
+            <option value="custom-tcp">Custom TCP</option>
+            <option value="custom-udp">Custom UDP</option>
+            <option value="icmp">All ICMP</option>
+            <option value="all">All traffic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ruleFromPort">Cổng (hoặc dải cổng)</label>
+          <div class="port-range">
+            <input type="number" class="form-input" id="ruleFromPort" min="0" max="65535" required>
+            <span class="muted">–</span>
+            <input type="number" class="form-input" id="ruleToPort" min="0" max="65535" placeholder="đến">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ruleCidr" id="ruleCidrLabel">Nguồn (CIDR)</label>
+        <input type="text" class="form-input mono" id="ruleCidr" value="0.0.0.0/0" required
+          pattern="(\d{1,3}\.){3}\d{1,3}/\d{1,2}|sg-[a-zA-Z0-9\-]+" title="CIDR, ví dụ 0.0.0.0/0 hoặc 10.0.0.0/16">
+        <div class="quick-cidr">
+          <button type="button" class="chip-btn" onclick="setRuleCidr('0.0.0.0/0')">Mọi nơi 0.0.0.0/0</button>
+          <button type="button" class="chip-btn" id="vpcCidrChip" onclick="setRuleCidr(this.dataset.cidr)">Trong
+            VPC</button>
+        </div>
+        <div class="form-warn" id="ruleWarn" hidden>Cổng này đang mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ruleDesc">Mô tả (không bắt buộc)</label>
+        <input type="text" class="form-input" id="ruleDesc" maxlength="120" placeholder="Ví dụ: API nội bộ">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addRuleModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Thêm rule</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- MODAL: create security group -->
+  <div class="modal-overlay" id="createSgModal" role="dialog" aria-modal="true" aria-labelledby="createSgTitle">
+    <form class="modal-card" style="max-width: 480px;" onsubmit="submitCreateSg(event)">
+      <h2 class="modal-title" id="createSgTitle">Tạo Security Group</h2>
+      <div class="form-group">
+        <label class="form-label" for="sgName">Tên</label>
+        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}"
+          title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" placeholder="web-backend">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="sgDesc">Mô tả</label>
+        <input type="text" class="form-input" id="sgDesc" maxlength="160"
+          placeholder="Ví dụ: Cho phép API nội bộ cổng 8080">
+      </div>
+      <label class="check-row"><input type="checkbox" id="sgAttach" checked> Gắn vào máy ảo này sau khi tạo</label>
+      <p class="muted" style="margin-top: 8px;">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi
+        tạo.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createSgModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo Security Group</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- MODAL: update Route 53 -->
+  <div class="modal-overlay" id="dnsModal" role="dialog" aria-modal="true" aria-labelledby="dnsModalTitle">
+    <form class="modal-card" style="max-width: 480px;" onsubmit="submitDnsUpdate(event)">
+      <h2 class="modal-title" id="dnsModalTitle">Cập nhật bản ghi Route 53</h2>
+      <div class="form-group">
+        <label class="form-label" for="dnsDomain">Tên miền</label>
+        <input type="text" class="form-input mono" id="dnsDomain" readonly>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="dnsTarget">Trỏ tới IP</label>
+          <input type="text" class="form-input mono" id="dnsTarget" required pattern="(\d{1,3}\.){3}\d{1,3}"
+            title="Địa chỉ IPv4">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="dnsTtl">TTL (giây)</label>
+          <input type="number" class="form-input" id="dnsTtl" value="60" min="30" max="86400" required>
+        </div>
+      </div>
+      <p class="muted">Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi
+        này.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Cập nhật DNS</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- MODAL: log of one past migration -->
+  <div class="modal-overlay" id="migLogModal" role="dialog" aria-modal="true" aria-labelledby="migLogTitle">
+    <div class="modal-card" style="max-width: 760px;">
+      <div class="mig-log-head">
+        <h2 class="modal-title" id="migLogTitle">Chi tiết lần chuyển vùng</h2>
+        <span id="migLogStatus"></span>
+      </div>
+      <div class="mig-log-route" id="migLogRoute"></div>
+      <div class="mig-log-stats" id="migLogStats"></div>
+      <ol class="mig-log-steps" id="migLogSteps"></ol>
+      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn"
+          data-copy="migLogTerminal" aria-label="Sao chép log">⧉ Sao chép</button></div>
+      <div class="terminal-window mig-log-terminal" id="migLogTerminal" role="log"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('migLogModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: connect via SSH -->
+  <div class="modal-overlay" id="connectModal" role="dialog" aria-modal="true" aria-labelledby="connectTitle">
+    <div class="modal-card" style="max-width: 600px;">
+      <h2 class="modal-title" id="connectTitle">Kết nối tới máy ảo</h2>
+      <ol class="connect-steps">
+        <li>Mở terminal ở thư mục chứa file khóa <code id="connKeyFile">--</code> đã tải lúc tạo Key Pair.</li>
+        <li>Trên Linux/macOS, giới hạn quyền đọc file khóa: <code id="connChmod">--</code></li>
+        <li>Kết nối bằng Elastic IP:</li>
+      </ol>
+      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp"
+          aria-label="Sao chép lệnh SSH">⧉</button></div>
+      <p class="modal-text" style="margin-top: 12px;">Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:</p>
+      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns"
+          aria-label="Sao chép lệnh SSH theo tên miền">⧉</button></div>
+      <p class="muted" style="margin-top: 12px;" id="connNote"></p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('connectModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: change security groups -->
+  <div class="modal-overlay" id="changeSgModal" role="dialog" aria-modal="true" aria-labelledby="changeSgTitle">
+    <form class="modal-card" style="max-width: 560px;" onsubmit="submitChangeSg(event)">
+      <h2 class="modal-title" id="changeSgTitle">Đổi Security Group</h2>
+      <p class="modal-text">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.
+      </p>
+      <div class="sg-pick" id="changeSgList"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('changeSgModal')">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+      </div>
+    </form>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
+  <script src="/js/instance-detail.js"></script>
   <script>
     // Tab switching utility
     function switchDetailTab(tabName) {
@@ -613,7 +801,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      initDetailPage();
+      initInstanceDetail();
     });
   </script>
 </body>

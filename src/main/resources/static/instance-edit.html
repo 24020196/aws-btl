@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,190 @@
     }
   </script>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .ec2-setting-container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .ec2-page-head {
+      margin-bottom: 20px;
+    }
+
+    .ec2-page-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin: 0 0 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ec2-page-sub {
+      font-size: 13.5px;
+      color: #94a3b8;
+      margin: 0;
+    }
+
+    .ec2-setting-card {
+      background: var(--bg-card, #111827);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      padding: 24px 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .ec2-field-block {
+      margin-bottom: 22px;
+    }
+
+    .ec2-field-label {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .ec2-field-static {
+      font-size: 14px;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ec2-field-hint {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    .ec2-select-wrap {
+      position: relative;
+      max-width: 420px;
+    }
+
+    .ec2-select-wrap.is-stop-locked[data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      background: #1e293b;
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+      z-index: 50;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .ec2-check-disabled {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: #64748b;
+      font-size: 13.5px;
+      user-select: none;
+    }
+
+    .ec2-check-disabled input {
+      margin-top: 3px;
+      accent-color: #64748b;
+    }
+
+    .ec2-cmp-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 0;
+      color: #38bdf8;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 0;
+      cursor: pointer;
+    }
+
+    .ec2-cmp-toggle:hover {
+      text-decoration: underline;
+    }
+
+    .ec2-cmp-divider {
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
+      margin-top: 8px;
+      padding-top: 12px;
+    }
+
+    .ec2-cmp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .ec2-cmp-table th {
+      text-align: left;
+      padding: 10px 14px;
+      color: #94a3b8;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .ec2-cmp-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      color: #e2e8f0;
+    }
+
+    .ec2-cmp-table td:first-child {
+      color: #cbd5e1;
+      width: 36%;
+    }
+
+    .ec2-footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-ec2-save {
+      background: #f59e0b;
+      color: #0f172a;
+      font-weight: 700;
+      border: 0;
+      padding: 9px 22px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+
+    .btn-ec2-save:hover:not(:disabled) {
+      background: #fbbf24;
+    }
+
+    .btn-ec2-save:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .ec2-sec-panel {
+      display: none;
+    }
+
+    .ec2-sec-panel.active {
+      display: block;
+    }
+  </style>
 </head>
+
 <body>
 
   <!-- Top Global Header -->
@@ -27,7 +211,6 @@
         <div class="health-dot"></div>
         <span>Global</span>
       </div>
-
       <div class="user-badge" id="userBadgeContainer"></div>
     </div>
   </header>
@@ -35,232 +218,428 @@
   <!-- Sub Navigation Bar -->
   <nav class="sub-nav">
     <a href="/index.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Trang Chủ Overview
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+      <span data-i18n-vi="Trang Chủ Tổng Quan" data-i18n-en="Overview Dashboard">Trang Chủ Tổng Quan</span>
     </a>
     <a href="/instances.html" class="sub-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
-      Danh Sách Máy Ảo (Instances)
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <rect x="9" y="9" width="6" height="6" />
+        <line x1="9" y1="1" x2="9" y2="4" />
+        <line x1="15" y1="1" x2="15" y2="4" />
+        <line x1="9" y1="20" x2="9" y2="23" />
+        <line x1="15" y1="20" x2="15" y2="23" />
+      </svg>
+      <span data-i18n-vi="Danh Sách Máy Ảo" data-i18n-en="Instances">Danh Sách Máy Ảo</span>
     </a>
     <a href="/launch.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Khởi Tạo Máy Ảo (+ Launch VM)
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+      </svg>
+      <span data-i18n-vi="Khởi Tạo Máy Ảo (+ Launch VM)" data-i18n-en="Launch Instance (+ Launch VM)">Khởi Tạo Máy Ảo (+
+        Launch VM)</span>
     </a>
     <a href="/account-tokens.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-      Tài Khoản & API Token
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+      <span data-i18n-vi="Tài Khoản &amp; API Token" data-i18n-en="Account &amp; API Tokens">Tài Khoản &amp; API
+        Token</span>
     </a>
   </nav>
 
   <!-- Main Content Area -->
   <main class="main-content">
-    <div class="breadcrumb">
-      <a href="/index.html">XRegion-EC2</a>
-      <span>/</span>
-      <a href="/instances.html">Instances</a>
-      <span>/</span>
-      <a href="#" id="editBreadcrumbDetailLink" style="color: var(--accent-cyan); font-family: monospace;">--</a>
-      <span>/</span>
-      <span>Modify Instance Settings</span>
-    </div>
-
-    <!-- On-screen API Error Banner -->
-    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
-
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
-      <div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <h1 style="font-size: 24px; font-weight: 800; color: #fff;">Chỉnh Sửa Thông Tin Máy Ảo (Modify Instance)</h1>
-          <span class="badge" id="editInstStatusBadge" style="font-size: 12px; padding: 4px 10px;">LOADING</span>
-        </div>
-        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-          Thay đổi tên định danh, gói cấu hình phần cứng (Instance Type / Flavor), khóa SSH Key Pair và tham số an toàn chuyển vùng tương tự AWS EC2.
-        </p>
+    <div class="ec2-setting-container">
+      <!-- Breadcrumb matching AWS EC2 Console -->
+      <div class="breadcrumb" style="margin-bottom: 16px;">
+        <a href="/index.html">EC2</a>
+        <span>&gt;</span>
+        <a href="/instances.html" data-i18n-vi="Máy ảo (Instances)" data-i18n-en="Instances">Instances</a>
+        <span>&gt;</span>
+        <a href="#" id="editBreadcrumbDetailLink" style="color: var(--accent-cyan); font-family: monospace;">i-...</a>
+        <span>&gt;</span>
+        <span id="editBreadcrumbActionName">Change instance type</span>
       </div>
-      <a href="/instances.html" id="btnBackToDetail" class="btn btn-secondary">← Quay lại chi tiết máy ảo</a>
-    </div>
 
-    <form id="editInstancePageForm" autocomplete="off" onsubmit="handleEditInstanceSubmit(event)">
-      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
+      <!-- On-screen API Error Banner -->
+      <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
-        <!-- Left Column: Editable Sections -->
-        <div>
-          <!-- Section 1: Read-only Instance Identity & Network -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">ℹ</span>
-              Định Danh Hạ Tầng Hiện Tại (Read-Only)
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <div>
-                <div style="font-size: 11px; color: var(--text-muted);">INSTANCE ID</div>
-                <div id="editRoInstanceId" style="font-family: monospace; font-weight: 700; color: var(--accent-cyan); margin-top: 4px;">--</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; color: var(--text-muted);">VÙNG HIỆN TẠI (REGION)</div>
-                <div id="editRoRegion" style="font-weight: 700; color: #fff; margin-top: 4px;">--</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; color: var(--text-muted);">PRIVATE IP</div>
-                <div id="editRoPrivateIp" style="font-family: monospace; color: #cbd5e1; margin-top: 4px;">--</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; color: var(--text-muted);">ELASTIC / PUBLIC IP</div>
-                <div id="editRoPublicIp" style="font-family: monospace; color: #34d399; margin-top: 4px;">--</div>
-              </div>
+      <!-- Dynamic EC2 Page Title & Subtitle -->
+      <div class="ec2-page-head">
+        <h1 class="ec2-page-title" id="editPageTitle">Change instance type</h1>
+        <p class="ec2-page-sub" id="editPageSubtitle">You can change the instance type only if the current instance type
+          and the instance type that you want are compatible.</p>
+      </div>
+
+      <form id="editInstanceForm" onsubmit="handleEditInstanceSubmit(event)">
+        <div class="ec2-setting-card">
+          <!-- Always visible: Instance ID header row -->
+          <div class="ec2-field-block">
+            <label class="ec2-field-label" data-i18n-vi="Mã máy ảo (Instance ID)" data-i18n-en="Instance ID">Instance
+              ID</label>
+            <div class="ec2-field-static">
+              <button type="button" class="copy-btn"
+                onclick="navigator.clipboard?.writeText(document.getElementById('editRoInstanceId').textContent); showToast(t('Đã sao chép Instance ID', 'Copied Instance ID'), 'success');"
+                title="Copy Instance ID">⧉</button>
+              <a href="#" id="editCardInstanceLink"
+                style="color: var(--accent-cyan); font-family: monospace; text-decoration: none; font-weight: 600;">
+                <span id="editRoInstanceId">--</span>
+              </a>
+              <span style="color: #cbd5e1;" id="editRoInstanceNameParen">(--)</span>
+              <span class="badge" id="editInstStatusBadge" style="margin-left: 6px;">--</span>
             </div>
           </div>
 
-          <!-- Section 2: Edit Instance Name & DNS -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">1</span>
-              Tên Máy Ảo & Tên Miền DNS (Instance Name & Route 53 DNS)
+          <!-- ============================================================ -->
+          <!-- SECTION 1: CHANGE INSTANCE TYPE (section=instance-type)      -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-instance-type">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Loại máy ảo hiện tại (Current instance type)"
+                data-i18n-en="Current instance type">Current instance type</label>
+              <div class="ec2-field-static" style="font-family: monospace; color: #cbd5e1;"
+                id="editCurrentFlavorDisplay">--</div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Tên Máy Ảo Mới *</label>
-              <input type="text" class="form-input" id="editInstName" required placeholder="vd: web-prod-01" oninput="updateEditInstanceSummary()">
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên Miền DNS (Cột <code>dns</code> trên DynamoDB)</label>
-              <input type="text" class="form-input" id="editInstDomain" placeholder="vd: web-prod-01.xregion.net" oninput="updateEditInstanceSummary()">
-            </div>
-          </div>
 
-          <!-- Section 3: Change Instance Type (Flavor) -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">2</span>
-              Thay Đổi Gói Cấu Hình Phần Cứng (Change Instance Type / Flavor)
-            </div>
-            <div class="form-group">
-              <label class="form-label">Chọn Flavor Mới *</label>
-              <select class="form-select" id="editInstFlavor" onchange="updateEditInstanceSummary()">
-                <optgroup label="── Dòng Tiêu Chuẩn (m1) ──">
-                  <option value="m1.tiny">m1.tiny — 1 vCPU • 512 MB RAM • 10 GB Root Disk</option>
-                  <option value="m1.small">m1.small — 1 vCPU • 2048 MB RAM (2 GB) • 10 GB Root Disk</option>
-                  <option value="m1.medium">m1.medium — 2 vCPUs • 4096 MB RAM (4 GB) • 10 GB Root Disk</option>
-                  <option value="m1.large">m1.large — 4 vCPUs • 8192 MB RAM (8 GB) • 10 GB Root Disk</option>
-                  <option value="m1.xlarge">m1.xlarge — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
-                </optgroup>
-                <optgroup label="── Dòng Hiệu Năng Cao (h1) ──">
-                  <option value="h1.medium">h1.medium — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
-                  <option value="h1.large">h1.large — 16 vCPUs • 32768 MB RAM (32 GB) • 10 GB Root Disk</option>
-                  <option value="h1.xlarge">h1.xlarge — 32 vCPUs • 65536 MB RAM (64 GB) • 10 GB Root Disk</option>
-                </optgroup>
-              </select>
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted);">
-              💡 Tương tự AWS EC2 <em>Change Instance Type</em>: việc nâng/hạ cấp vCPU & RAM sẽ đồng bộ xuống cụm Bare Metal qua EventBridge.
-            </div>
-          </div>
-
-          <!-- Section 4: SSH Key Pair -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">3</span>
-              Khóa Xác Thực SSH (Key Pair)
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Chọn Key Pair Đính Kèm</label>
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;" onchange="updateEditInstanceSummary()">
-                  <option value="xregion-key">xregion-key</option>
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstFlavor" data-i18n-vi="Loại máy ảo mới (New instance type)"
+                data-i18n-en="New instance type">New instance type</label>
+              <div class="ec2-select-wrap" id="flavorSelectWrap">
+                <select class="form-select" id="editInstFlavor" onchange="updateEditInstanceSummary()">
+                  <optgroup label="General Purpose (M1 Series)">
+                    <option value="m1.tiny">m1.tiny (1 vCPU, 1 GiB RAM)</option>
+                    <option value="m1.small">m1.small (1 vCPU, 2 GiB RAM)</option>
+                    <option value="m1.medium">m1.medium (2 vCPUs, 4 GiB RAM)</option>
+                    <option value="m1.large">m1.large (4 vCPUs, 8 GiB RAM)</option>
+                    <option value="m1.xlarge">m1.xlarge (8 vCPUs, 16 GiB RAM)</option>
+                  </optgroup>
+                  <optgroup label="High Memory / Compute (H1 Series)">
+                    <option value="h1.medium">h1.medium (4 vCPUs, 16 GiB RAM)</option>
+                    <option value="h1.large">h1.large (8 vCPUs, 32 GiB RAM)</option>
+                    <option value="h1.xlarge">h1.xlarge (16 vCPUs, 64 GiB RAM)</option>
+                  </optgroup>
                 </select>
-                <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()" style="padding: 10px 16px; white-space: nowrap;">
-                  🔑 + Tạo Key Pair Mới (.pem)
-                </button>
+              </div>
+              <div class="ec2-field-hint"
+                data-i18n-vi="Chỉ hỗ trợ các dòng máy có cùng kiến trúc vi xử lý x86 (32-bit / 64-bit)."
+                data-i18n-en="Only instance types with x86 (32-bit) / (64-bit) architecture can be chosen.">Only
+                instance types with x86 (32-bit) / (64-bit) architecture can be chosen.</div>
+            </div>
+
+            <div class="ec2-field-block">
+              <label class="ec2-check-disabled">
+                <input type="checkbox" checked disabled>
+                <span>
+                  <strong style="display: block; color: #94a3b8;">EBS-optimized</strong>
+                  <span style="font-size: 12px; color: #64748b;"
+                    data-i18n-vi="Tối ưu hóa băng thông EBS được bật mặc định cho loại máy ảo này"
+                    data-i18n-en="EBS-optimized is enabled by default for this instance type">EBS-optimized is enabled
+                    by default for this instance type</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="ec2-cmp-divider">
+              <button type="button" class="ec2-cmp-toggle" onclick="toggleFlavorComparison()">
+                <span id="cmpToggleIcon">▼</span>
+                <span data-i18n-vi="So sánh cấu hình loại máy ảo (Instance type comparison)"
+                  data-i18n-en="Instance type comparison">Instance type comparison</span>
+              </button>
+              <div id="flavorComparisonBox" style="margin-top: 10px;">
+                <table class="ec2-cmp-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n-vi="Thuộc tính" data-i18n-en="Attribute">Attribute</th>
+                      <th id="cmpHeaderCurrent">Current</th>
+                      <th id="cmpHeaderNew">New</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-i18n-vi="Dòng phần cứng (Series)" data-i18n-en="Instance series">Instance series</td>
+                      <td id="cmpSeriesCurrent">--</td>
+                      <td id="cmpSeriesNew" style="color: var(--accent-cyan); font-weight: 600;">--</td>
+                    </tr>
+                    <tr>
+                      <td>vCPUs</td>
+                      <td id="cmpVcpuCurrent">--</td>
+                      <td id="cmpVcpuNew" style="color: var(--accent-cyan); font-weight: 600;">--</td>
+                    </tr>
+                    <tr>
+                      <td data-i18n-vi="Bộ nhớ RAM (GiB)" data-i18n-en="Memory (GiB)">Memory (GiB)</td>
+                      <td id="cmpRamCurrent">--</td>
+                      <td id="cmpRamNew" style="color: var(--accent-cyan); font-weight: 600;">--</td>
+                    </tr>
+                    <tr>
+                      <td data-i18n-vi="Kiến trúc CPU" data-i18n-en="Architecture">Architecture</td>
+                      <td>x86_64 (64-bit)</td>
+                      <td>x86_64 (64-bit)</td>
+                    </tr>
+                    <tr>
+                      <td data-i18n-vi="Hiệu năng mạng" data-i18n-en="Network performance">Network performance</td>
+                      <td>Up to 10 Gigabit (SR-IOV)</td>
+                      <td>Up to 10 Gigabit (SR-IOV)</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
 
-          <!-- Section 5: Migration Cooldown Setting -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">4</span>
-              Cấu Hình Khóa An Toàn Di Trú (Migration Cooldown)
+          <!-- ============================================================ -->
+          <!-- SECTION 2: CHANGE SECURITY GROUPS (section=security-groups)  -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-security-groups">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Nhóm bảo mật hiện tại"
+                data-i18n-en="Current security group">Current security group</label>
+              <div class="ec2-field-static"><code id="editCurrentSgDisplay" style="color: var(--accent-cyan);">--</code>
+              </div>
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Thời Gian Cooldown Giữa 2 Lần Chuyển Vùng (Giây)</label>
-              <input type="number" class="form-input" id="editInstCooldown" value="300" min="0" max="86400" oninput="updateEditInstanceSummary()">
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-                Thời gian khóa bảo vệ sau khi máy ảo hoàn tất di trú liên vùng (mặc định: <code>300</code> giây = 5 phút).
+
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstSecurityGroup"
+                data-i18n-vi="Chọn nhóm bảo mật (Security group)" data-i18n-en="Associated security group">Associated
+                security group</label>
+              <div class="ec2-select-wrap">
+                <select class="form-select" id="editInstSecurityGroup" onchange="updateEditInstanceSummary()">
+                  <option value="sg-default">sg-default (Default Firewall — SSH 22, HTTP 80, HTTPS 443)</option>
+                  <option value="sg-web-dmz">sg-web-dmz (Web Public DMZ — 80, 443, 8080, 22)</option>
+                  <option value="sg-db-internal">sg-db-internal (Database Tier — 3306, 5432, 6379 Internal)</option>
+                  <option value="sg-cluster-all">sg-cluster-all (Multi-Region Mesh — All VPC Traffic)</option>
+                </select>
+              </div>
+              <div class="ec2-field-hint"
+                data-i18n-vi="Quy tắc tường lửa Security Group có hiệu lực ngay lập tức trên card mạng (ENI) mà không cần khởi động lại máy."
+                data-i18n-en="Security group rules take effect immediately on the primary network interface (ENI) without restarting the instance.">
+                Security group rules take effect immediately on the primary network interface (ENI) without restarting
+                the instance.</div>
+            </div>
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- SECTION 3: MANAGE ELASTIC IP (section=elastic-ip)            -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-elastic-ip">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Địa chỉ Elastic IP hiện tại (Public IPv4)"
+                data-i18n-en="Current Elastic IP (Public IPv4)">Current Elastic IP (Public IPv4)</label>
+              <div class="ec2-field-static"><code id="editRoPublicIp" style="color: #34d399;">--</code></div>
+            </div>
+
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Địa chỉ IP nội bộ (Private IPv4)"
+                data-i18n-en="Private IPv4 address (Primary ENI)">Private IPv4 address (Primary ENI)</label>
+              <div class="ec2-field-static"><code id="editRoPrivateIp">--</code></div>
+            </div>
+
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstElasticIpAction" data-i18n-vi="Thao tác với Elastic IP"
+                data-i18n-en="Elastic IP operation">Elastic IP operation</label>
+              <div class="ec2-select-wrap" style="max-width: 520px;">
+                <select class="form-select" id="editInstElasticIpAction" onchange="updateEditInstanceSummary()">
+                  <option value="KEEP" data-i18n-vi="Giữ nguyên địa chỉ Elastic IP hiện tại"
+                    data-i18n-en="Keep current Elastic IP address">Keep current Elastic IP address</option>
+                  <option value="ALLOCATE_NEW" data-i18n-vi="Cấp phát &amp; gắn Elastic IP mới từ vùng hiện tại"
+                    data-i18n-en="Allocate &amp; associate new Elastic IP from regional pool">Allocate &amp; associate
+                    new Elastic IP from regional pool</option>
+                  <option value="DISASSOCIATE" data-i18n-vi="Gỡ bỏ địa chỉ Public IPv4 (Chỉ truy cập nội bộ VPC)"
+                    data-i18n-en="Disassociate Public IPv4 (Private VPC access only)">Disassociate Public IPv4 (Private
+                    VPC access only)</option>
+                </select>
+              </div>
+              <div class="ec2-field-hint"
+                data-i18n-vi="Gắn hoặc gỡ Elastic IP sẽ cập nhật ánh xạ NAT 1:1 trên card mạng ENI ngay lập tức."
+                data-i18n-en="Associating or disassociating an Elastic IP updates NAT 1:1 mapping on the instance ENI immediately.">
+                Associating or disassociating an Elastic IP updates NAT 1:1 mapping on the instance ENI immediately.
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Right Column: Sticky Before vs After Summary -->
-        <div style="position: sticky; top: 80px;">
-          <div class="card" style="padding: 22px; border-color: var(--accent-cyan); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-              Tóm Tắt Thay Đổi (Review Changes)
+          <!-- ============================================================ -->
+          <!-- SECTION 4: CHANGE ROUTE 53 DNS (section=dns)                 -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-dns">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Bản ghi Route 53 A-Record hiện tại"
+                data-i18n-en="Current Route 53 A-Record">Current Route 53 A-Record</label>
+              <div class="ec2-field-static"><code id="editCurrentDnsDisplay"
+                  style="color: var(--accent-cyan);">--</code></div>
             </div>
 
-            <div id="editErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 12px; line-height: 1.4;"></div>
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstDomain" data-i18n-vi="Tên miền mới (Route 53 Hosted Zone)"
+                data-i18n-en="Domain name (Route 53 Hosted Zone)">Domain name (Route 53 Hosted Zone)</label>
+              <div class="ec2-select-wrap" style="max-width: 480px;">
+                <input type="text" class="form-input" id="editInstDomain" placeholder="vm.xregion.net"
+                  oninput="updateEditInstanceSummary()">
+              </div>
+              <div class="ec2-field-hint"><span data-i18n-vi="Định dạng gợi ý:"
+                  data-i18n-en="Suggested format:">Suggested format:</span> <code id="editDnsPreview"
+                  style="color: var(--accent-cyan);">vm.xregion.net</code> (TTL: 60s).</div>
+            </div>
+          </div>
 
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">TÊN MÁY ẢO</div>
-              <div id="sumEditName" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">--</div>
+          <!-- ============================================================ -->
+          <!-- SECTION 5: MODIFY EBS ROOT VOLUME (section=storage)          -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-storage">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label">Volume ID</label>
+              <div class="ec2-field-static">
+                <code id="editRoVolumeId" style="color: var(--accent-cyan);">vol-...</code>
+                <span class="badge badge-key">gp3 SSD · 3,000 IOPS · 125 MB/s</span>
+              </div>
             </div>
 
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">GÓI CẤU HÌNH (FLAVOR)</div>
-              <div id="sumEditFlavor" style="font-size: 13px; font-weight: 700; color: var(--accent-cyan); margin-top: 3px;">--</div>
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Dung lượng hiện tại (GiB)"
+                data-i18n-en="Current size (GiB)">Current size (GiB)</label>
+              <div class="ec2-field-static" id="editCurrentEbsDisplay" style="font-family: monospace;">20 GiB</div>
             </div>
 
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">SSH KEY PAIR</div>
-              <div id="sumEditKey" style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 3px; font-family: monospace;">--</div>
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstEbsSize" data-i18n-vi="Dung lượng mới (GiB)"
+                data-i18n-en="New size (GiB)">New size (GiB)</label>
+              <div class="ec2-select-wrap" style="max-width: 240px;">
+                <input type="number" class="form-input" id="editInstEbsSize" min="10" max="2000" step="5"
+                  oninput="updateEditInstanceSummary()">
+              </div>
+              <div id="ebsDownsizeWarning"
+                style="display: none; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; font-size: 12.5px;">
+                <span
+                  data-i18n-vi="Dung lượng ổ đĩa EBS chỉ có thể tăng lên, không thể giảm xuống. Vui lòng nhập giá trị lớn hơn hoặc bằng"
+                  data-i18n-en="The size of a volume can only be increased, not decreased. Enter a value greater than or equal to">The
+                  size of a volume can only be increased, not decreased. Enter a value greater than or equal to</span>
+                <strong id="minAllowedEbsGb">20</strong> GiB.
+              </div>
+              <div class="ec2-field-hint"><span
+                  data-i18n-vi="Sau khi mở rộng ổ cứng, chạy lệnh trong OS để nhận đủ dung lượng:"
+                  data-i18n-en="After increasing the volume size, extend the OS partition using:">After increasing the
+                  volume size, extend the OS partition using:</span>
+                <code>sudo growpart /dev/xvda 1 &amp;&amp; sudo resize2fs /dev/xvda1</code>.</div>
+            </div>
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- SECTION 6: CHANGE SSH KEY PAIR (section=key-pair)            -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-key-pair">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" data-i18n-vi="Khóa SSH hiện tại" data-i18n-en="Current key pair">Current
+                key pair</label>
+              <div class="ec2-field-static"><code id="editCurrentKeyDisplay" style="color: #34d399;">--</code></div>
             </div>
 
-            <div style="margin-bottom: 20px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">COOLDOWN BẢO VỆ</div>
-              <div id="sumEditCooldown" style="font-size: 13px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">300 giây</div>
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="instKeyPair" data-i18n-vi="Chọn khóa SSH (Key pair name)"
+                data-i18n-en="Key pair name">Key pair name</label>
+              <div style="display: flex; gap: 10px; max-width: 520px;">
+                <select class="form-select" id="instKeyPair" onchange="updateEditInstanceSummary()" style="flex: 1;">
+                  <option value="xregion-key">xregion-key (Default RSA 2048-bit)</option>
+                </select>
+                <button type="button" class="btn btn-secondary" onclick="promptCreateKey()" style="white-space: nowrap;"
+                  data-i18n-vi="+ Tạo Key Pair mới" data-i18n-en="+ Create new key pair">+ Create new key pair</button>
+              </div>
+              <div class="ec2-field-hint"><span data-i18n-vi="Cập nhật khóa công khai vào"
+                  data-i18n-en="Updates public key in">Updates public key in</span> <code>~/.ssh/authorized_keys</code>.
+              </div>
             </div>
+          </div>
 
-            <button type="submit" id="btnSaveEditInstance" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; font-weight: 800; background: #f59e0b; color: #0a0f1d; border: none; margin-bottom: 10px;">
-              💾 Lưu Thay Đổi (Save Changes)
-            </button>
-            <a href="/instances.html" id="btnCancelEditInstance" class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 10px;">
-              Hủy bỏ (Cancel)
-            </a>
+          <!-- ============================================================ -->
+          <!-- SECTION 7: CHANGE INSTANCE NAME & TAGS (section=tags)        -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-tags">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstName" data-i18n-vi="Tên máy ảo (Name tag)"
+                data-i18n-en="Name tag (Key: Name)">Name tag (Key: Name)</label>
+              <div class="ec2-select-wrap" style="max-width: 460px;">
+                <input type="text" class="form-input" id="editInstName" placeholder="e.g. web-prod-primary" required
+                  oninput="updateEditInstanceSummary()">
+              </div>
+              <div class="ec2-field-hint"
+                data-i18n-vi="Nhãn tên máy ảo được lưu đồng bộ trên bảng DynamoDB (XRegion-Instances)."
+                data-i18n-en="Instance Name tag is stored in DynamoDB (XRegion-Instances) and displayed across the console.">
+                Instance Name tag is stored in DynamoDB (XRegion-Instances) and displayed across the console.</div>
+            </div>
+          </div>
+
+          <!-- ============================================================ -->
+          <!-- SECTION 8: CHANGE MIGRATION COOLDOWN (section=cooldown)      -->
+          <!-- ============================================================ -->
+          <div class="ec2-sec-panel" id="panel-cooldown">
+            <div class="ec2-field-block">
+              <label class="ec2-field-label" for="editInstCooldown"
+                data-i18n-vi="Thời gian chờ Cooldown chuyển vùng (giây)"
+                data-i18n-en="Cross-region migration cooldown (seconds)">Cross-region migration cooldown
+                (seconds)</label>
+              <div class="ec2-select-wrap" style="max-width: 260px;">
+                <input type="number" class="form-input" id="editInstCooldown" min="0" max="86400" step="30" value="300"
+                  oninput="updateEditInstanceSummary()">
+              </div>
+              <div class="ec2-field-hint"
+                data-i18n-vi="Khoảng thời gian nghỉ tối thiểu giữa hai lần di trú liên vùng liên tiếp (ap-southeast-2 ⇄ us-east-1)."
+                data-i18n-en="Minimum wait interval between consecutive cross-region migrations (ap-southeast-2 ⇄ us-east-1).">
+                Minimum wait interval between consecutive cross-region migrations (ap-southeast-2 ⇄ us-east-1).</div>
+            </div>
+          </div>
+
+          <!-- Hidden read-only holder for region compatibility -->
+          <span id="editRoRegion" style="display: none;"></span>
+
+          <!-- Error Box -->
+          <div id="editErrorBox"
+            style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 12px 14px; border-radius: 8px; font-size: 13px; margin-top: 16px; line-height: 1.5;">
           </div>
         </div>
 
-      </div>
-    </form>
+        <!-- Bottom Action Bar (Cancel / Change) -->
+        <div class="ec2-footer-actions">
+          <a href="/instances.html" id="btnCancelEditInstance" class="btn btn-secondary"
+            style="text-decoration: none; padding: 9px 20px;" data-i18n-vi="Hủy bỏ" data-i18n-en="Cancel">Cancel</a>
+          <div class="ec2-select-wrap" id="saveBtnWrap" style="max-width: none;">
+            <button type="submit" class="btn-ec2-save" id="btnSaveEditInstance">Change</button>
+          </div>
+        </div>
+      </form>
+    </div>
   </main>
 
-  <!-- MODAL: CREATE KEY PAIR -->
+  <!-- MODAL: CREATE KEY PAIR (.PEM) -->
   <div class="modal-overlay" id="createKeyModal">
-    <div class="modal-card" style="max-width: 460px;">
-      <div class="card-header">
-        <div class="card-title">🔑 Tạo SSH Key Pair Mới</div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">✕</button>
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title" data-i18n-vi="🔑 Tạo Khóa SSH Mới (.pem)" data-i18n-en="🔑 Create Key Pair (.pem)">🔑
+          Create Key Pair (.pem)</div>
+        <button class="modal-close" onclick="closeModal('createKeyModal')">&times;</button>
       </div>
-      <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
-        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
-          Hệ thống sẽ sinh cặp khóa <strong>RSA 2048-bit</strong> chuẩn PKCS#1. Khóa công khai được lưu trên tài khoản của bạn, còn file <code>.pem</code> sẽ tự động tải xuống máy của bạn.
-        </div>
+      <form id="createKeyForm" onsubmit="submitCreateKeyModal(event)">
         <div class="form-group">
-          <label class="form-label">Tên Key Pair (Key pair name) *</label>
-          <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: nmcuong, web-prod-key..." autocomplete="off">
+          <label class="form-label" data-i18n-vi="Tên Key Pair *" data-i18n-en="Key Pair Name *">Key Pair Name *</label>
+          <input type="text" class="form-input" id="newKeyPairNameInput" placeholder="e.g. prod-ssh-key-2026" required>
         </div>
-        <div class="form-group">
-          <label class="form-label">Loại Khóa (Key pair type)</label>
-          <input type="text" class="form-input" value="RSA (2048-bit) — Định dạng .pem (OpenSSH / EC2)" disabled>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')">Hủy</button>
-          <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary" style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700;">
-            ⬇ Tạo Key Pair & Tải .pem
-          </button>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')" data-i18n-vi="Hủy"
+            data-i18n-en="Cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitCreateKey"
+            data-i18n-vi="⬇ Tạo &amp; Tải xuống .pem" data-i18n-en="⬇ Create &amp; Download .pem">⬇ Create &amp;
+            Download .pem</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
@@ -270,5 +649,5 @@
     });
   </script>
 </body>
-</html>
 
+</html>

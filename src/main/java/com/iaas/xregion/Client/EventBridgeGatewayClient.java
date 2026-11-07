@@ -73,7 +73,26 @@ public class EventBridgeGatewayClient {
         detail.put("requested_by", requestedBy);
         detail.put("timestamp", System.currentTimeMillis());
 
-        return sendEvent("xregion.backend.instance", "Instance Lifecycle Request", detail);
+        return sendEvent("xregion.backend.instance", "instance.lifecycle", detail);
+    }
+
+    /**
+     * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qua Step Function OpenStack-NovaVM-EBS-Provisioner
+     */
+    public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceName, int sizeGb, String volumeType,
+                                                            String flavorName, String imageName, String keyName, String username) {
+        Map<String, Object> detail = new HashMap<>();
+        detail.put("event_id", "evt-launch-" + UUID.randomUUID().toString().substring(0, 8));
+        detail.put("instance_name", instanceName);
+        detail.put("size_gb", sizeGb);
+        detail.put("volume_type", volumeType != null ? volumeType : "gp3");
+        detail.put("flavor_name", flavorName);
+        detail.put("image_name", imageName);
+        detail.put("key_name", keyName);
+        detail.put("username", username);
+        detail.put("timestamp", System.currentTimeMillis());
+
+        return sendEvent("xregion.backend.instance", "instance.launch", detail);
     }
 
     /**
@@ -91,7 +110,23 @@ public class EventBridgeGatewayClient {
         detail.put("created_by", createdBy);
         detail.put("timestamp", System.currentTimeMillis());
 
-        return sendEvent("xregion.backend.key", "Keypair Created Event", detail);
+        return sendEvent("xregion.backend.key", "key.import", detail);
+    }
+
+    /**
+     * Gửi sự kiện tạo Security Group qua OpenStack Neutron & DynamoDB
+     */
+    public EventBridgeEventResponse sendSecurityGroupCreateEvent(String name, String description,
+                                                                List<Map<String, Object>> inboundRules, String createdBy) {
+        Map<String, Object> detail = new HashMap<>();
+        detail.put("event_id", "evt-sg-" + UUID.randomUUID().toString().substring(0, 8));
+        detail.put("name", name);
+        detail.put("description", description);
+        detail.put("inbound_rules", inboundRules);
+        detail.put("created_by", createdBy);
+        detail.put("timestamp", System.currentTimeMillis());
+
+        return sendEvent("xregion.backend.security", "security.create", detail);
     }
 
     /**
