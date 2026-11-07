@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +42,7 @@
     .cyber-grid-overlay {
       position: fixed;
       inset: 0;
-      background-image: 
+      background-image:
         linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
       background-size: 40px 40px;
@@ -54,8 +55,8 @@
       position: fixed;
       inset: 0;
       background: radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.16) 0%, transparent 60%),
-                  radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
-                  radial-gradient(circle at 15% 85%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 15% 85%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
       pointer-events: none;
       z-index: 0;
     }
@@ -146,6 +147,7 @@
         grid-template-columns: 1fr;
         max-width: 420px;
       }
+
       .xr-promo-box {
         display: none;
       }
@@ -455,6 +457,7 @@
     }
   </style>
 </head>
+
 <body class="xr-cyber-body">
 
   <!-- Cyberpunk Tech Grid & Horizon Glow Layers -->
@@ -491,14 +494,16 @@
       <div id="troubleHintBox" class="xr-trouble-box">
         <strong data-i18n="troubleTitle">Tài khoản mặc định để thử nghiệm:</strong><br>
         • Username: <code>admin</code> | Password: <code>admin123</code><br>
-        <a class="xr-link" onclick="fillDefaultAdminCredentials()" data-i18n="troubleAutoFill">Bấm vào đây để tự động điền</a>
+        <a class="xr-link" onclick="fillDefaultAdminCredentials()" data-i18n="troubleAutoFill">Bấm vào đây để tự động
+          điền</a>
       </div>
 
       <form id="authLoginForm" onsubmit="handleLoginPageSubmit(event)">
         <!-- Username -->
         <div class="xr-field-group">
           <label class="xr-label" for="authUsername" data-i18n="labelUsername">Tên đăng nhập</label>
-          <input type="text" class="xr-input" id="authUsername" value="admin" required placeholder="Nhập tên đăng nhập" autocomplete="username">
+          <input type="text" class="xr-input" id="authUsername" value="admin" required placeholder="Nhập tên đăng nhập"
+            autocomplete="username">
         </div>
 
         <div class="xr-checkbox-row" style="margin-top: 4px; margin-bottom: 14px;">
@@ -511,7 +516,8 @@
         <!-- Password -->
         <div class="xr-field-group" style="margin-bottom: 8px;">
           <label class="xr-label" for="authPassword" data-i18n="labelPassword">Mật khẩu</label>
-          <input type="password" class="xr-input" id="authPassword" value="admin123" required placeholder="••••••••••••" autocomplete="current-password">
+          <input type="password" class="xr-input" id="authPassword" value="admin123" required placeholder="••••••••••••"
+            autocomplete="current-password">
         </div>
 
         <!-- Show Password & Help -->
@@ -549,7 +555,8 @@
         Triển khai & chuyển vùng máy ảo chỉ trong vài phút.
       </h2>
       <p class="xr-promo-subtext" data-i18n="promoSubtext">
-        Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ tầng.
+        Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ
+        tầng.
       </p>
       <a href="/register.html" class="xr-promo-cta">
         <span data-i18n="promoCta">Bắt đầu trải nghiệm ngay</span>
@@ -563,7 +570,9 @@
     <span>© 2026 XRegion Cloud Platform</span>
     <a href="javascript:void(0)" data-i18n="footerPrivacy">Bảo mật</a>
     <a href="javascript:void(0)" data-i18n="footerTerms">Điều khoản sử dụng</a>
-    <a href="javascript:void(0)" onclick="changeXrLanguage(document.getElementById('xrLangSelect').value === 'vi' ? 'en' : 'vi')" data-i18n="footerSwitchLang">
+    <a href="javascript:void(0)"
+      onclick="changeXrLanguage(document.getElementById('xrLangSelect').value === 'vi' ? 'en' : 'vi')"
+      data-i18n="footerSwitchLang">
       🌐 Switch to English
     </a>
   </footer>
@@ -572,7 +581,7 @@
 
   <script src="/js/app.js"></script>
   <script>
-    (function() {
+    (function () {
       const existingToken = localStorage.getItem('xregion_jwt');
       const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
       if (existingToken && (!expAt || Date.now() < expAt)) {
@@ -727,4 +736,5 @@
     }
   </script>
 </body>
+
 </html>

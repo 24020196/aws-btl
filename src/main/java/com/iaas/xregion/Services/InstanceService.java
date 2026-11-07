@@ -11,6 +11,8 @@ import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
 import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
+import com.iaas.xregion.Entity.InstanceStatus;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -20,6 +22,10 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -83,6 +89,9 @@ public class InstanceService {
         String keyName = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
+        String securityGroup = (request.getSecurityGroup() != null && !request.getSecurityGroup().trim().isEmpty())
+                ? request.getSecurityGroup().trim()
+                : "sg-default";
         String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
@@ -106,13 +115,25 @@ public class InstanceService {
                 .instanceId(id)
                 .instanceName(request.getName())
                 .currentRegion(region)
-                .currentStatus("RUNNING")
+                .currentStatus(InstanceStatus.PENDING.name())
                 .elasticIp(elasticIp)
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
+                .keyName(keyName)
+                .securityGroup(securityGroup)
                 .dns(dns)
                 .migrationLock(false)
                 .build();
+
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to put instance into AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
+        }
+
+        // Schedule async transition: PENDING -> RUNNING after 3500ms
+        scheduleStateTransition(id, InstanceStatus.PENDING, InstanceStatus.RUNNING, 3500);
 
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Requested launch for instance [" + request.getName() + "] in AWS region [" + region + "]");
@@ -132,8 +153,7 @@ public class InstanceService {
                     request.getFlavor(),
                     imageId,
                     keyName,
-                    currentUser
-            );
+                    currentUser);
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
         }
@@ -156,7 +176,8 @@ public class InstanceService {
         }
 
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            throw new AppException("Máy ảo đang trong quá trình chuyển vùng (MIGRATING), không thể chỉnh sửa cấu hình lúc này.");
+            throw new AppException(
+                    "Máy ảo đang trong quá trình chuyển vùng (MIGRATING), không thể chỉnh sửa cấu hình lúc này.");
         }
 
         String oldName = entity.getInstanceName();
@@ -168,20 +189,26 @@ public class InstanceService {
         boolean isStopped = "STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
                 || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus());
 
-        // Quy tắc AWS EC2 Nhóm 2 (Cold-modify): Thay đổi Instance Type (Flavor) bắt buộc máy ảo phải ở trạng thái STOPPED
+        // Quy tắc AWS EC2 Nhóm 2 (Cold-modify): Thay đổi Instance Type (Flavor) bắt
+        // buộc máy ảo phải ở trạng thái STOPPED
         String requestedFlavor = request.getFlavor() != null ? request.getFlavor().trim() : oldFlavor;
         if (!requestedFlavor.equalsIgnoreCase(oldFlavor)) {
             if (!isStopped) {
-                throw new AppException("Theo quy tắc AWS EC2, bạn bắt buộc phải Dừng máy ảo (Stop) trước khi thay đổi gói cấu hình phần cứng (Instance Type / Flavor từ " + oldFlavor + " sang " + requestedFlavor + ")!");
+                throw new AppException(
+                        "Theo quy tắc AWS EC2, bạn bắt buộc phải Dừng máy ảo (Stop) trước khi thay đổi gói cấu hình phần cứng (Instance Type / Flavor từ "
+                                + oldFlavor + " sang " + requestedFlavor + ")!");
             }
             entity.setFlavor(requestedFlavor);
         }
 
-        // Quy tắc AWS EC2 Nhóm 3 & 1 (EBS Elastic Volumes): Chỉ cho phép tăng dung lượng ổ cứng, không hỗ trợ giảm (Downsize)
+        // Quy tắc AWS EC2 Nhóm 3 & 1 (EBS Elastic Volumes): Chỉ cho phép tăng dung
+        // lượng ổ cứng, không hỗ trợ giảm (Downsize)
         int currentEbsSize = instanceEbsSizeMap.getOrDefault(id, 10);
         if (request.getEbsSizeGb() != null) {
             if (request.getEbsSizeGb() < currentEbsSize) {
-                throw new AppException("AWS EBS chỉ cho phép mở rộng (tăng) kích thước ổ cứng, không hỗ trợ giảm dung lượng trực tiếp (Hiện tại: " + currentEbsSize + " GB, Yêu cầu: " + request.getEbsSizeGb() + " GB).");
+                throw new AppException(
+                        "AWS EBS chỉ cho phép mở rộng (tăng) kích thước ổ cứng, không hỗ trợ giảm dung lượng trực tiếp (Hiện tại: "
+                                + currentEbsSize + " GB, Yêu cầu: " + request.getEbsSizeGb() + " GB).");
             }
             instanceEbsSizeMap.put(id, request.getEbsSizeGb());
         }
@@ -220,7 +247,8 @@ public class InstanceService {
         }
 
         auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
-                String.format("Updated instance [%s -> %s], flavor [%s -> %s], sg [%s -> %s], eip [%s -> %s], ebs [%dGB]",
+                String.format(
+                        "Updated instance [%s -> %s], flavor [%s -> %s], sg [%s -> %s], eip [%s -> %s], ebs [%dGB]",
                         oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(),
                         oldSg, entity.getSecurityGroupId(), oldEip, entity.getElasticIp(),
                         instanceEbsSizeMap.getOrDefault(id, 10)));
@@ -228,8 +256,7 @@ public class InstanceService {
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
                     "MODIFY", id, entity.getInstanceName(), entity.getFlavor(),
-                    entity.getCurrentRegion(), entity.getKeyId(), currentUser
-            );
+                    entity.getCurrentRegion(), entity.getKeyId(), currentUser);
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện MODIFY qua API Gateway EventBridge: {}", e.getMessage());
         }
@@ -255,21 +282,28 @@ public class InstanceService {
 
         switch (action) {
             case "START":
-                entity.setCurrentStatus("RUNNING");
-                instancesTable.putItem(entity);
+                entity.setCurrentStatus(InstanceStatus.PENDING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.PENDING, InstanceStatus.RUNNING, 3500);
                 break;
             case "STOP":
-                entity.setCurrentStatus("STOPPED");
-                instancesTable.putItem(entity);
+                entity.setCurrentStatus(InstanceStatus.STOPPING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.STOPPING, InstanceStatus.STOPPED, 3500);
                 break;
             case "REBOOT":
-                entity.setCurrentStatus("RUNNING");
-                instancesTable.putItem(entity);
+                entity.setCurrentStatus(InstanceStatus.REBOOTING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.REBOOTING, InstanceStatus.RUNNING, 3500);
                 break;
             case "TERMINATE":
             case "DELETE":
-                instancesTable.deleteItem(Key.builder().partitionValue(id).build());
+                entity.setCurrentStatus(InstanceStatus.SHUTTING_DOWN.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.SHUTTING_DOWN, InstanceStatus.TERMINATED, 3500);
                 break;
+            case "CONSOLE":
+                return mapToResponse(entity);
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
         }
@@ -277,12 +311,14 @@ public class InstanceService {
         auditLogService.logAction(action + "_VM", "INSTANCE", id,
                 "Requested lifecycle action " + action + " for instance " + id);
 
-        // Bắn sự kiện qua API Gateway vào EventBridge để Lambda NovaLifecycleManager thực thi OpenStack
-        // và OpenStack event forwarder tự động trigger Lambda SyncNovaToDynamoDB cập nhật trạng thái thực tế vào DynamoDB
+        // Bắn sự kiện qua API Gateway vào EventBridge để Lambda NovaLifecycleManager
+        // thực thi OpenStack
+        // và OpenStack event forwarder tự động trigger Lambda SyncNovaToDynamoDB cập
+        // nhật trạng thái thực tế vào DynamoDB
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyId(), currentUser
-            );
+                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(),
+                    entity.getKeyId(), currentUser);
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
         }
@@ -294,18 +330,26 @@ public class InstanceService {
         String regionCode = entity.getCurrentRegion() != null ? entity.getCurrentRegion() : "ap-southeast-2";
         RegionType regionType = RegionType.fromCode(regionCode);
 
-        // Normalize status for UI display (RUNNING -> ACTIVE)
-        String uiStatus = "ACTIVE";
+        // Standard EC2 Statuses: PENDING, RUNNING, STOPPING, STOPPED, REBOOTING,
+        // SHUTTING_DOWN, TERMINATED, MIGRATING
+        String status = InstanceStatus.RUNNING.name();
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "MIGRATING";
-        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
-                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "SHUTOFF";
-        } else if ("REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "REBOOTING";
+            status = InstanceStatus.MIGRATING.name();
+        } else if (entity.getCurrentStatus() != null) {
+            try {
+                status = InstanceStatus.valueOf(entity.getCurrentStatus().toUpperCase().trim()).name();
+            } catch (IllegalArgumentException e) {
+                if ("SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
+                    status = InstanceStatus.STOPPED.name();
+                } else if ("ACTIVE".equalsIgnoreCase(entity.getCurrentStatus())) {
+                    status = InstanceStatus.RUNNING.name();
+                } else {
+                    status = entity.getCurrentStatus().toUpperCase().trim();
+                }
+            }
         }
 
-        long timestampMs = System.currentTimeMillis();
+        long timestampMs = TimeSyncUtil.toEpochMillis(entity.getLastMigrationTimestamp());
 
         return InstanceResponse.builder()
                 .username(entity.getUsername())
@@ -315,12 +359,14 @@ public class InstanceService {
                 .region(regionCode)
                 .regionName(regionType.getDisplayName())
                 .flavor(entity.getFlavor() != null ? entity.getFlavor() : "m1.medium")
-                .status(uiStatus)
+                .status(status)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
+                .securityGroup(entity.getSecurityGroup() != null ? entity.getSecurityGroup() : "sg-default")
                 .dnsDomain((entity.getDns() != null && !entity.getDns().trim().isEmpty())
                         ? entity.getDns()
-                        : (entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net"))
+                        : (entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net"
+                                : "app.xregion.net"))
                 .imageId("img-u22")
                 .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
@@ -330,7 +376,8 @@ public class InstanceService {
                 .keyName(entity.getKeyId() != null ? entity.getKeyId().replaceFirst("^key-", "") : "xregion-key")
                 .volumeId(entity.getVolumeId())
                 .ebsSizeGb(instanceEbsSizeMap.getOrDefault(entity.getInstanceId(), 10))
-                .securityGroupId(entity.getSecurityGroupId() != null ? entity.getSecurityGroupId() : "7295eaec-b17d-4dd0-be49-97389e6b361a")
+                .securityGroupId(entity.getSecurityGroupId() != null ? entity.getSecurityGroupId()
+                        : "7295eaec-b17d-4dd0-be49-97389e6b361a")
                 .build();
     }
 }

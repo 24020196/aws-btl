@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quản Lý Máy Ảo (Instances) - XRegion-EC2</title>
+  <script>
+    if (!localStorage.getItem('xregion_jwt')) {
+      window.location.replace('/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+    }
+  </script>
   <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
@@ -60,60 +65,68 @@
     <!-- On-screen API Error Banner -->
     <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
-    <!-- 4 Summary Status Cards (Hình 2.2 chuẩn) -->
+    <!-- 4 Summary Status Cards (AWS EC2 Console Style) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-      <div class="card" style="margin-bottom: 0; padding: 18px;">
-        <div style="font-size: 12px; color: var(--text-muted);">Total Instances</div>
+      <div class="card" style="margin-bottom: 0; padding: 18px; border-left: 3px solid #3b82f6;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Instances</div>
         <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 8px;">
           <span id="statTotalInstances" style="font-size: 30px; font-weight: 800; color: #fff;">0</span>
-          <span id="statRegionACount" style="font-size: 12px; color: var(--text-muted);">0 in Region A</span>
+          <span id="statRegionACount" style="font-size: 12px; color: var(--text-muted);">0 across regions</span>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 0; padding: 18px;">
-        <div style="font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-          Running
+      <div class="card" style="margin-bottom: 0; padding: 18px; border-left: 3px solid #10b981;">
+        <div style="font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span class="status-dot dot-running"></span>
+          Running Instances
         </div>
         <div id="statRunningInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #34d399;">0</div>
       </div>
 
-      <div class="card" style="margin-bottom: 0; padding: 18px;">
-        <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
-          Stopped
+      <div class="card" style="margin-bottom: 0; padding: 18px; border-left: 3px solid #64748b;">
+        <div style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span class="status-dot dot-stopped"></span>
+          Stopped Instances
         </div>
         <div id="statStoppedInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #94a3b8;">0</div>
       </div>
 
-      <div class="card" style="margin-bottom: 0; padding: 18px;">
-        <div style="font-size: 12px; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
-          Migrating
+      <div class="card" style="margin-bottom: 0; padding: 18px; border-left: 3px solid #f59e0b;">
+        <div style="font-size: 12px; color: #fbbf24; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+          <span class="status-dot dot-pending"></span>
+          Pending / Transitioning
         </div>
-        <div id="statMigratingInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #fbbf24;">0</div>
+        <div id="statPendingInstances" style="font-size: 30px; font-weight: 800; margin-top: 8px; color: #fbbf24;">0</div>
       </div>
     </div>
 
-    <!-- Instances Table Card (Hình 2.2) -->
+    <!-- Instances Table Card (AWS Management Console Style) -->
     <div class="card">
       <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
         <div class="card-title">
-          <span>Instances</span>
+          <span>EC2 Instances</span>
           <span id="instanceCountBadge" class="badge" style="background: #1e293b; color: #38bdf8;">(0)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <input type="text" class="form-input" id="instanceSearchInput" placeholder="Tìm theo tên hoặc ID..." style="width: 220px; padding: 7px 12px;" oninput="filterInstancesUI()">
+          <input type="text" class="form-input" id="instanceSearchInput" placeholder="Tìm kiếm theo ID, Name, IP..." style="width: 220px; padding: 7px 12px;" oninput="filterInstancesUI()">
           
-          <select class="form-select" id="instanceStatusFilter" style="width: 150px; padding: 7px 10px;" onchange="filterInstancesUI()">
-            <option value="ALL">All statuses</option>
-            <option value="ACTIVE">Running (ACTIVE)</option>
-            <option value="SHUTOFF">Stopped (SHUTOFF)</option>
+          <select class="form-select" id="instanceStatusFilter" style="width: 170px; padding: 7px 10px;" onchange="filterInstancesUI()">
+            <option value="ALL">All instance states</option>
+            <option value="RUNNING">Running</option>
+            <option value="PENDING">Pending</option>
+            <option value="STOPPING">Stopping</option>
+            <option value="STOPPED">Stopped</option>
+            <option value="REBOOTING">Rebooting</option>
+            <option value="SHUTTING_DOWN">Shutting-down</option>
+            <option value="TERMINATED">Terminated</option>
             <option value="MIGRATING">Migrating</option>
           </select>
 
-          <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="padding: 8px 14px;">Làm mới</button>
-          <a href="/launch.html" class="btn btn-primary" style="padding: 8px 16px; font-weight: 700;">+ Launch Instance</a>
+          <button class="btn btn-secondary btn-sm" onclick="loadInstances()" style="padding: 8px 14px;">
+            <svg style="width: 14px; height: 14px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Làm mới
+          </button>
+          <a href="/launch.html" class="btn btn-aws" style="padding: 8px 16px; font-weight: 700;">+ Launch Instance</a>
         </div>
       </div>
 
@@ -121,19 +134,19 @@
         <thead>
           <tr>
             <th>INSTANCE ID</th>
-            <th>TÊN MÁY ẢO</th>
-            <th>VÙNG HIỆN TẠI</th>
+            <th>NAME</th>
+            <th>INSTANCE STATE</th>
+            <th>REGION</th>
             <th>FLAVOR</th>
-            <th>SSH KEY</th>
-            <th>IP NỘI BỘ</th>
-            <th>PUBLIC / ELASTIC IP</th>
-            <th>DNS DOMAIN</th>
-            <th>TRẠNG THÁI</th>
-            <th>THAO TÁC</th>
+            <th>SECURITY GROUP</th>
+            <th>PUBLIC IP</th>
+            <th>PRIVATE IP</th>
+            <th>KEY PAIR</th>
+            <th>ACTIONS</th>
           </tr>
         </thead>
         <tbody id="instanceTableBody">
-          <tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--text-muted);">Đang tải danh sách máy ảo...</td></tr>
+          <tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--text-muted);">Đang tải danh sách máy ảo từ AWS DynamoDB...</td></tr>
         </tbody>
       </table>
     </div>

@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KeyService {
 
-    private final DynamoDbTable<UserEntity> usersTable;
+    private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
 
@@ -72,7 +72,7 @@ public class KeyService {
 
     private List<KeyPairItem> loadUserKeyItems(String username) {
         try {
-            UserEntity user = findUserByUsername(username);
+            UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user != null) {
                 if (user.getSshKeys() != null) {
                     return new ArrayList<>(user.getSshKeys());
@@ -88,11 +88,11 @@ public class KeyService {
     private void saveUserKeyItems(String username, List<KeyPairItem> keys) {
         fallbackUserKeys.put(username, new ArrayList<>(keys));
         try {
-            UserEntity user = findUserByUsername(username);
+            UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user == null) {
                 String userId = "usr-" + UlidCreator.nextUlid();
                 user = UserEntity.builder()
-                        .userId(userId)
+                        .userId("usr-" + username.toLowerCase())
                         .username(username)
                         .fullName(username)
                         .role("ROLE_USER")
@@ -103,7 +103,7 @@ public class KeyService {
             } else {
                 user.setSshKeys(keys);
             }
-            usersTable.putItem(user);
+            userRepository.save(user);
         } catch (Exception e) {
             log.warn("Không thể lưu ssh_keys của user [{}] vào DynamoDB: {}", username, e.getMessage());
         }
@@ -163,7 +163,8 @@ public class KeyService {
             publicKeyStr = request.getPublicKey().trim();
             fingerprint = generateFingerprint(publicKeyStr.getBytes(StandardCharsets.UTF_8));
         } else {
-            // Sinh cặp khóa RSA 2048 chuẩn PKCS#1 PEM (-----BEGIN RSA PRIVATE KEY-----) giống hệt AWS EC2
+            // Sinh cặp khóa RSA 2048 chuẩn PKCS#1 PEM (-----BEGIN RSA PRIVATE KEY-----)
+            // giống hệt AWS EC2
             try {
                 KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
                 kpg.initialize(2048);
@@ -173,7 +174,7 @@ public class KeyService {
                 RSAPublicKey pubKey = (RSAPublicKey) kp.getPublic();
 
                 byte[] pkcs1Bytes = encodePkcs1PrivateKey(privKey);
-                Base64.Encoder mimeEncoder = Base64.getMimeEncoder(64, new byte[]{'\n'});
+                Base64.Encoder mimeEncoder = Base64.getMimeEncoder(64, new byte[] { '\n' });
                 privateKeyPem = "-----BEGIN RSA PRIVATE KEY-----\n"
                         + mimeEncoder.encodeToString(pkcs1Bytes)
                         + "\n-----END RSA PRIVATE KEY-----";
@@ -227,7 +228,8 @@ public class KeyService {
         userKeys.add(itemToSave);
         saveUserKeyItems(currentUser, userKeys);
 
-        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name, "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
+        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name,
+                "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
 
         // 3. Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <name>.pem
         return KeyPairResponse.builder()
@@ -253,7 +255,8 @@ public class KeyService {
     }
 
     /**
-     * Mã hóa chuẩn ASN.1 DER PKCS#1 RSAPrivateKey (MIIEp...) khớp 100% cấu trúc file .pem của AWS EC2 / OpenSSH
+     * Mã hóa chuẩn ASN.1 DER PKCS#1 RSAPrivateKey (MIIEp...) khớp 100% cấu trúc
+     * file .pem của AWS EC2 / OpenSSH
      */
     private byte[] encodePkcs1PrivateKey(RSAPrivateCrtKey key) throws IOException {
         ByteArrayOutputStream seq = new ByteArrayOutputStream();
@@ -324,7 +327,8 @@ public class KeyService {
             byte[] digest = md.digest(data);
             StringBuilder sb = new StringBuilder("SHA256:");
             for (int i = 0; i < Math.min(16, digest.length); i++) {
-                if (i > 0) sb.append(":");
+                if (i > 0)
+                    sb.append(":");
                 sb.append(String.format("%02x", digest[i]));
             }
             return sb.toString();

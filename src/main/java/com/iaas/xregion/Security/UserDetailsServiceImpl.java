@@ -1,47 +1,58 @@
 package com.iaas.xregion.Security;
 
 import com.iaas.xregion.Entity.UserEntity;
+import com.iaas.xregion.Services.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final DynamoDbTable<UserEntity> usersTable;
-    private final String encodedAdminPass = new BCryptPasswordEncoder().encode("admin123");
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final String encodedAdminPass = passwordEncoder.encode("admin123");
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        try {
-            UserEntity user = null;
+        if ("admin".equalsIgnoreCase(username)) {
+            String pass = encodedAdminPass;
+            String fullName = "IaaS Super Administrator";
             try {
-                user = usersTable.index("username-index")
-                        .query(QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
-                        .stream()
-                        .flatMap(page -> page.items().stream())
-                        .findFirst()
-                        .orElse(null);
-            } catch (Exception ex) {
-                log.debug("GSI lookup error, falling back to direct user_id lookup: {}", ex.getMessage());
+                Optional<UserEntity> userOpt = userRepository.findByUsername("admin");
+                if (userOpt.isPresent()) {
+                    UserEntity u = userOpt.get();
+                    if (u.getPassword() != null && (u.getPassword().startsWith("$2a$")
+                            || u.getPassword().startsWith("$2b$") || u.getPassword().startsWith("$2y$"))) {
+                        pass = u.getPassword();
+                    }
+                    if (u.getFullName() != null && !u.getFullName().trim().isEmpty()) {
+                        fullName = u.getFullName();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not query admin entity from DynamoDB: {}", e.getMessage());
             }
 
             if (user == null && username.startsWith("usr-")) {
                 user = usersTable.getItem(Key.builder().partitionValue(username).build());
             }
 
-            if (user != null) {
+        try {
+            Optional<UserEntity> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                UserEntity user = userOpt.get();
                 return CustomUserDetails.builder()
-                        .username(user.getUsername())
+                        .username(user.getUsername() != null ? user.getUsername() : username)
                         .password(user.getPassword())
                         .fullName(user.getFullName() != null ? user.getFullName() : user.getUsername())
                         .role(user.getRole() != null ? user.getRole() : "ROLE_USER")
@@ -52,15 +63,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             log.warn("Could not query user [{}] from DynamoDB: {}", username, e.getMessage());
         }
 
-        if ("admin".equalsIgnoreCase(username)) {
-            return CustomUserDetails.builder()
-                    .username("admin")
-                    .password(encodedAdminPass)
-                    .fullName("IaaS Super Administrator")
-                    .role("ROLE_ADMIN")
-                    .active(true)
-                    .build();
-        }
         throw new UsernameNotFoundException("User not found: " + username);
     }
 }

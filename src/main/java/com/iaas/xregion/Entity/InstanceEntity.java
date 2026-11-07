@@ -34,7 +34,12 @@ public class InstanceEntity {
     private String privateIp;
     private String flavor;
     private Boolean migrationLock;
+    private Long lockAcquiredAt;
+    private Integer cooldownSeconds;
+    private Long lastMigrationTimestamp;
+    private String keyName;
     private String dns;
+    private String securityGroup;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -103,8 +108,33 @@ public class InstanceEntity {
         return migrationLock;
     }
 
+    @DynamoDbAttribute("lock_acquired_at")
+    public Long getLockAcquiredAt() {
+        return lockAcquiredAt;
+    }
+
+    @DynamoDbAttribute("cooldown_seconds")
+    public Integer getCooldownSeconds() {
+        return cooldownSeconds;
+    }
+
+    @DynamoDbAttribute("last_migration_timestamp")
+    public Long getLastMigrationTimestamp() {
+        return lastMigrationTimestamp;
+    }
+
+    @DynamoDbAttribute("key_name")
+    public String getKeyName() {
+        return keyName;
+    }
+
     @DynamoDbAttribute("dns")
     public String getDns() {
         return dns;
+    }
+
+    @DynamoDbAttribute("security_group")
+    public String getSecurityGroup() {
+        return securityGroup;
     }
 }

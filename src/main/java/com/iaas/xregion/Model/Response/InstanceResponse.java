@@ -32,4 +32,5 @@ public class InstanceResponse {
     private Integer ebsSizeGb;
     private String securityGroupId;
     private Integer cooldownSeconds;
+    private String securityGroup;
 }

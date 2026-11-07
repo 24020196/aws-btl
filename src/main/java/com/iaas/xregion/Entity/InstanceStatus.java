@@ -1,12 +1,13 @@
 package com.iaas.xregion.Entity;
 
 public enum InstanceStatus {
-    ACTIVE,
-    SHUTOFF,
-    MIGRATING,
+    PENDING,
+    RUNNING,
+    STOPPING,
+    STOPPED,
     REBOOTING,
-    BUILDING,
-    ERROR,
-    TERMINATED
+    SHUTTING_DOWN,
+    TERMINATED,
+    MIGRATING
 }
 

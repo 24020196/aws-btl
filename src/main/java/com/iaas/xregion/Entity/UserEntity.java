@@ -12,7 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 /**
  * Maps to live AWS DynamoDB table: XRegion-Users
  * Primary Key: user_id (S)
- * GSI: username-index (username)
+ * GSI username-index: username (S)
  */
 @DynamoDbBean
 @Setter

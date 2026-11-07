@@ -6,6 +6,23 @@ let performanceChart = null;
 let migrationPollInterval = null;
 let serverClockOffsetMs = 0;
 
+// Auth Guard: Tự động kiểm tra phiên đăng nhập và chuyển hướng nếu chưa xác thực
+function requireAuthGuard() {
+  const token = localStorage.getItem('xregion_jwt');
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html') || path.endsWith('login') || path.endsWith('register');
+
+  if (!token && !isAuthPage) {
+    const currentUrl = window.location.pathname + window.location.search;
+    window.location.replace('/login.html?redirect=' + encodeURIComponent(currentUrl));
+    return false;
+  }
+  return true;
+}
+
+// Chạy kiểm tra Auth Guard ngay khi nạp file app.js
+requireAuthGuard();
+
 // Đồng bộ đồng hồ trình duyệt với Server & AWS DynamoDB
 async function syncServerClock() {
   try {
@@ -217,20 +234,29 @@ function showToast(message, type = 'success') {
 
 // Authenticated Fetch wrapper
 async function apiRequest(endpoint, options = {}) {
+  const token = localStorage.getItem('xregion_jwt') || authToken;
   const headers = {
     'Content-Type': 'application/json',
-    ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {})
+    ...(token ? { 'Authorization': 'Bearer ' + token } : {})
   };
 
   try {
     const res = await fetch(API_BASE + endpoint, { ...options, headers });
-    if (res.status === 401) {
-      const err = new Error('Phiên đăng nhập hết hạn hoặc chưa xác thực (HTTP 401). Vui lòng đăng nhập lại.');
-      showApiError(endpoint, err.message, 401);
-      setTimeout(() => {
-        window.location.href = '/login.html';
-      }, 1500);
-      throw err;
+    if (res.status === 401 || res.status === 403) {
+      console.warn(`Auth error (${res.status}) on endpoint: ${endpoint}`);
+      localStorage.removeItem('xregion_jwt');
+      localStorage.removeItem('xregion_user');
+      authToken = '';
+
+      const isAuthPage = window.location.pathname.endsWith('login.html') || window.location.pathname.endsWith('register.html');
+      if (!isAuthPage) {
+        showToast('Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Đang chuyển về trang đăng nhập...', 'error');
+        const currentUrl = window.location.pathname + window.location.search;
+        setTimeout(() => {
+          window.location.replace('/login.html?redirect=' + encodeURIComponent(currentUrl));
+        }, 800);
+      }
+      throw new Error(`Yêu cầu bị từ chối (${res.status} Forbidden/Unauthorized). Vui lòng đăng nhập lại.`);
     }
 
     let data;
@@ -250,7 +276,9 @@ async function apiRequest(endpoint, options = {}) {
     return data ? data.data : null;
   } catch (err) {
     console.error('API Error:', endpoint, err);
-    showApiError(endpoint, err.message);
+    if (!endpoint.includes('/auth/login')) {
+      showApiError(endpoint, err.message);
+    }
     throw err;
   }
 }
@@ -346,8 +374,103 @@ async function submitRegister(e) {
   }
 }
 
-// TAB 1: COMPUTE
+// TAB 1: COMPUTE & EC2 INSTANCES
 let cachedInstances = [];
+let statePollingInterval = null;
+
+function getStatusBadgeConfig(status) {
+  const s = (status || '').toUpperCase().trim();
+  switch (s) {
+    case 'RUNNING':
+    case 'ACTIVE':
+      return { cssClass: 'badge-running', dotClass: 'dot-running', label: 'running', isTransitioning: false };
+    case 'PENDING':
+      return { cssClass: 'badge-pending', dotClass: 'dot-pending', label: 'pending', isTransitioning: true };
+    case 'STOPPING':
+      return { cssClass: 'badge-stopping', dotClass: 'dot-stopping', label: 'stopping', isTransitioning: true };
+    case 'STOPPED':
+    case 'SHUTOFF':
+      return { cssClass: 'badge-stopped', dotClass: 'dot-stopped', label: 'stopped', isTransitioning: false };
+    case 'REBOOTING':
+      return { cssClass: 'badge-rebooting', dotClass: 'dot-rebooting', label: 'rebooting', isTransitioning: true };
+    case 'SHUTTING_DOWN':
+      return { cssClass: 'badge-shutting-down', dotClass: 'dot-shutting-down', label: 'shutting-down', isTransitioning: true };
+    case 'TERMINATED':
+      return { cssClass: 'badge-terminated', dotClass: 'dot-terminated', label: 'terminated', isTransitioning: false };
+    case 'MIGRATING':
+      return { cssClass: 'badge-migrating', dotClass: 'dot-migrating', label: 'migrating', isTransitioning: true };
+    default:
+      return { cssClass: 'badge-error', dotClass: 'dot-stopped', label: status || 'unknown', isTransitioning: false };
+  }
+}
+
+function updateInstancesKPIs() {
+  const elTotal = document.getElementById('statTotalInstances');
+  const elRegA = document.getElementById('statRegionACount');
+  const elRun = document.getElementById('statRunningInstances');
+  const elStop = document.getElementById('statStoppedInstances');
+  const elPending = document.getElementById('statPendingInstances');
+  const elMig = document.getElementById('statMigratingInstances');
+  const elBadge = document.getElementById('instanceCountBadge');
+
+  const total = cachedInstances.length;
+  const running = cachedInstances.filter(i => {
+    const s = (i.status || '').toUpperCase();
+    return s === 'RUNNING' || s === 'ACTIVE';
+  }).length;
+  const stopped = cachedInstances.filter(i => {
+    const s = (i.status || '').toUpperCase();
+    return s === 'STOPPED' || s === 'SHUTOFF';
+  }).length;
+  const pendingOrTransition = cachedInstances.filter(i => {
+    const s = (i.status || '').toUpperCase();
+    return s === 'PENDING' || s === 'STOPPING' || s === 'REBOOTING' || s === 'SHUTTING_DOWN';
+  }).length;
+  const migrating = cachedInstances.filter(i => (i.status || '').toUpperCase() === 'MIGRATING').length;
+
+  if (elTotal) elTotal.textContent = total;
+  if (elRegA) elRegA.textContent = `${total} across regions`;
+  if (elRun) elRun.textContent = running;
+  if (elStop) elStop.textContent = stopped;
+  if (elPending) elPending.textContent = pendingOrTransition;
+  if (elMig) elMig.textContent = migrating;
+  if (elBadge) elBadge.textContent = `(${total})`;
+}
+
+function checkAndTriggerStatePolling() {
+  const hasTransitioningInstance = cachedInstances.some(inst => {
+    const config = getStatusBadgeConfig(inst.status);
+    return config.isTransitioning;
+  });
+
+  if (hasTransitioningInstance) {
+    if (!statePollingInterval) {
+      console.log('Transitioning instance detected, starting polling every 2000ms...');
+      statePollingInterval = setInterval(async () => {
+        try {
+          const instances = await apiRequest('/instances');
+          cachedInstances = instances || [];
+          updateInstancesKPIs();
+          filterInstancesUI();
+
+          const stillTransitioning = cachedInstances.some(i => getStatusBadgeConfig(i.status).isTransitioning);
+          if (!stillTransitioning) {
+            console.log('All instances in steady state, clearing polling interval.');
+            clearInterval(statePollingInterval);
+            statePollingInterval = null;
+          }
+        } catch (e) {
+          console.error('State polling error:', e);
+        }
+      }, 2000);
+    }
+  } else {
+    if (statePollingInterval) {
+      clearInterval(statePollingInterval);
+      statePollingInterval = null;
+    }
+  }
+}
 
 async function loadInstances() {
   const tbody = document.getElementById('instanceTableBody');
@@ -355,6 +478,7 @@ async function loadInstances() {
   const elRegA = document.getElementById('statRegionACount');
   const elRun = document.getElementById('statRunningInstances');
   const elStop = document.getElementById('statStoppedInstances');
+  const elPending = document.getElementById('statPendingInstances');
   const elMig = document.getElementById('statMigratingInstances');
   const elBadge = document.getElementById('instanceCountBadge');
 
@@ -367,19 +491,7 @@ async function loadInstances() {
     if (select) select.innerHTML = '';
     if (metricSelect) metricSelect.innerHTML = '';
 
-    // Update 4 Summary Cards (Hình 2.2)
-    const total = cachedInstances.length;
-    const running = cachedInstances.filter(i => i.status === 'ACTIVE').length;
-    const stopped = cachedInstances.filter(i => i.status === 'SHUTOFF').length;
-    const migrating = cachedInstances.filter(i => i.status === 'MIGRATING').length;
-    const regionACount = cachedInstances.filter(i => (i.region || '').includes('southeast')).length;
-
-    if (elTotal) elTotal.textContent = total;
-    if (elRegA) elRegA.textContent = t(`${regionACount} tại Region A`, `${regionACount} in Region A`);
-    if (elRun) elRun.textContent = running;
-    if (elStop) elStop.textContent = stopped;
-    if (elMig) elMig.textContent = migrating;
-    if (elBadge) elBadge.textContent = `(${total})`;
+    updateInstancesKPIs();
 
     cachedInstances.forEach(inst => {
       if (select) {
@@ -391,21 +503,21 @@ async function loadInstances() {
     });
 
     filterInstancesUI();
+    checkAndTriggerStatePolling();
   } catch (err) {
     console.error('Failed to load instances from API:', err);
-    // Báo lỗi rõ ràng lên 4 thẻ thống kê
     if (elTotal) elTotal.textContent = 'ERR';
     if (elRegA) elRegA.textContent = 'Lỗi kết nối API';
     if (elRun) elRun.textContent = 'ERR';
     if (elStop) elStop.textContent = 'ERR';
+    if (elPending) elPending.textContent = 'ERR';
     if (elMig) elMig.textContent = 'ERR';
     if (elBadge) elBadge.textContent = '(Lỗi)';
 
-    // Báo lỗi trực tiếp lên bảng máy ảo
     if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" style="text-align:center; padding: 36px 20px; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+          <td colspan="10" style="text-align:center; padding: 36px 20px; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
             <div style="font-size: 26px; margin-bottom: 8px;">❌</div>
             <div style="font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 6px;">Không thể tải danh sách máy ảo từ API (GET /api/instances)</div>
             <div style="font-size: 13px; color: #cbd5e1; max-width: 680px; margin: 0 auto; line-height: 1.5; font-family: monospace; word-break: break-all;">${err.message || 'Lỗi kết nối máy chủ hoặc chưa cấu hình AWS Credentials'}</div>
@@ -429,42 +541,51 @@ function filterInstancesUI() {
   const statusFilter = document.getElementById('instanceStatusFilter')?.value || 'ALL';
 
   const filtered = cachedInstances.filter(inst => {
-    const matchText = !q || (inst.name || '').toLowerCase().includes(q) || (inst.id || '').toLowerCase().includes(q);
-    const matchStatus = statusFilter === 'ALL' || inst.status === statusFilter;
+    const rawStatus = (inst.status || '').toUpperCase();
+    const matchText = !q || (inst.name || '').toLowerCase().includes(q) || (inst.id || '').toLowerCase().includes(q) || (inst.publicIp || '').includes(q) || (inst.privateIp || '').includes(q);
+    const matchStatus = statusFilter === 'ALL' || rawStatus === statusFilter.toUpperCase();
     return matchText && matchStatus;
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Không có máy ảo nào trong hệ thống. Bấm "+ Launch Instance" để khởi tạo máy ảo mới.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Không có máy ảo nào phù hợp bộ lọc. Bấm "+ Launch Instance" để khởi tạo máy ảo mới.</td></tr>';
     return;
   }
 
   filtered.forEach(inst => {
-    const badgeClass = inst.status === 'ACTIVE' ? 'badge-active' :
-                       inst.status === 'MIGRATING' ? 'badge-migrating' :
-                       inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error';
+    const cfg = getStatusBadgeConfig(inst.status);
+    const rawStatus = (inst.status || '').toUpperCase();
+    const isTrans = cfg.isTransitioning;
+    const isRunning = rawStatus === 'RUNNING' || rawStatus === 'ACTIVE';
+    const isStopped = rawStatus === 'STOPPED' || rawStatus === 'SHUTOFF';
+    const isTerminated = rawStatus === 'TERMINATED';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><a href="/instance-detail.html?id=${inst.id}" style="font-family:monospace; color:var(--accent-cyan); font-weight:700; text-decoration:none;" title="Xem chi tiết máy ảo">${inst.id}</a></td>
       <td><strong>${inst.name}</strong></td>
-      <td>${inst.regionName || inst.region}</td>
-      <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
-      <td><span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace;">🔑 ${inst.keyName || 'xregion-key'}</span></td>
-      <td><code>${inst.privateIp}</code></td>
+      <td><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></td>
+      <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
+      <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace;">${inst.flavor}</span></td>
+      <td><span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace;">${inst.securityGroup || 'sg-default'}</span></td>
       <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
-      <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
-      <td><span class="badge ${badgeClass}">${inst.status}</span></td>
+      <td><code>${inst.privateIp}</code></td>
+      <td><span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace;">🔑 ${inst.keyName || 'xregion-key'}</span></td>
       <td>
         <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
-          <a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="text-decoration:none; padding:4px 8px;">${t('Chi tiết', 'Details')}</a>
-          ${renderRowEc2ActionsDropdown(inst)}
-          ${inst.status === 'ACTIVE' 
-            ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">${t('Dừng', 'Stop')}</button>` 
-            : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">${t('Bật', 'Start')}</button>`}
-          <button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'REBOOT')">Reboot</button>
-          <button class="btn btn-primary btn-sm" onclick="triggerDirectMigration('${inst.id}')">⚡ Fast Migrate</button>
-          <button class="btn btn-danger btn-sm" onclick="instanceAction('${inst.id}', 'TERMINATE')">${t('Xóa', 'Terminate')}</button>
+          <a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="text-decoration:none; padding:4px 8px;" title="Chi tiết máy ảo">Chi tiết</a>
+          <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary btn-sm ${isTrans || isTerminated ? 'disabled' : ''}" style="text-decoration:none; padding:4px 8px; color:var(--accent-cyan);" ${isTrans || isTerminated ? 'tabindex="-1"' : ''} title="Chỉnh sửa">✏️</a>
+          
+          ${isRunning
+            ? `<button class="btn btn-secondary btn-sm ${isTrans ? 'disabled' : ''}" ${isTrans ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'STOP')" title="Dừng máy ảo (Stop)">Dừng</button>`
+            : `<button class="btn btn-success btn-sm ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'START')" title="Khởi động máy ảo (Start)">Bật</button>`
+          }
+          
+          <button class="btn btn-secondary btn-sm ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'REBOOT')" title="Khởi động lại (Reboot)">Reboot</button>
+          
+          <button class="btn btn-primary btn-sm ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="triggerDirectMigration('${inst.id}')" title="Chuyển vùng máy ảo tức thì (Fast Migrate)">⚡ Migrate</button>
+          
+          <button class="btn btn-danger btn-sm ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'TERMINATE')" title="Xóa máy ảo vĩnh viễn (Terminate)">Xóa</button>
         </div>
       </td>
     `;
@@ -630,6 +751,7 @@ async function submitLaunch(e) {
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
     keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
+    securityGroup: document.getElementById('instSecurityGroup')?.value || 'sg-default',
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };
@@ -1502,6 +1624,7 @@ function renderUserBadge() {
 
 // 1. OVERVIEW PAGE (index.html)
 async function initOverviewPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 
@@ -1518,7 +1641,10 @@ async function initOverviewPage() {
     const instances = await apiRequest('/instances');
     const list = instances || [];
     const total = list.length;
-    const running = list.filter(i => i.status === 'ACTIVE').length;
+    const running = list.filter(i => {
+      const s = (i.status || '').toUpperCase();
+      return s === 'RUNNING' || s === 'ACTIVE';
+    }).length;
     const regA = list.filter(i => (i.region || '').includes('southeast')).length;
     const regB = list.filter(i => (i.region || '').includes('us-east')).length;
 
@@ -1533,9 +1659,7 @@ async function initOverviewPage() {
       } else {
         tbodyInst.innerHTML = '';
         list.slice(0, 5).forEach(inst => {
-          const badgeClass = inst.status === 'ACTIVE' ? 'badge-active' :
-                             inst.status === 'MIGRATING' ? 'badge-migrating' :
-                             inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error';
+          const cfg = getStatusBadgeConfig(inst.status);
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td><a href="/instance-detail.html?id=${inst.id}" style="color:var(--accent-cyan); font-weight:700; text-decoration:none; font-family:monospace;">${inst.id}</a></td>
@@ -1544,8 +1668,8 @@ async function initOverviewPage() {
             <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
             <td><code>${inst.publicIp || t('Chưa gán', 'None')}</code></td>
             <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
-            <td><span class="badge ${badgeClass}">${inst.status}</span></td>
-            <td><a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; text-decoration:none;">${t('Xem Chi Tiết →', 'View Details →')}</a></td>
+            <td><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></td>
+            <td><a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; text-decoration:none;">Xem Chi Tiết →</a></td>
           `;
           tbodyInst.appendChild(tr);
         });
@@ -1600,6 +1724,7 @@ async function initOverviewPage() {
 
 // 2. INSTANCES LIST PAGE (instances.html)
 function initInstancesPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
     sessionStorage.removeItem('xregion_launch_completed');
@@ -1613,6 +1738,7 @@ function initInstancesPage() {
 
 // 3. INSTANCE DETAIL PAGE (instance-detail.html)
 async function initDetailPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 
@@ -1633,59 +1759,121 @@ async function initDetailPage() {
       throw new Error(`Không tìm thấy thông tin máy ảo với ID [${instanceId}]`);
     }
 
-    // Populate header
-    document.getElementById('detInstanceName').textContent = inst.name || inst.id;
-    document.getElementById('detInstanceId').textContent = inst.id;
-    document.getElementById('detRegionName').textContent = inst.regionName || inst.region;
+    // Populate header & summary card
+    const nameEl = document.getElementById('detInstanceName');
+    if (nameEl) nameEl.textContent = inst.name || inst.id;
+    const idEl = document.getElementById('detInstanceId');
+    if (idEl) idEl.textContent = inst.id;
+    const sumIdEl = document.getElementById('summaryCardId');
+    if (sumIdEl) sumIdEl.textContent = inst.id;
+    const regNameEl = document.getElementById('detRegionName');
+    if (regNameEl) regNameEl.textContent = inst.regionName || inst.region;
+    const regCodeEl = document.getElementById('detRegionCode');
+    if (regCodeEl) regCodeEl.textContent = `(${inst.region})`;
 
     const badge = document.getElementById('detStatusBadge');
-    badge.textContent = inst.status;
-    badge.className = 'badge ' + (inst.status === 'ACTIVE' ? 'badge-active' :
-                                  inst.status === 'MIGRATING' ? 'badge-migrating' :
-                                  inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error');
-
-    // Populate Cards
-    const spec = FLAVOR_SPECS[inst.flavor];
-    const diskSize = inst.ebsSizeGb || (spec ? spec.defaultDisk : 20);
-    const specDesc = spec ? ` (${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${diskSize} GB Root Disk)` : '';
-    document.getElementById('detFlavor').textContent = `${inst.flavor}${specDesc}`;
-    const detKeyEl = document.getElementById('detKeyName');
-    if (detKeyEl) detKeyEl.textContent = inst.keyName || 'xregion-key';
-    document.getElementById('detImageName').textContent = inst.imageName || 'Ubuntu Server 22.04 LTS';
-    document.getElementById('detRegionCode').textContent = inst.region;
-    document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
-    document.getElementById('detPublicIp').textContent = inst.publicIp || 'Chưa gán';
-    document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
-    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
-
-    const volIdEl = document.getElementById('detEbsVolumeId');
-    if (volIdEl) volIdEl.textContent = inst.volumeId || inst.ebsVolumeId || `vol-${inst.id.replace('i-', '')}`;
-    const diskSizeEl = document.getElementById('detRootDiskSize');
-    if (diskSizeEl) diskSizeEl.textContent = `${diskSize} GB (gp3)`;
-
-    const consoleLink = document.getElementById('detConsoleLink');
-    if (consoleLink) {
-      consoleLink.href = inst.consoleUrl || '#';
-      consoleLink.onclick = (e) => {
-        if (!inst.consoleUrl || inst.consoleUrl === '#') {
-          e.preventDefault();
-          showToast(`Đang mở Web Terminal VNC cho ${inst.id}...`, 'success');
-        }
-      };
+    const cfg = getStatusBadgeConfig(inst.status);
+    if (badge) {
+      badge.className = 'badge ' + cfg.cssClass;
+      badge.innerHTML = `<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}`;
     }
 
-    // Render Actions Toolbar
+    const sumStat = document.getElementById('detSummaryStatus');
+    if (sumStat) {
+      sumStat.innerHTML = `<span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span>`;
+    }
+
+    // Populate Summary & Tabs
+    const spec = FLAVOR_SPECS[inst.flavor] || FLAVOR_SPECS['m1.medium'];
+    const specDesc = spec ? ` (${spec.vcpu} vCPU • ${spec.ramDisplay})` : '';
+    const flavEl = document.getElementById('detFlavor');
+    if (flavEl) flavEl.textContent = `${inst.flavor}${specDesc}`;
+
+    const detKeyEl = document.getElementById('detKeyName');
+    if (detKeyEl) detKeyEl.textContent = inst.keyName || 'xregion-key';
+    const detSgEl = document.getElementById('detSecurityGroup');
+    if (detSgEl) detSgEl.textContent = inst.securityGroup || 'sg-default';
+    const detPrivEl = document.getElementById('detPrivateIp');
+    if (detPrivEl) detPrivEl.textContent = inst.privateIp || '10.0.1.10';
+    const detPubEl = document.getElementById('detPublicIp');
+    if (detPubEl) detPubEl.textContent = inst.publicIp || 'Chưa gán';
+    const detDnsEl = document.getElementById('detDnsDomain');
+    if (detDnsEl) detDnsEl.textContent = inst.dnsDomain || 'N/A';
+    const detUpEl = document.getElementById('detUpdatedAt');
+    if (detUpEl) detUpEl.textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
+
+    const cdEl = document.getElementById('detCooldownDisplay');
+    if (cdEl) {
+      cdEl.textContent = inst.cooldownSeconds && inst.cooldownSeconds > 0 ? `${inst.cooldownSeconds}s (Đang cooldown)` : '0 giây (Sẵn sàng)';
+    }
+
+    // Tab 1: Details
+    const tfName = document.getElementById('tabFlavorName');
+    if (tfName) tfName.textContent = inst.flavor;
+    const tfVcpu = document.getElementById('tabFlavorVcpu');
+    if (tfVcpu) tfVcpu.textContent = spec ? spec.vcpu : 2;
+    const tfRam = document.getElementById('tabFlavorRam');
+    if (tfRam) tfRam.textContent = spec ? spec.ramDisplay : '4 GB';
+    const tfDisk = document.getElementById('tabFlavorDisk');
+    if (tfDisk) tfDisk.textContent = spec ? spec.defaultDisk : 10;
+    const tInstName = document.getElementById('tabInstanceName');
+    if (tInstName) tInstName.textContent = inst.name || inst.id;
+    const tInstId = document.getElementById('tabInstanceId');
+    if (tInstId) tInstId.textContent = inst.id;
+    const tRegName = document.getElementById('tabRegionName');
+    if (tRegName) tRegName.textContent = `${inst.regionName || inst.region} [${inst.region}]`;
+    const tUser = document.getElementById('tabUsername');
+    if (tUser) tUser.textContent = inst.username || 'admin';
+
+    // Tab 2: Networking & Security
+    const tNetDns = document.getElementById('tabNetDns');
+    if (tNetDns) tNetDns.textContent = inst.dnsDomain || 'N/A';
+    const tNetPub = document.getElementById('tabNetPublicIp');
+    if (tNetPub) tNetPub.textContent = inst.publicIp || 'Chưa gán';
+    const tNetPriv = document.getElementById('tabNetPrivateIp');
+    if (tNetPriv) tNetPriv.textContent = inst.privateIp || '10.0.1.10';
+    const tNetSg = document.getElementById('tabNetSecurityGroup');
+    if (tNetSg) tNetSg.textContent = inst.securityGroup || 'sg-default';
+    const tNetKey = document.getElementById('tabNetKeyName');
+    if (tNetKey) tNetKey.textContent = inst.keyName || 'xregion-key';
+
+    // Tab 3: Migration
+    const tMigCur = document.getElementById('tabMigCurrentRegion');
+    if (tMigCur) tMigCur.textContent = `${inst.regionName || inst.region} (${inst.region})`;
+    const isSydney = (inst.region || '').includes('Sydney') || (inst.region || '').includes('Region A');
+    const tMigTar = document.getElementById('tabMigTargetRegion');
+    if (tMigTar) tMigTar.textContent = isSydney ? 'Melbourne (Region B - ap-southeast-4)' : 'Sydney (Region A - ap-southeast-2)';
+    const tMigUp = document.getElementById('tabMigUpdatedAt');
+    if (tMigUp) tMigUp.textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
+
+    const isRunning = (inst.status || '').toUpperCase() === 'RUNNING' || (inst.status || '').toUpperCase() === 'ACTIVE';
+    const isTrans = cfg.isTransitioning;
+    const isTerminated = (inst.status || '').toUpperCase() === 'TERMINATED';
+
+    const tabMigBtn = document.getElementById('tabMigrateActionBtn');
+    if (tabMigBtn) {
+      tabMigBtn.disabled = !isRunning || isTrans || isTerminated;
+      tabMigBtn.onclick = () => triggerDirectMigration(inst.id);
+    }
+
+    // Render Actions Toolbar (disables buttons if instance is transitioning)
     const actionsContainer = document.getElementById('detailActionButtons');
     if (actionsContainer) {
       actionsContainer.innerHTML = `
-        <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary" style="text-decoration:none; color:var(--accent-cyan);">✏️ Chỉnh Sửa (Modify)</a>
-        ${inst.status === 'ACTIVE'
-          ? `<button class="btn btn-secondary" onclick="executeDetailAction('${inst.id}', 'STOP')">⏸ Dừng Máy (Stop)</button>`
-          : `<button class="btn btn-success" onclick="executeDetailAction('${inst.id}', 'START')">▶ Bật Máy (Start)</button>`}
-        <button class="btn btn-secondary" onclick="executeDetailAction('${inst.id}', 'REBOOT')">🔄 Reboot</button>
-        <button class="btn btn-primary" onclick="triggerDirectMigration('${inst.id}')">⚡ Fast Migrate X-Region</button>
-        <button class="btn btn-danger" onclick="executeDetailAction('${inst.id}', 'TERMINATE')">🗑 Xóa Máy Ảo</button>
+        <button class="btn btn-secondary" onclick="initDetailPage()" title="Làm mới trạng thái">⟳ Làm Mới</button>
+        <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary ${isTrans || isTerminated ? 'disabled' : ''}" style="text-decoration:none; color:var(--accent-cyan);" ${isTrans || isTerminated ? 'tabindex="-1"' : ''}>✏️ Chỉnh Sửa</a>
+        ${isRunning
+          ? `<button class="btn btn-secondary ${isTrans ? 'disabled' : ''}" ${isTrans ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'STOP')">⏸ Dừng Máy (Stop)</button>`
+          : `<button class="btn btn-success ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'START')">▶ Bật Máy (Start)</button>`}
+        <button class="btn btn-secondary ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'REBOOT')">🔄 Reboot</button>
+        <button class="btn btn-primary ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="triggerDirectMigration('${inst.id}')">⚡ Fast Migrate X-Region</button>
+        <button class="btn btn-danger ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'TERMINATE')">🗑 Xóa Máy Ảo</button>
       `;
+    }
+
+    // Auto-refresh if currently transitioning
+    if (isTrans) {
+      setTimeout(initDetailPage, 2500);
     }
   } catch (err) {
     console.error('Failed to load instance detail:', err);
@@ -1720,6 +1908,7 @@ async function executeDetailAction(id, action) {
 
 // 4. LAUNCH INSTANCE PAGE (launch.html)
 function initLaunchPage() {
+  if (!requireAuthGuard()) return;
   if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
     sessionStorage.removeItem('xregion_launch_completed');
     window.location.replace('/instances.html');
@@ -2029,6 +2218,11 @@ function updatePageLaunchSummary() {
     const val = kpEl ? kpEl.value.trim() : '';
     sumKey.textContent = val ? val : 'Mặc định (xregion-key)';
   }
+  const sumSg = document.getElementById('sumSgText');
+  const sgEl = document.getElementById('instSecurityGroup');
+  if (sumSg && sgEl) {
+    sumSg.textContent = sgEl.value;
+  }
 
   // Highlight selected row in specification matrix table
   const tableRows = document.querySelectorAll('#flavorMatrixBody tr');
@@ -2048,10 +2242,10 @@ async function handleLaunchPageSubmit(e) {
   if (errBox) errBox.style.display = 'none';
 
   const btn = document.getElementById('btnLaunchInstance');
-  const origText = btn ? btn.innerHTML : '🚀 Launch Compute Instance';
+  const origText = btn ? btn.innerHTML : '🚀 Launch Instance';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '⏳ Đang cấp phát máy chủ Bare Metal & ổ đĩa EBS...';
+    btn.innerHTML = '⏳ Đang cấp phát máy ảo EC2 & ổ đĩa EBS...';
   }
 
   const payload = {
@@ -2060,6 +2254,7 @@ async function handleLaunchPageSubmit(e) {
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
     keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
+    securityGroup: document.getElementById('instSecurityGroup')?.value || 'sg-default',
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };
@@ -2259,6 +2454,7 @@ function applyEditInstanceStateLock(status) {
 }
 
 async function initEditInstancePage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 
