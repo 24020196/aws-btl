@@ -1,105 +1,77 @@
-# PHÂN CHIA CÔNG VIỆC DASHBOARD
+# PHÂN CHIA CÔNG VIỆC FE (TINH CHỈNH CHUẨN AWS EC2)
 
-
-> - **3 thành viên (Duy Anh, Cường, Lực) chỉ tập trung làm:**
->   1. **Lấy dữ liệu từ Database (DynamoDB) về và hiển thị lên giao diện Dashboard.**
->   2. **Làm hoàn chỉnh Giao diện (Form nhập liệu + các Nút bấm) để gửi Request từ Web xuống Controller.**
+> **Các hạng mục cần làm mới trong đợt này**
+> 1. **Kiểm soát phiên đăng nhập**: Không cho vào trang chủ (`index.html`), đăng nhập xong vào thẳng quản lý máy ảo (`instances.html`) + giới hạn thời hạn Token tự động đăng xuất (`Auto-Logout`).
+> 2. **Trạng thái máy ảo chuẩn EC2**: Bổ sung các trạng thái chuyển tiếp (`PENDING`, `STOPPING`, `REBOOTING`, `SHUTTING_DOWN` / `TERMINATED`) từ Backend lên giao diện.
+> 3. **Thiết kế lại vị trí Chuyển vùng (Migration)**: Bỏ tab/thẻ lịch sử di trú cũ, bố trí lại khung Tiến trình 6 bước & Lịch sử di trú ở vị trí hợp lý.
+> 4. **Bổ sung Security Group + Network** và tinh chỉnh lại các `Services/` liên quan.
 
 ---
 
-## 1. BẢNG PHÂN CÔNG  CHO 3 THÀNH VIÊN
+## 1. BẢNG PHÂN CÔNG CHO 3 THÀNH VIÊN
 
-
-| Thành viên | Nhiệm vụ chính | File phụ trách |
+| Thành viên | Nhiệm vụ cần làm mới | File phụ trách |
 | :--- | :--- | :--- |
-| **1. Nguyễn Mạnh Cường** | **Đọc dữ liệu từ DynamoDB & Chuẩn bị DTO/Controller nhận Request** | • `Config/DynamoDbConfig.java`, `DynamoDbTableInitializer.java`<br>• `Entity/InstanceEntity.java`, `MigrationEntity.java`<br>• `Model/Request/*`, `Model/Response/*`<br>• `Controllers/InstanceController.java`, `MigrationController.java` |
-| **2. Tạ Duy Anh** | **Giao diện & Nút gửi Request phần Máy ảo (Compute, Launch Instance, Storage, Images) + Đưa Web lên chạy** | • `static/index.html` *(Khối `#tab-compute`, `#tab-storage`, `#tab-images`, `#launchModal`)*<br>• `static/js/app.js` *(Hàm `loadInstances`, `submitLaunch`, `instanceAction`, `loadVolumes`, `loadImages`)*<br>• `Dockerfile`, `docker-compose.yml`, `.env` |
-| **3. Hoàng Xuân Lực** | **Giao diện & Nút gửi Request phần Chuyển vùng, Mạng DNS, Giám sát & Logs** | • `static/index.html` *(Khối `#tab-migration`, `#tab-network`, `#tab-monitoring`, `#scenarioModal`)*<br>• `static/js/app.js` *(Hàm `loadScenarios`, `submitCreateScenario`, `triggerDirectMigration`, `loadNetwork`, `loadMetrics`, `loadAuditLogs`)*<br>• `static/css/dashboard.css` |
-
-*(Lưu ý: Phần `Services/` giữ nguyên khung hàm hiện tại để tối Lâm vào gắn code bắn request xuống IaaS).*
+| **1. Nguyễn Mạnh Cường** | **1. Thời hạn Token & Tự động đăng xuất + Chặn vào trang chủ<br>2. Backend trạng thái máy ảo chuẩn EC2 (`PENDING`, `STOPPING`, `TERMINATING`) & cột `security_group`** | • `Security/JwtTokenProvider.java`, `SecurityConfig.java`<br>• `Entity/InstanceStatus.java`, `InstanceEntity.java`<br>• `Services/InstanceService.java`, `AuthService.java`<br>• `static/login.html`, `static/register.html` *(luồng điều hướng & hết hạn phiên)* |
+| **2. Tạ Duy Anh** | **1. Tinh chỉnh UI `instances.html` & `launch.html` hiển thị các trạng thái `PENDING`, `STOPPING`, `TERMINATING` (kèm tự động Polling)<br>2. Bỏ tab/thẻ Lịch sử di trú cũ và sắp xếp lại bố cục trong `instance-detail.html`** | • `static/instances.html`, `static/launch.html`<br>• `static/instance-detail.html` *(bố cục lại phần hiển thị & bỏ thẻ lịch sử di trú thừa)*<br>• `static/js/app.js` *(Khối Polling trạng thái EC2, khóa nút khi đang chuyển trạng thái)* |
+| **3. Hoàng Xuân Lực** | **1. Thiết kế chức năng Security Group (Inbound/Outbound Rules) + Network DNS<br>2. Chỉnh sửa `NetworkService`, `MigrationService`, `MonitoringService` & CSS** | • `Controllers/NetworkController.java`, `MigrationController.java`<br>• `Services/NetworkService.java`, `MigrationService.java`, `MonitoringService.java`<br>• `static/css/dashboard.css`<br>• `static/js/app.js` *(Khối Security Group, Network & Migration)* |
 
 ---
 
 ## 2. CHI TIẾT VIỆC CẦN LÀM CỦA TỪNG NGƯỜI
 
-### 👤 1. Nguyễn Mạnh Cường — Phần Lấy Dữ Liệu Từ DB & Nhận Request Ở Controller
-**Mục tiêu:** Đảm bảo kết nối DynamoDB đọc dữ liệu mượt mà trả về cho giao diện, và các API ở `Controller` nhận đúng JSON từ các nút bấm trên Web để tối Lâm chỉ việc viết tiếp trong `Service`.
+### 👤 1. Nguyễn Mạnh Cường — Phiên Đăng Nhập (Token Timeout / Chặn Trang Chủ) & Backend Trạng Thái EC2
 
-- [ ] **Kiểm tra đọc dữ liệu từ DynamoDB (`XRegion-Instances` & `XRegion-Migrations`):**
-  - Rà soát `InstanceEntity.java` và `MigrationEntity.java` khớp 100% với tên cột (attribute) trên bảng DynamoDB thật của nhóm (`instance_id`, `instance_name`, `current_region`, `current_status`, `elastic_ip`, `private_ip`, `flavor`, `migration_lock`...).
-  - Đảm bảo hàm đọc danh sách máy ảo (`GET /api/instances`), chi tiết máy ảo (`GET /api/instances/{id}`) và danh sách kịch bản (`GET /api/migrations/scenarios`) lấy đúng dữ liệu từ DynamoDB trả về thành `InstanceResponse` / `MigrationResponse` cho giao diện hiển thị.
-- [ ] **Chuẩn bị sẵn các đầu API nhận Request (`Controllers` + `Model/Request`):**
-  - Kiểm tra các class nhận dữ liệu từ nút bấm:
-    - `LaunchInstanceRequest.java`: Nhận dữ liệu khi bấm nút **Khởi tạo máy ảo** (`name`, `region`, `flavor`, `imageId`, `ebsSizeGb`, `domainName`).
-    - `InstanceActionRequest.java`: Nhận dữ liệu khi bấm nút **Bật / Dừng / Reboot / Xóa** (`action`: `START`, `STOP`, `REBOOT`, `TERMINATE`).
-    - `CreateScenarioRequest.java` & `TriggerMigrationRequest.java`: Nhận dữ liệu khi bấm nút **Lưu kịch bản** và **Chuyển vùng**.
-  - Giữ các hàm trong `Services/` gọn gàng, đúng tên hàm để tối Lâm vào viết phần gửi request xuống IaaS.
-
----
-
-### 👤 2. Tạ Duy Anh — Hiển Thị & Nút Gửi Request Phần Máy Ảo (Compute / Storage / Images)
-**Mục tiêu:** Hiển thị danh sách máy ảo lấy từ DB lên bảng và làm các nút bấm gửi Request tạo/điều khiển máy ảo.
-
-- [ ] **Hiển thị danh sách máy ảo từ DB lên bảng (`#tab-compute`):**
-  - Gọi `GET /api/instances` lấy danh sách máy ảo từ DB về, hiển thị lên:
-    - 4 ô thống kê trạng thái (`Total Instances`, `Running`, `Stopped`, `Migrating` - Hình 2.2).
-    - Bảng máy ảo gồm các cột: `ID`, `Tên Máy Ảo`, `Vùng`, `Flavor`, `IP Nội Bộ`, `Public / Elastic IP`, `DNS`, `Trạng Thái`.
-- [ ] **Làm Form & Nút gửi Request Khởi tạo máy ảo (`#launchModal` - Hình 2.3):**
-  - Form chọn Tên máy ảo, Vùng (`Region A` / `Region B`), Hệ điều hành (`OS Image`), Cấu hình (`Flavor`), Dung lượng ổ đĩa (`EBS Size GB`) kèm khung `Instance Summary` bên phải.
-  - Khi bấm nút **🚀 Launch Compute Instance**, gửi `POST /api/instances` kèm JSON xuống Backend và tải lại bảng danh sách từ DB.
-- [ ] **Làm các Nút gửi Request Điều khiển vòng đời trên từng dòng máy ảo:**
-  - Nút **Bật (`START`)**, **Dừng (`STOP`)**, **Reboot (`REBOOT`)**, **Xóa (`TERMINATE`)** $\rightarrow$ bấm vào gửi `POST /api/instances/{id}/actions` với `{ "action": "..." }`.
-- [ ] **Hiển thị & Nút gửi Request ở tab Storage (`#tab-storage`) và Images (`#tab-images`):**
-  - Nút tạo ổ đĩa (`POST /api/volumes`), gắn/tháo ổ đĩa, xem danh sách Image (`GET /api/images`).
+- [ ] **1. Chặn vào trang chủ & Tự động đăng xuất khi hết hạn Token:**
+  - Cấu hình thời hạn sống của JWT Token (`jwt.expirationMinutes` / `JwtTokenProvider.java`) và trả thêm mốc hết hạn `expiresAt` trong `JwtResponse`.
+  - Khi người dùng truy cập gốc `/` hoặc `/index.html`, tự động điều hướng thẳng về `/instances.html` (nếu đã đăng nhập) hoặc `/login.html` (nếu chưa đăng nhập) — bỏ hoàn toàn việc vào trang chủ Overview.
+  - Thêm bộ kiểm tra thời hạn token định kỳ: khi hết thời gian hiệu lực của token thì tự động xóa phiên và đăng xuất về `/login.html`.
+- [ ] **2. Bổ sung các trạng thái chuyển tiếp máy ảo chuẩn EC2 trong `InstanceService.java` & `InstanceStatus.java`:**
+  - Cập nhật `InstanceStatus.java` gồm: `PENDING`, `RUNNING`, `STOPPING`, `STOPPED`, `REBOOTING`, `SHUTTING_DOWN`, `TERMINATED`, `MIGRATING`.
+  - Chỉnh sửa `InstanceService.java`:
+    - Khi tạo máy ảo mới (`launchInstance`): lưu trạng thái ban đầu là **`PENDING`** (Đang cấp phát) $\rightarrow$ sau vài giây chuyển sang **`RUNNING`**.
+    - Khi bấm Dừng (`STOP`): chuyển sang **`STOPPING`** $\rightarrow$ sau đó chuyển sang **`STOPPED`**.
+    - Khi bấm Bật (`START`): chuyển sang **`PENDING`** $\rightarrow$ **`RUNNING`**.
+    - Khi bấm Xóa (`TERMINATE`): chuyển sang **`SHUTTING_DOWN`** / **`TERMINATING`** trước khi xóa khỏi DynamoDB.
+- [ ] **3. Bổ sung trường `security_group` vào `InstanceEntity` & DTO:**
+  - Thêm thuộc tính `@DynamoDbAttribute("security_group") private String securityGroup;` vào `InstanceEntity.java`, `InstanceResponse.java` và `UpdateInstanceRequest.java` để ghép với phần Security Group của Lực.
 
 ---
 
-### 👤 3. Hoàng Xuân Lực — Hiển Thị & Nút Gửi Request Phần Chuyển Vùng, Mạng & Giám Sát
-**Mục tiêu:** Hiển thị dữ liệu kịch bản/tiến trình chuyển vùng lấy từ DB và làm các nút gửi Request tạo kịch bản, kích hoạt chuyển vùng, xem giám sát.
+### 👤 2. Tạ Duy Anh — Giao Diện Trạng Thái Máy Ảo EC2 & Bố Cục Lại Trang Chi Tiết (Bỏ Tab Lịch Sử Di Trú Cũ)
 
-- [ ] **Hiển thị & Nút gửi Request ở tab Kịch bản chuyển vùng (`#tab-migration` - Hình 2.4):**
-  - Gọi `GET /api/migrations/scenarios` lấy dữ liệu từ bảng `XRegion-Migrations` trên DB về hiển thị lên bảng danh sách kịch bản.
-  - Làm Form & Nút **+ Tạo Kịch Bản Chuyển Vùng** (`#scenarioModal`) $\rightarrow$ bấm nút Lưu gửi `POST /api/migrations/scenarios` (gồm tên kịch bản, máy ảo nguồn, vùng nguồn $\rightarrow$ vùng đích, kiểu kích hoạt `MANUAL` / `SCHEDULED`, thời gian `cooldown`).
-  - Làm Nút **⚡ Chạy Kịch Bản Ngay / Fast Migrate** $\rightarrow$ bấm vào gửi `POST /api/migrations/trigger` với `{ "id": "..." }`.
-  - Hiển thị thanh tiến trình **6 bước chuyển vùng** và khung log lấy từ `GET /api/migrations/progress/{instanceId}`.
-- [ ] **Hiển thị ở tab Mạng DNS (`#tab-network`) và Giám sát & Logs (`#tab-monitoring`):**
-  - Hiển thị thông tin VPC, bản ghi DNS (`GET /api/network`), biểu đồ hiệu năng & chi phí (`GET /api/metrics/instances/{id}`) và bảng Nhật ký hệ thống (`GET /api/logs`).
-  - Căn chỉnh lại CSS (`dashboard.css`) cho toàn bộ các bảng, badge trạng thái và nút bấm đồng bộ, dễ nhìn.
-
----
-
-## 3. TỔNG HỢP CÁC NÚT BẤM & REQUEST TRÊN DASHBOARD 
-
-| Nút bấm trên Giao diện | Endpoint gọi vào Controller | JSON Request gửi xuống (Body) | Hàm trong `Service` |
-| :--- | :--- | :--- | :--- |
-| **🚀 Launch Compute Instance** | `POST /api/instances` | `{ "name", "region", "flavor", "imageId", "ebsSizeGb", "domainName" }` | `InstanceService.launchInstance(request)` |
-| **Bật / Dừng / Reboot / Xóa VM** | `POST /api/instances/{id}/actions` | `{ "action": "START" \| "STOP" \| "REBOOT" \| "TERMINATE" }` | `InstanceService.executeAction(id, request)` |
-| **+ Tạo Ổ Đĩa EBS** | `POST /api/volumes` | `{ "name", "sizeGb", "region", "volumeType": "gp3" }` | `VolumeService.createVolume(request)` |
-| **Lưu Kịch Bản Chuyển Vùng** | `POST /api/migrations/scenarios` | `{ "name", "targetInstanceId", "sourceRegion", "destRegion", "triggerType", "cooldownMinutes" }` | `MigrationService.createScenario(request)` |
-| **⚡ Chạy Chuyển Vùng / Fast Migrate** | `POST /api/migrations/trigger` | `{ "id": "<instanceId hoặc scenarioId>" }` | `MigrationService.triggerMigration(targetId)` |
+- [ ] **1. Hiển thị & Tự động cập nhật (Polling) các trạng thái máy ảo chuẩn EC2 trên `instances.html`:**
+  - Bổ sung hiển thị Badge màu sắc + hiệu ứng xoay (loading spinner) cho các trạng thái mới trên bảng danh sách máy ảo (`instances.html`) và bộ lọc trạng thái (`#instanceStatusFilter`):
+    - `⏳ PENDING` *(Đang khởi tạo - Vàng)*
+    - `● RUNNING` *(Đang chạy - Xanh lá)*
+    - `⏳ STOPPING` *(Đang dừng - Cam)*
+    - `○ STOPPED` *(Đã dừng - Xám)*
+    - `🔄 REBOOTING` *(Đang khởi động lại - Xanh dương)*
+    - `🗑 SHUTTING-DOWN` / `TERMINATED` *(Đang xóa / Đã xóa - Đỏ)*
+  - Tự động bật Polling (`setInterval` 2–3 giây/lần) gọi lại `loadInstances()` khi trong bảng có máy ảo đang ở trạng thái chuyển tiếp (`PENDING`, `STOPPING`, `REBOOTING`, `SHUTTING_DOWN`) để giao diện tự nhảy sang `RUNNING` / `STOPPED` như AWS EC2 thật.
+  - Khóa (disable) các nút bấm `Dừng / Bật / Reboot / Sửa / Fast Migrate` khi máy ảo đang ở trạng thái `PENDING`, `STOPPING` hoặc `SHUTTING_DOWN`.
+- [ ] **2. Bỏ tab/thẻ Lịch sử di trú cũ & Thiết kế lại vị trí hợp lý trên `instance-detail.html`:**
+  - Xóa bỏ thẻ "Lịch sử di trú & Tính sẵn sàng" tĩnh đang đặt rời rạc.
+  - Sắp xếp lại trang `instance-detail.html` theo bố cục chuẩn AWS EC2 (chia rõ khu vực **Thông tin chung**, **Security & Network**, và **Khung Tiến trình 6 bước Chuyển vùng + Lịch sử chuyển vùng của máy ảo** nằm gọn bên dưới khi bấm chuyển vùng).
+- [ ] **3. Bổ sung ô chọn Security Group trên `launch.html` & `instance-edit.html`:**
+  - Thêm Dropdown chọn Security Group (`sg-default`, `sg-web-public`...) lấy từ API của Lực khi khởi tạo hoặc sửa máy ảo.
 
 ---
 
-## 4. CHỐT PHÂN CÔNG
+### 👤 3. Hoàng Xuân Lực — Thiết Kế Security Group + Network & Tinh Chỉnh Các Services
 
-
-
-Chia việc cụ thể như sau để không đụng file nhau:
-
-1️⃣ Cường (Đọc DB & Nhận Request ở Controller):
-- Phụ trách Entity, DTO (Model/Request, Response) và Controllers.
-- Đảm bảo đọc đúng dữ liệu từ 2 bảng DynamoDB (XRegion-Instances, XRegion-Migrations) trả về cho giao diện hiển thị.
-- Giữ chuẩn các đầu API ở Controller nhận JSON từ nút bấm để tối Lâm chỉ việc viết tiếp trong tầng Service.
-
-2️⃣ Duy Anh (Giao diện hiển thị & Nút gửi Request phần Máy ảo, Ổ đĩa, Image):
-- Phụ trách #tab-compute, #tab-storage, #tab-images và #launchModal trong index.html & app.js + cấu hình chạy Docker/Server.
-- Hiển thị bảng danh sách máy ảo lấy từ DB (kèm 4 ô thống kê trạng thái như Hình 2.2).
-- Làm Form Launch Instance 2 cột (Hình 2.3) và các nút bấm gửi Request: Tạo máy ảo (POST /api/instances), Bật/Dừng/Reboot/Xóa (POST /api/instances/{id}/actions).
-
-3️⃣ Lực (Giao diện hiển thị & Nút gửi Request phần Chuyển vùng, Mạng, Giám sát):
-- Phụ trách #tab-migration, #tab-network, #tab-monitoring trong index.html, app.js và dashboard.css.
-- Hiển thị danh sách kịch bản lấy từ DB và thanh trạng thái 6 bước chuyển vùng (Hình 2.4).
-- Làm Form & Nút gửi Request: Lưu kịch bản (POST /api/migrations/scenarios), Kích hoạt chuyển vùng (POST /api/migrations/trigger) và hiển thị biểu đồ/logs.
-
-Hạn 21h 06/11/2026
-```
+- [ ] **1. Xây dựng chức năng Security Group (Inbound / Outbound Rules) + Network:**
+  - Cập nhật `NetworkService.java` và `NetworkController.java`:
+    - Quản lý danh sách **Security Groups** (`sg-default`, `sg-web-http`, `sg-ssh-only`...) gồm: `groupId`, `groupName`, `description`, `vpcId`, danh sách `inboundRules` và `outboundRules` (Type: `SSH`, `HTTP`, `HTTPS`, `Custom TCP`; Protocol: `TCP`; Port Range: `22`, `80`, `443`; Source: `0.0.0.0/0`).
+    - Thêm các API:
+      - `GET /api/network/security-groups`: Lấy danh sách Security Group & Rules.
+      - `POST /api/network/security-groups`: Tạo Security Group mới hoặc cập nhật Inbound/Outbound Rules.
+  - Làm giao diện hiển thị bảng **Inbound Rules / Outbound Rules** của Security Group và thông tin mạng (VPC, Subnet, Elastic IP, Route 53 DNS) trong trang chi tiết máy ảo (`instance-detail.html`).
+- [ ] **2. Chỉnh sửa `MigrationService.java` & `MonitoringService.java` cho hợp lý:**
+  - Trong `MigrationService.java`:
+    - Thêm API `GET /api/migrations/history/{instanceId}` trả về danh sách các lần chuyển vùng của đúng máy ảo đó từ bảng `XRegion-Migrations` để hiển thị vào khu vực chuyển vùng mới.
+    - Chỉ cho phép kích hoạt chuyển vùng khi máy ảo đang ở trạng thái `RUNNING` hoặc `STOPPED` (chặn nếu máy đang `PENDING`, `STOPPING`, `SHUTTING_DOWN`).
+    - Tự động gọi `NetworkService` cập nhật bản ghi DNS trỏ về `elastic_ip` mới ngay khi hoàn tất Bước 6.
+- [ ] **3. Hoàn thiện CSS (`dashboard.css`) chuẩn giao diện EC2:**
+  - Thêm style cho các badge trạng thái chuyển tiếp (`badge-pending`, `badge-stopping`, `badge-terminating` kèm hiệu ứng pulse/spinner), bảng Inbound/Outbound Rules của Security Group và khung tiến trình chuyển vùng.
+DEADLINE: 21h 07/11/2026

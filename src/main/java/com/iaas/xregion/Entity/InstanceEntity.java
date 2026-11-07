@@ -7,6 +7,7 @@ import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 /**
  * Maps to live AWS DynamoDB table: XRegion-Instances
@@ -19,6 +20,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @AllArgsConstructor
 public class InstanceEntity {
 
+    private String username;
     private String instanceId;
     private String instanceName;
     private String currentRegion;
@@ -31,6 +33,13 @@ public class InstanceEntity {
     private Integer cooldownSeconds;
     private Long lastMigrationTimestamp;
     private String keyName;
+    private String dns;
+
+    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
+    @DynamoDbAttribute("username")
+    public String getUsername() {
+        return username;
+    }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -92,5 +101,9 @@ public class InstanceEntity {
     public String getKeyName() {
         return keyName;
     }
-}
 
+    @DynamoDbAttribute("dns")
+    public String getDns() {
+        return dns;
+    }
+}

@@ -4,6 +4,53 @@ const API_BASE = '/api';
 let authToken = localStorage.getItem('xregion_jwt') || '';
 let performanceChart = null;
 let migrationPollInterval = null;
+let serverClockOffsetMs = 0;
+
+// Đồng bộ đồng hồ trình duyệt với Server & AWS DynamoDB
+async function syncServerClock() {
+  try {
+    const clientBefore = Date.now();
+    const res = await fetch(API_BASE + '/auth/health');
+    if (res.ok) {
+      const data = await res.json();
+      const clientAfter = Date.now();
+      const rttHalf = Math.round((clientAfter - clientBefore) / 2);
+      const serverTs = Number(data.timestamp);
+      if (!isNaN(serverTs) && serverTs > 0) {
+        serverClockOffsetMs = (serverTs + rttHalf) - clientAfter;
+      }
+    }
+  } catch (e) {
+    console.warn('Clock sync skipped:', e);
+  }
+}
+
+function getSyncedNowMs() {
+  return Date.now() + serverClockOffsetMs;
+}
+
+function getSyncedNowSec() {
+  return Math.floor(getSyncedNowMs() / 1000);
+}
+
+// Tự động chuẩn hóa cả Epoch Seconds (10 chữ số trên DynamoDB) lẫn Milliseconds (13 chữ số)
+function toNormalizedMillis(rawTs) {
+  if (!rawTs || isNaN(Number(rawTs))) return getSyncedNowMs();
+  const num = Number(rawTs);
+  return num < 10000000000 ? num * 1000 : num;
+}
+
+function formatSyncedDateTime(rawTs) {
+  if (!rawTs) return 'Vừa xong';
+  const ms = toNormalizedMillis(rawTs);
+  return new Date(ms).toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour12: false
+  });
+}
+
+// Khởi chạy đồng bộ thời gian ngay khi tải script
+syncServerClock();
 
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
@@ -342,6 +389,7 @@ function filterInstancesUI() {
       <td>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
           <a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="text-decoration:none; padding:4px 8px;">Chi tiết</a>
+          <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="text-decoration:none; padding:4px 8px; color:var(--accent-cyan);">✏️ Sửa</a>
           ${inst.status === 'ACTIVE' 
             ? `<button class="btn btn-secondary btn-sm" onclick="instanceAction('${inst.id}', 'STOP')">Dừng</button>` 
             : `<button class="btn btn-success btn-sm" onclick="instanceAction('${inst.id}', 'START')">Bật</button>`}
@@ -951,7 +999,7 @@ async function loadAuditLogs() {
 
     logs.forEach(log => {
       const tr = document.createElement('tr');
-      const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
+      const timeStr = log.timestamp ? formatSyncedDateTime(log.timestamp) : 'N/A';
       tr.innerHTML = `
         <td style="color:var(--text-muted); font-size:12px;">${timeStr}</td>
         <td><strong>${log.username || 'system'}</strong></td>
@@ -1075,7 +1123,7 @@ async function initOverviewPage() {
         tbodyLogs.innerHTML = '';
         logs.slice(0, 5).forEach(l => {
           const tr = document.createElement('tr');
-          const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'N/A';
+          const time = l.timestamp ? formatSyncedDateTime(l.timestamp) : 'N/A';
           tr.innerHTML = `
             <td style="color:var(--text-muted); font-size:12px;">${time}</td>
             <td><strong>${l.username || 'admin'}</strong></td>
@@ -1095,6 +1143,13 @@ async function initOverviewPage() {
 // 2. INSTANCES LIST PAGE (instances.html)
 function initInstancesPage() {
   renderUserBadge();
+  if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
+    sessionStorage.removeItem('xregion_launch_completed');
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', () => {
+      window.history.pushState(null, '', window.location.href);
+    });
+  }
   loadInstances();
 }
 
@@ -1142,7 +1197,7 @@ async function initDetailPage() {
     document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
     document.getElementById('detPublicIp').textContent = inst.publicIp || 'Chưa gán';
     document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
-    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? new Date(inst.updatedAt).toLocaleString() : 'Vừa xong';
+    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
 
     const volIdEl = document.getElementById('detEbsVolumeId');
     if (volIdEl) volIdEl.textContent = inst.ebsVolumeId || `vol-${inst.id.replace('i-', '')}`;
@@ -1164,6 +1219,7 @@ async function initDetailPage() {
     const actionsContainer = document.getElementById('detailActionButtons');
     if (actionsContainer) {
       actionsContainer.innerHTML = `
+        <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary" style="text-decoration:none; color:var(--accent-cyan);">✏️ Chỉnh Sửa (Modify)</a>
         ${inst.status === 'ACTIVE'
           ? `<button class="btn btn-secondary" onclick="executeDetailAction('${inst.id}', 'STOP')">⏸ Dừng Máy (Stop)</button>`
           : `<button class="btn btn-success" onclick="executeDetailAction('${inst.id}', 'START')">▶ Bật Máy (Start)</button>`}
@@ -1205,54 +1261,113 @@ async function executeDetailAction(id, action) {
 
 // 4. LAUNCH INSTANCE PAGE (launch.html)
 function initLaunchPage() {
+  if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
+    sessionStorage.removeItem('xregion_launch_completed');
+    window.location.replace('/instances.html');
+    return;
+  }
+
+  window.addEventListener('pageshow', (event) => {
+    const form = document.getElementById('launchInstancePageForm');
+    if (event.persisted || sessionStorage.getItem('xregion_launch_completed') === 'true') {
+      if (form) form.reset();
+      sessionStorage.removeItem('xregion_launch_completed');
+      window.location.replace('/instances.html');
+    }
+  });
+
+  const form = document.getElementById('launchInstancePageForm');
+  if (form) form.reset();
+
   renderUserBadge();
   clearApiError();
+  loadKeyPairsDropdown();
   updatePageLaunchSummary();
 }
 
-async function loadKeyPairsDropdown() {
+async function loadKeyPairsDropdown(selectedName = null) {
   const select = document.getElementById('instKeyPair');
   if (!select) return;
   try {
     const keys = await apiRequest('/keys');
+    const currentVal = selectedName || select.value;
     if (keys && keys.length > 0) {
-      const currentVal = select.value;
-      select.innerHTML = keys.map(k => `<option value="${k.keyName}">${k.keyName} (${k.keyType || 'RSA'})</option>`).join('');
-      if (keys.some(k => k.keyName === currentVal)) {
+      select.innerHTML = keys.map(k => `<option value="${k.keyName}">${k.keyName} (${k.keyType || 'RSA 2048'} • ${k.keyFingerprint ? k.keyFingerprint.substring(0, 22) + '...' : ''})</option>`).join('');
+      if (currentVal && keys.some(k => k.keyName === currentVal)) {
         select.value = currentVal;
+      } else {
+        select.value = keys[0].keyName;
       }
-      updatePageLaunchSummary();
+    } else {
+      select.innerHTML = `<option value="">-- Chưa có Key Pair nào (Bấm "+ Tạo Key Pair Mới" bên cạnh) --</option>`;
     }
+    updatePageLaunchSummary();
   } catch (e) {
     console.warn('Could not load keypairs from API:', e);
   }
 }
 
-async function promptCreateKey() {
-  const name = prompt('Nhập tên cho SSH Key Pair mới (ví dụ: dev-ssh-key):');
-  if (!name || !name.trim()) return;
+function openCreateKeyModal() {
+  const input = document.getElementById('newKeyPairName');
+  if (input) input.value = '';
+  openModal('createKeyModal');
+  setTimeout(() => {
+    if (input) input.focus();
+  }, 100);
+}
+
+function downloadPemFile(filename, pemContent) {
+  const cleanName = filename.endsWith('.pem') ? filename : `${filename}.pem`;
+  const blob = new Blob([pemContent], { type: 'application/x-pem-file;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = cleanName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function submitCreateKeyModal(e) {
+  e.preventDefault();
+  const input = document.getElementById('newKeyPairName');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+
+  const btn = document.getElementById('btnSubmitCreateKey');
+  const origText = btn ? btn.innerHTML : '⬇ Tạo Key Pair & Tải .pem';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang sinh khóa RSA 2048...';
+  }
+
   try {
     const res = await apiRequest('/keys', {
       method: 'POST',
-      body: JSON.stringify({ name: name.trim() })
+      body: JSON.stringify({ name })
     });
-    showToast(`Đã tạo SSH Key Pair [${name.trim()}] thành công!`, 'success');
+    closeModal('createKeyModal');
+    showToast(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem!`, 'success');
     if (res && res.privateKey) {
-      const blob = new Blob([res.privateKey], { type: 'application/x-pem-file' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${name.trim()}.pem`;
-      link.click();
+      downloadPemFile(name, res.privateKey);
     }
-    await loadKeyPairsDropdown();
-    const select = document.getElementById('instKeyPair');
-    if (select) {
-      select.value = name.trim();
-      updatePageLaunchSummary();
+    await loadKeyPairsDropdown(name);
+    if (typeof updateEditInstanceSummary === 'function') {
+      updateEditInstanceSummary();
     }
   } catch (err) {
     showToast(`Lỗi tạo Key Pair: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
   }
+}
+
+async function promptCreateKey() {
+  openCreateKeyModal();
 }
 
 function selectRegion(regionCode) {
@@ -1373,10 +1488,14 @@ async function handleLaunchPageSubmit(e) {
       body: JSON.stringify(payload)
     });
 
+    const form = document.getElementById('launchInstancePageForm');
+    if (form) form.reset();
+    sessionStorage.setItem('xregion_launch_completed', 'true');
+
     showToast(`Khởi tạo máy ảo [${payload.name}] (${res ? res.id : ''}) thành công!`, 'success');
     setTimeout(() => {
-      window.location.href = '/instances.html';
-    }, 1200);
+      window.location.replace('/instances.html');
+    }, 800);
   } catch (err) {
     console.error('Launch failed:', err);
     if (errBox) {
@@ -1384,11 +1503,179 @@ async function handleLaunchPageSubmit(e) {
       errBox.style.display = 'block';
     }
     showToast(`Lỗi khởi tạo: ${err.message}`, 'error');
-  } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = origText;
     }
   }
 }
+
+// 5. MODIFY / EDIT INSTANCE PAGE (instance-edit.html)
+let currentEditingInstance = null;
+
+async function initEditInstancePage() {
+  renderUserBadge();
+  clearApiError();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const instanceId = urlParams.get('id');
+
+  if (!instanceId) {
+    showApiError('/instances/{id}', 'Không tìm thấy tham số ID máy ảo cần chỉnh sửa trên URL.');
+    return;
+  }
+
+  const bcLink = document.getElementById('editBreadcrumbDetailLink');
+  if (bcLink) {
+    bcLink.textContent = instanceId;
+    bcLink.href = `/instance-detail.html?id=${instanceId}`;
+  }
+  const backBtn = document.getElementById('btnBackToDetail');
+  if (backBtn) backBtn.href = `/instance-detail.html?id=${instanceId}`;
+  const cancelBtn = document.getElementById('btnCancelEditInstance');
+  if (cancelBtn) cancelBtn.href = `/instance-detail.html?id=${instanceId}`;
+
+  try {
+    const inst = await apiRequest(`/instances/${instanceId}`);
+    if (!inst) {
+      throw new Error(`Không tìm thấy máy ảo [${instanceId}]`);
+    }
+    currentEditingInstance = inst;
+
+    document.getElementById('editRoInstanceId').textContent = inst.id;
+    document.getElementById('editRoRegion').textContent = `${inst.regionName || inst.region} (${inst.region})`;
+    document.getElementById('editRoPrivateIp').textContent = inst.privateIp || '10.0.1.10';
+    document.getElementById('editRoPublicIp').textContent = inst.publicIp || 'Chưa gán';
+
+    const badge = document.getElementById('editInstStatusBadge');
+    if (badge) {
+      badge.textContent = inst.status;
+      badge.className = 'badge ' + (inst.status === 'ACTIVE' ? 'badge-active' :
+                                    inst.status === 'MIGRATING' ? 'badge-migrating' :
+                                    inst.status === 'SHUTOFF' ? 'badge-shutoff' : 'badge-error');
+    }
+
+    document.getElementById('editInstName').value = inst.name || inst.id;
+    const domainInput = document.getElementById('editInstDomain');
+    if (domainInput) {
+      domainInput.value = inst.dnsDomain || `${(inst.name || inst.id).toLowerCase()}.xregion.net`;
+    }
+    const flavorSelect = document.getElementById('editInstFlavor');
+    if (flavorSelect && inst.flavor) {
+      flavorSelect.value = inst.flavor;
+    }
+    const cooldownInput = document.getElementById('editInstCooldown');
+    if (cooldownInput) {
+      cooldownInput.value = inst.cooldownSeconds != null ? inst.cooldownSeconds : 300;
+    }
+
+    await loadKeyPairsDropdown(inst.keyName || 'xregion-key');
+    const keySelect = document.getElementById('instKeyPair');
+    if (keySelect && inst.keyName && !Array.from(keySelect.options).some(o => o.value === inst.keyName)) {
+      const opt = document.createElement('option');
+      opt.value = inst.keyName;
+      opt.textContent = `${inst.keyName} (Đang gán trên máy ảo)`;
+      keySelect.prepend(opt);
+      keySelect.value = inst.keyName;
+    }
+
+    updateEditInstanceSummary();
+  } catch (err) {
+    console.error('Failed to load instance for editing:', err);
+    showApiError(`/instances/${instanceId}`, err.message);
+  }
+}
+
+function updateEditInstanceSummary() {
+  const nameEl = document.getElementById('editInstName');
+  const flavorEl = document.getElementById('editInstFlavor');
+  const keyEl = document.getElementById('instKeyPair');
+  const cooldownEl = document.getElementById('editInstCooldown');
+  if (!nameEl || !flavorEl) return;
+
+  const newName = nameEl.value.trim() || (currentEditingInstance ? currentEditingInstance.name : '--');
+  const newFlavor = flavorEl.value;
+  const newKey = (keyEl && keyEl.value) ? keyEl.value : (currentEditingInstance?.keyName || 'xregion-key');
+  const newCooldown = cooldownEl ? (parseInt(cooldownEl.value) || 0) : 300;
+
+  const dnsPreview = document.getElementById('editDnsPreview');
+  if (dnsPreview) {
+    dnsPreview.textContent = `${newName.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.xregion.net`;
+  }
+
+  const spec = FLAVOR_SPECS[newFlavor] || FLAVOR_SPECS['m1.medium'];
+  const oldName = currentEditingInstance?.name;
+  const oldFlavor = currentEditingInstance?.flavor;
+  const oldKey = currentEditingInstance?.keyName;
+
+  const sumName = document.getElementById('sumEditName');
+  const sumFlavor = document.getElementById('sumEditFlavor');
+  const sumKey = document.getElementById('sumEditKey');
+  const sumCooldown = document.getElementById('sumEditCooldown');
+
+  if (sumName) {
+    sumName.innerHTML = (oldName && oldName !== newName)
+      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldName}</span> ➔ <span style="color:#fbbf24;">${newName}</span>`
+      : newName;
+  }
+  if (sumFlavor) {
+    const desc = `${newFlavor} (${spec.vcpu} vCPU • ${spec.ramDisplay})`;
+    sumFlavor.innerHTML = (oldFlavor && oldFlavor !== newFlavor)
+      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldFlavor}</span> ➔ <span style="color:#fbbf24;">${desc}</span>`
+      : desc;
+  }
+  if (sumKey) {
+    sumKey.innerHTML = (oldKey && oldKey !== newKey)
+      ? `<span style="color:#94a3b8; text-decoration:line-through; font-weight:400;">${oldKey}</span> ➔ <span style="color:#fbbf24;">${newKey}</span>`
+      : newKey;
+  }
+  if (sumCooldown) {
+    sumCooldown.textContent = `${newCooldown} giây`;
+  }
+}
+
+async function handleEditInstanceSubmit(e) {
+  e.preventDefault();
+  if (!currentEditingInstance) return;
+
+  const errBox = document.getElementById('editErrorBox');
+  if (errBox) errBox.style.display = 'none';
+
+  const btn = document.getElementById('btnSaveEditInstance');
+  const origText = btn ? btn.innerHTML : '💾 Lưu Thay Đổi (Save Changes)';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang lưu thay đổi lên AWS DynamoDB...';
+  }
+
+  const payload = {
+    name: document.getElementById('editInstName').value.trim(),
+    flavor: document.getElementById('editInstFlavor').value,
+    keyPairName: document.getElementById('instKeyPair')?.value || currentEditingInstance.keyName || 'xregion-key',
+    domainName: document.getElementById('editInstDomain')?.value.trim() || '',
+    cooldownSeconds: parseInt(document.getElementById('editInstCooldown')?.value) || 300
+  };
+
+  try {
+    await apiRequest(`/instances/${currentEditingInstance.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    showToast(`Đã cập nhật thông tin máy ảo [${payload.name}] thành công!`, 'success');
+    setTimeout(() => {
+      window.location.replace(`/instance-detail.html?id=${currentEditingInstance.id}`);
+    }, 800);
+  } catch (err) {
+    if (errBox) {
+      errBox.innerHTML = `<strong>❌ Lỗi cập nhật máy ảo:</strong><br>${err.message}`;
+      errBox.style.display = 'block';
+    }
+    showToast(`Lỗi cập nhật: ${err.message}`, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
 

@@ -1,15 +1,19 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
 import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
+import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -26,11 +30,21 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
 
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "admin";
+    }
+
     public List<InstanceResponse> getAllInstances() {
+        String currentUser = getCurrentUsername();
         try {
             return instancesTable.scan()
                     .items()
                     .stream()
+                    .filter(entity -> currentUser.equalsIgnoreCase(entity.getUsername()))
                     .map(this::mapToResponse)
                     .sorted((a, b) -> Long.compare(b.getUpdatedAt(), a.getUpdatedAt()))
                     .collect(Collectors.toList());
@@ -41,6 +55,7 @@ public class InstanceService {
     }
 
     public InstanceResponse getInstanceById(String id) {
+        String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
             entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
@@ -48,15 +63,16 @@ public class InstanceService {
             log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
         }
-        if (entity == null) {
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
             throw new ResourceNotFoundException("Instance not found in AWS DynamoDB: " + id);
         }
         return mapToResponse(entity);
     }
 
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
+        String currentUser = getCurrentUsername();
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
-        long now = System.currentTimeMillis();
+        long nowSec = TimeSyncUtil.nowEpochSeconds();
 
         String region = request.getRegion();
         String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
@@ -65,8 +81,12 @@ public class InstanceService {
         String keyName = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
+        String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
+                ? request.getDomainName().trim()
+                : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
         InstanceEntity entity = InstanceEntity.builder()
+                .username(currentUser)
                 .instanceId(id)
                 .instanceName(request.getName())
                 .currentRegion(region)
@@ -75,10 +95,11 @@ public class InstanceService {
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
                 .keyName(keyName)
+                .dns(dns)
                 .migrationLock(false)
                 .lockAcquiredAt(0L)
                 .cooldownSeconds(300)
-                .lastMigrationTimestamp(now)
+                .lastMigrationTimestamp(nowSec)
                 .build();
 
         try {
@@ -94,7 +115,7 @@ public class InstanceService {
         // Bắn sự kiện qua API Gateway vào EventBridge
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, "admin"
+                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
@@ -103,7 +124,8 @@ public class InstanceService {
         return mapToResponse(entity);
     }
 
-    public InstanceResponse executeAction(String id, InstanceActionRequest request) {
+    public InstanceResponse updateInstance(String id, UpdateInstanceRequest request) {
+        String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
             entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
@@ -112,7 +134,65 @@ public class InstanceService {
             throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
         }
 
-        if (entity == null) {
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
+            throw new ResourceNotFoundException("Instance not found: " + id);
+        }
+
+        if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
+            throw new AppException("Máy ảo đang trong quá trình chuyển vùng (MIGRATING), không thể chỉnh sửa cấu hình lúc này.");
+        }
+
+        String oldName = entity.getInstanceName();
+        String oldFlavor = entity.getFlavor();
+        String oldKey = entity.getKeyName();
+
+        entity.setInstanceName(request.getName().trim());
+        entity.setFlavor(request.getFlavor().trim());
+        if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
+            entity.setKeyName(request.getKeyPairName().trim());
+        }
+        if (request.getDomainName() != null && !request.getDomainName().trim().isEmpty()) {
+            entity.setDns(request.getDomainName().trim());
+        }
+        if (request.getCooldownSeconds() != null && request.getCooldownSeconds() >= 0) {
+            entity.setCooldownSeconds(request.getCooldownSeconds());
+        }
+        entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+
+        try {
+            instancesTable.putItem(entity);
+        } catch (Exception e) {
+            log.error("Failed to update instance in AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi cập nhật thông tin máy ảo vào AWS DynamoDB: " + e.getMessage());
+        }
+
+        auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
+                String.format("Updated instance [%s -> %s], flavor [%s -> %s], key [%s -> %s]",
+                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(), oldKey, entity.getKeyName()));
+
+        try {
+            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
+                    "MODIFY", id, entity.getInstanceName(), entity.getFlavor(),
+                    entity.getCurrentRegion(), entity.getKeyName(), currentUser
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi sự kiện MODIFY qua API Gateway EventBridge: {}", e.getMessage());
+        }
+
+        return mapToResponse(entity);
+    }
+
+    public InstanceResponse executeAction(String id, InstanceActionRequest request) {
+        String currentUser = getCurrentUsername();
+        InstanceEntity entity;
+        try {
+            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+        } catch (Exception e) {
+            log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
+            throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
+        }
+
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
             throw new ResourceNotFoundException("Instance not found: " + id);
         }
 
@@ -167,7 +247,7 @@ public class InstanceService {
         // Bắn sự kiện qua API Gateway vào EventBridge
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), "admin"
+                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
@@ -191,11 +271,10 @@ public class InstanceService {
             uiStatus = "REBOOTING";
         }
 
-        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0
-                ? entity.getLastMigrationTimestamp()
-                : System.currentTimeMillis();
+        long timestampMs = TimeSyncUtil.toEpochMillis(entity.getLastMigrationTimestamp());
 
         return InstanceResponse.builder()
+                .username(entity.getUsername())
                 .id(entity.getInstanceId())
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)
@@ -204,14 +283,16 @@ public class InstanceService {
                 .status(uiStatus)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
-                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net"
-                        : "app.xregion.net")
+                .dnsDomain((entity.getDns() != null && !entity.getDns().trim().isEmpty())
+                        ? entity.getDns()
+                        : (entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net"))
                 .imageId("img-u22")
                 .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
-                .createdAt(timestamp)
-                .updatedAt(timestamp)
+                .createdAt(timestampMs)
+                .updatedAt(timestampMs)
                 .keyName(entity.getKeyName() != null ? entity.getKeyName() : "xregion-key")
+                .cooldownSeconds(entity.getCooldownSeconds() != null ? entity.getCooldownSeconds() : 300)
                 .build();
     }
 }

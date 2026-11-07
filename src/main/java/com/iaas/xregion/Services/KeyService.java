@@ -1,16 +1,30 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Entity.KeyPairItem;
+import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateKeyPairRequest;
 import com.iaas.xregion.Model.Response.KeyPairResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -19,57 +33,101 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KeyService {
 
+    private final DynamoDbTable<UserEntity> usersTable;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
-    private final Map<String, KeyPairResponse> keyStore = new ConcurrentHashMap<>();
 
-    // Khởi tạo các Key Pair mặc định
-    {
-        keyStore.put("xregion-key", KeyPairResponse.builder()
-                .keyName("xregion-key")
-                .keyFingerprint("SHA256:7b:19:e4:a1:8f:2c:6d:3e:90:5a:11:ff:34:bb:aa:12")
-                .keyType("RSA 2048")
-                .publicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8v1lJ09k+defaultKey/xregion==")
-                .description("Khóa SSH mặc định cho cụm Bare Metal OpenStack & AWS")
-                .createdAt(System.currentTimeMillis() - 86400000L * 7)
-                .build());
+    // Fallback cache nếu bảng DynamoDB chưa tạo bản ghi cho tài khoản mặc định
+    private final Map<String, List<KeyPairItem>> fallbackUserKeys = new ConcurrentHashMap<>();
 
-        keyStore.put("prod-ssh-key", KeyPairResponse.builder()
-                .keyName("prod-ssh-key")
-                .keyFingerprint("SHA256:4d:9a:11:c3:22:ee:aa:55:66:77:88:99:00:11:22:33")
-                .keyType("RSA 2048")
-                .publicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDF89mN21k+prodKey/xregion==")
-                .description("Khóa SSH Production cho các môi trường chạy tải lớn")
-                .createdAt(System.currentTimeMillis() - 86400000L * 3)
-                .build());
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "admin";
+    }
+
+    private List<KeyPairItem> loadUserKeyItems(String username) {
+        try {
+            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            if (user != null) {
+                if (user.getSshKeys() != null) {
+                    return new ArrayList<>(user.getSshKeys());
+                }
+                return new ArrayList<>();
+            }
+        } catch (Exception e) {
+            log.warn("Không thể đọc ssh_keys của user [{}] từ DynamoDB: {}", username, e.getMessage());
+        }
+        return new ArrayList<>(fallbackUserKeys.getOrDefault(username, Collections.emptyList()));
+    }
+
+    private void saveUserKeyItems(String username, List<KeyPairItem> keys) {
+        fallbackUserKeys.put(username, new ArrayList<>(keys));
+        try {
+            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            if (user == null) {
+                user = UserEntity.builder()
+                        .username(username)
+                        .fullName(username)
+                        .role("ROLE_USER")
+                        .active(true)
+                        .createdAt(System.currentTimeMillis())
+                        .sshKeys(keys)
+                        .build();
+            } else {
+                user.setSshKeys(keys);
+            }
+            usersTable.putItem(user);
+        } catch (Exception e) {
+            log.warn("Không thể lưu ssh_keys của user [{}] vào DynamoDB: {}", username, e.getMessage());
+        }
     }
 
     public List<KeyPairResponse> getAllKeyPairs() {
-        return keyStore.values().stream()
-                .sorted((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()))
+        String currentUser = getCurrentUsername();
+        List<KeyPairItem> items = loadUserKeyItems(currentUser);
+
+        return items.stream()
+                .sorted((a, b) -> Long.compare(
+                        b.getCreatedAt() != null ? b.getCreatedAt() : 0L,
+                        a.getCreatedAt() != null ? a.getCreatedAt() : 0L))
                 .map(k -> KeyPairResponse.builder()
                         .keyName(k.getKeyName())
                         .keyFingerprint(k.getKeyFingerprint())
                         .keyType(k.getKeyType())
                         .publicKey(k.getPublicKey())
                         .description(k.getDescription())
-                        .createdAt(k.getCreatedAt())
+                        .createdAt(k.getCreatedAt() != null ? k.getCreatedAt() : 0L)
                         .build())
                 .collect(Collectors.toList());
     }
 
     public KeyPairResponse getKeyPair(String keyName) {
-        KeyPairResponse key = keyStore.get(keyName);
-        if (key == null) {
-            throw new ResourceNotFoundException("Không tìm thấy Key Pair với tên: " + keyName);
-        }
-        return key;
+        String currentUser = getCurrentUsername();
+        return loadUserKeyItems(currentUser).stream()
+                .filter(k -> keyName.equalsIgnoreCase(k.getKeyName()))
+                .findFirst()
+                .map(k -> KeyPairResponse.builder()
+                        .keyName(k.getKeyName())
+                        .keyFingerprint(k.getKeyFingerprint())
+                        .keyType(k.getKeyType())
+                        .publicKey(k.getPublicKey())
+                        .description(k.getDescription())
+                        .createdAt(k.getCreatedAt() != null ? k.getCreatedAt() : 0L)
+                        .build())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Key Pair với tên: " + keyName));
     }
 
     public KeyPairResponse createKeyPair(CreateKeyPairRequest request) {
+        String currentUser = getCurrentUsername();
         String name = request.getName().trim();
-        if (keyStore.containsKey(name)) {
-            throw new ConflictException("Key Pair với tên '" + name + "' đã tồn tại!");
+
+        List<KeyPairItem> userKeys = loadUserKeyItems(currentUser);
+        boolean exists = userKeys.stream().anyMatch(k -> name.equalsIgnoreCase(k.getKeyName()));
+        if (exists) {
+            throw new ConflictException("Key Pair với tên '" + name + "' đã tồn tại trong tài khoản của bạn!");
         }
 
         long now = System.currentTimeMillis();
@@ -78,34 +136,72 @@ public class KeyService {
         String fingerprint = "";
 
         if (request.getPublicKey() != null && !request.getPublicKey().trim().isEmpty()) {
-            // Trường hợp Import Public Key
             publicKeyStr = request.getPublicKey().trim();
-            fingerprint = generateFingerprint(publicKeyStr.getBytes());
+            fingerprint = generateFingerprint(publicKeyStr.getBytes(StandardCharsets.UTF_8));
         } else {
-            // Tự động sinh cặp khóa RSA 2048
+            // Sinh cặp khóa RSA 2048 chuẩn PKCS#1 PEM (-----BEGIN RSA PRIVATE KEY-----) giống hệt AWS EC2
             try {
                 KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
                 kpg.initialize(2048);
                 KeyPair kp = kpg.generateKeyPair();
 
-                Base64.Encoder encoder = Base64.getMimeEncoder(64, new byte[]{'\n'});
-                privateKeyPem = "-----BEGIN RSA PRIVATE KEY-----\n"
-                        + encoder.encodeToString(kp.getPrivate().getEncoded())
-                        + "\n-----END RSA PRIVATE KEY-----\n";
+                RSAPrivateCrtKey privKey = (RSAPrivateCrtKey) kp.getPrivate();
+                RSAPublicKey pubKey = (RSAPublicKey) kp.getPublic();
 
-                publicKeyStr = "ssh-rsa " + Base64.getEncoder().encodeToString(kp.getPublic().getEncoded()) + " " + name + "@xregion";
-                fingerprint = generateFingerprint(kp.getPublic().getEncoded());
-            } catch (NoSuchAlgorithmException e) {
-                log.error("Lỗi thuật toán sinh khóa RSA: {}", e.getMessage());
+                byte[] pkcs1Bytes = encodePkcs1PrivateKey(privKey);
+                Base64.Encoder mimeEncoder = Base64.getMimeEncoder(64, new byte[]{'\n'});
+                privateKeyPem = "-----BEGIN RSA PRIVATE KEY-----\n"
+                        + mimeEncoder.encodeToString(pkcs1Bytes)
+                        + "\n-----END RSA PRIVATE KEY-----";
+
+                byte[] sshRsaBytes = encodeOpenSshPublicKey(pubKey);
+                publicKeyStr = "ssh-rsa " + Base64.getEncoder().encodeToString(sshRsaBytes) + " " + name;
+                fingerprint = generateFingerprint(sshRsaBytes);
+            } catch (Exception e) {
+                log.error("Lỗi sinh khóa RSA 2048: {}", e.getMessage(), e);
                 throw new RuntimeException("Lỗi sinh khóa RSA: " + e.getMessage());
             }
         }
 
         String desc = (request.getDescription() != null && !request.getDescription().trim().isEmpty())
                 ? request.getDescription().trim()
-                : "Khóa SSH xác thực tạo thủ công";
+                : "Khóa SSH RSA 2048 tạo bởi " + currentUser;
 
-        KeyPairResponse created = KeyPairResponse.builder()
+        // Lưu chỉ Public Key + Metadata vào DynamoDB (Tuyệt đối không lưu Private Key)
+        KeyPairItem itemToSave = KeyPairItem.builder()
+                .keyName(name)
+                .keyFingerprint(fingerprint)
+                .keyType("RSA 2048")
+                .publicKey(publicKeyStr)
+                .description(desc)
+                .createdAt(now)
+                .build();
+
+        userKeys.add(itemToSave);
+        saveUserKeyItems(currentUser, userKeys);
+
+        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name, "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
+
+        // Đồng bộ Public Key sang EventBridge bất đồng bộ để phản hồi tải file .pem tức thì
+        final String syncPubKey = publicKeyStr;
+        final String syncFp = fingerprint;
+        CompletableFuture.runAsync(() -> {
+            try {
+                eventBridgeGatewayClient.sendKeySyncEvent(
+                        name,
+                        "RSA 2048",
+                        syncPubKey,
+                        syncFp,
+                        List.of("ap-southeast-2", "us-east-1"),
+                        currentUser
+                );
+            } catch (Exception e) {
+                log.warn("Không thể gửi sự kiện đồng bộ SSH Key qua API Gateway EventBridge: {}", e.getMessage());
+            }
+        });
+
+        // Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <name>.pem
+        return KeyPairResponse.builder()
                 .keyName(name)
                 .keyFingerprint(fingerprint)
                 .keyType("RSA 2048")
@@ -114,36 +210,83 @@ public class KeyService {
                 .description(desc)
                 .createdAt(now)
                 .build();
-
-        keyStore.put(name, created);
-        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name, "Đã tạo/import SSH Key Pair: " + name);
-
-        // Bắn sự kiện qua API Gateway vào EventBridge để đồng bộ Public Key do Backend tạo
-        try {
-            eventBridgeGatewayClient.sendKeySyncEvent(
-                    name,
-                    created.getKeyType(),
-                    created.getPublicKey(),
-                    created.getKeyFingerprint(),
-                    List.of("ap-southeast-2"),
-                    "admin"
-            );
-        } catch (Exception e) {
-            log.warn("Không thể gửi sự kiện đồng bộ SSH Key qua API Gateway EventBridge: {}", e.getMessage());
-        }
-
-        return created;
     }
 
     public void deleteKeyPair(String keyName) {
-        if ("xregion-key".equalsIgnoreCase(keyName)) {
-            throw new IllegalArgumentException("Không được phép xóa khóa SSH mặc định 'xregion-key'");
-        }
-        if (!keyStore.containsKey(keyName)) {
+        String currentUser = getCurrentUsername();
+        List<KeyPairItem> userKeys = loadUserKeyItems(currentUser);
+        boolean removed = userKeys.removeIf(k -> keyName.equalsIgnoreCase(k.getKeyName()));
+        if (!removed) {
             throw new ResourceNotFoundException("Không tìm thấy Key Pair: " + keyName);
         }
-        keyStore.remove(keyName);
+        saveUserKeyItems(currentUser, userKeys);
         auditLogService.logAction("DELETE_KEYPAIR", "KEY", keyName, "Đã xóa SSH Key Pair: " + keyName);
+    }
+
+    /**
+     * Mã hóa chuẩn ASN.1 DER PKCS#1 RSAPrivateKey (MIIEp...) khớp 100% cấu trúc file .pem của AWS EC2 / OpenSSH
+     */
+    private byte[] encodePkcs1PrivateKey(RSAPrivateCrtKey key) throws IOException {
+        ByteArrayOutputStream seq = new ByteArrayOutputStream();
+        writeDerInteger(seq, BigInteger.ZERO); // version = 0
+        writeDerInteger(seq, key.getModulus());
+        writeDerInteger(seq, key.getPublicExponent());
+        writeDerInteger(seq, key.getPrivateExponent());
+        writeDerInteger(seq, key.getPrimeP());
+        writeDerInteger(seq, key.getPrimeQ());
+        writeDerInteger(seq, key.getPrimeExponentP());
+        writeDerInteger(seq, key.getPrimeExponentQ());
+        writeDerInteger(seq, key.getCrtCoefficient());
+        return wrapDerSequence(seq.toByteArray());
+    }
+
+    private void writeDerInteger(ByteArrayOutputStream out, BigInteger value) throws IOException {
+        byte[] bytes = value.toByteArray();
+        out.write(0x02); // INTEGER tag
+        writeDerLength(out, bytes.length);
+        out.write(bytes);
+    }
+
+    private byte[] wrapDerSequence(byte[] content) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(0x30); // SEQUENCE tag
+        writeDerLength(out, content.length);
+        out.write(content);
+        return out.toByteArray();
+    }
+
+    private void writeDerLength(ByteArrayOutputStream out, int length) {
+        if (length < 128) {
+            out.write(length);
+        } else if (length < 256) {
+            out.write(0x81);
+            out.write(length);
+        } else {
+            out.write(0x82);
+            out.write((length >> 8) & 0xFF);
+            out.write(length & 0xFF);
+        }
+    }
+
+    /**
+     * Mã hóa chuẩn RFC 4253 OpenSSH "ssh-rsa" wire format
+     */
+    private byte[] encodeOpenSshPublicKey(RSAPublicKey pub) throws IOException {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(buf);
+        byte[] sshRsa = "ssh-rsa".getBytes(StandardCharsets.US_ASCII);
+        dos.writeInt(sshRsa.length);
+        dos.write(sshRsa);
+
+        byte[] e = pub.getPublicExponent().toByteArray();
+        dos.writeInt(e.length);
+        dos.write(e);
+
+        byte[] n = pub.getModulus().toByteArray();
+        dos.writeInt(n.length);
+        dos.write(n);
+        dos.flush();
+        return buf.toByteArray();
     }
 
     private String generateFingerprint(byte[] data) {
@@ -161,4 +304,3 @@ public class KeyService {
         }
     }
 }
-
