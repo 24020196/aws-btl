@@ -1332,7 +1332,7 @@ body {
     grid-template-columns: 1fr;
   }
 }
-/* ===== Instance detail, overview migration summary, dialogs (Lực) ===== */
+/* ============================================================
    INSTANCE DETAIL (instance-detail.html) - EC2-style layout
    ============================================================ */
 [hidden] { display: none !important; }
