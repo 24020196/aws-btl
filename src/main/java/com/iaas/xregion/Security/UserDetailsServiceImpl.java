@@ -43,14 +43,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 log.warn("Could not query admin entity from DynamoDB: {}", e.getMessage());
             }
 
-            return CustomUserDetails.builder()
-                    .username("admin")
-                    .password(pass)
-                    .fullName(fullName)
-                    .role("ROLE_ADMIN")
-                    .active(true)
-                    .build();
-        }
+            if (user == null && username.startsWith("usr-")) {
+                user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            }
 
         try {
             Optional<UserEntity> userOpt = userRepository.findByUsername(username);

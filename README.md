@@ -89,6 +89,7 @@ graph TB
         BackendRule --> SFN
 
         subgraph Lambda_Workers ["AWS Lambda Functions Execution"]
+            L0["XRegion-VolumeLifecycleManager<br/>(Cấp phát EBS, Cinder Boot Volume & Nova VM)"]
             L1["XRegion-NovaLifecycleManager<br/>(Start / Stop / Reboot / Terminate)"]
             L2["XRegion-KeySyncManager<br/>(Import SSH Key vào Nova / EC2)"]
             L3["XRegion-SecurityGroupManager<br/>(Đồng bộ Neutron Security Groups)"]
@@ -96,6 +97,7 @@ graph TB
             L5["XRegion-SyncKeyToDynamoDB<br/>(Đồng bộ Key vào DDB)"]
             L6["XRegion-SyncSGToDynamoDB<br/>(Đồng bộ Security Group vào DDB)"]
             L7["XRegion-AutoAssignEIP<br/>(Tự động cấp Elastic IP)"]
+            L8["XRegion-ResourceCleaner<br/>(Tự động dọn dẹp EIP, Secondary IP, EBS & Cinder)"]
         end
 
         BackendRule --> L1
@@ -155,7 +157,7 @@ Toàn bộ thông tin cấu hình, trạng thái thời gian thực và lịch s
 | Tên Bảng DynamoDB | Khóa Chính (PK / SK) | Chỉ Mục Phụ (GSI) | Các Trường Thuộc Tính Chính | Chức Năng Kỹ Thuật |
 | :--- | :--- | :--- | :--- | :--- |
 | **`XRegion-Instances`** | **PK**: `instance_id` (String) | `username-index`<br>(PK: `username`) | `instance_name`, `user_id`, `key_id`, `volume_id`, `security_group_id`, `current_region`, `current_status`, `flavor`, `private_ip`, `elastic_ip`, `migration_lock`, `dns` | Lưu trữ metadata và trạng thái thực của toàn bộ máy ảo. Hỗ trợ khóa nguyên tử `migration_lock` chống xung đột. |
-| **`XRegion-Users`** | **PK**: `user_id` (String) | `username-index`<br>(PK: `username`) | `username`, `password` (BCrypt), `full_name`, `role`, `active`, `created_at`, `api_tokens` (List), `ssh_keys` (List) | Quản lý người dùng, phân quyền Role, cấp phát API Token Bearer và danh bạ SSH Keypair của cá nhân. |
+| **`XRegion-Users`** | **PK**: `user_id` (String - ULID: `usr-<26_char_crockford_base32>`) | `username-index`<br>(PK: `username`) | `username`, `password` (BCrypt), `full_name`, `role`, `active`, `created_at`, `api_tokens` (List), `ssh_keys` (List) | Quản lý người dùng, phân quyền Role, cấp phát API Token và danh bạ SSH Keypair. Khóa chính `user_id` định dạng ULID tự động sắp xếp đơn điệu theo thời gian tạo (Lexicographically Sortable) và độc nhất toàn cục. |
 | **`XRegion-Keys`** | **PK**: `key_id` (String) | - | `key_name`, `key_type`, `public_key`, `fingerprint`, `target_regions`, `created_by`, `created_at` | Lưu public key và đồng bộ với OpenStack Nova Keypair và AWS EC2 Key Pairs. |
 | **`XRegion-SecurityGroups`**| **PK**: `group_id` (String) | - | `group_name`, `description`, `inbound_rules` (List Map), `outbound_rules` (List Map), `created_by` | Lưu bộ quy tắc tường lửa mạng (Ports 22, 80, 443, CIDR Blocks), đồng bộ với OpenStack Neutron Security Group. |
 | **`XRegion-Volumes`** | **PK**: `volume_id` (String) | `instance-index`<br>(PK: `instance_id`) | `volume_name`, `size_gb`, `volume_type` (gp3), `status`, `attached_instance_id`, `device`, `snapshot_id`, `region` | Quản lý EBS volumes đính kèm máy ảo, trạng thái tháo rời và snapshot sao chép liên vùng. |
@@ -283,13 +285,15 @@ Hệ thống ứng dụng kiến trúc **Serverless Event-Driven** nhằm đảm
 
 | Tên Lambda Function | Vai Trò & Nghiệp Vụ Xử Lý |
 | :--- | :--- |
+| **`XRegion-VolumeLifecycleManager`** | Điều phối toàn diện vòng đời ổ cứng và máy ảo boot from volume: tạo AWS EBS gp3, gắn EC2 Host, tạo Cinder Volume từ Glance image, boot Nova VM và đồng bộ DynamoDB `XRegion-Volumes` / `XRegion-Instances`. |
 | **`XRegion-NovaLifecycleManager`** | Điều khiển Start/Stop/Reboot/Terminate VM trên OpenStack Nova. |
-| **`XRegion-KeySyncManager`** | Nhập và đồng bộ SSH key vào Nova Keypair trên OpenStack Node và AWS EC2. |
+| **`XRegion-KeySyncManager`** | Chuyên biệt hóa chế độ Import SSH Public Key vào OpenStack Nova và DynamoDB `XRegion-Keys`. Kiểm tra nghiêm ngặt `public_key` (trả về lỗi `statusCode: 400` nếu thiếu để người dùng thao tác lại). |
 | **`XRegion-SecurityGroupManager`** | Tạo và cấu hình Security Group, nạp Inbound/Outbound Rules trong OpenStack Neutron. |
 | **`XRegion-SyncNovaToDynamoDB`** | Đồng bộ trạng thái VM thực tế (`ACTIVE`, `SHUTOFF`) từ OpenStack daemon sang DynamoDB `XRegion-Instances`. |
 | **`XRegion-SyncKeyToDynamoDB`** | Đồng bộ SSH key từ OpenStack daemon sang DynamoDB `XRegion-Keys`. |
 | **`XRegion-SyncSGToDynamoDB`** | Đồng bộ Security Group từ OpenStack daemon sang DynamoDB `XRegion-SecurityGroups`. |
 | **`XRegion-AutoAssignEIP`** | Tự động phát hiện khi máy ảo chuyển sang trạng thái `ACTIVE` để cấp phát và gán Public IP / Elastic IP. |
+| **`XRegion-ResourceCleaner`** | Tự động giải phóng tài nguyên mồ côi (Disassociate EIP, Unassign Secondary IP trên `ens6`, xóa Cinder Volume & AWS EBS Volume) khi máy ảo chuyển sang `DELETED` / `TERMINATED`. |
 
 ### 4.5 OpenStack Daemon: `nova-event-forwarder.service`
 - Chạy nền dưới dạng `systemd daemon` trên máy chủ EC2 `i-056d7f3dd24156234`.
@@ -421,6 +425,7 @@ Tất cả các API yêu cầu gắn Header: `Authorization: Bearer <JWT_TOKEN_H
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/instances` | Lấy danh sách toàn bộ máy ảo | Trả về mảng `InstanceResponse` kèm trạng thái thực và Lock |
 | `GET` | `/api/instances/{id}` | Lấy chi tiết thông tin một máy ảo | Trả về IP, Volume, Key, Security Group, Lock |
+| `GET` | `/api/flavors` | Lấy danh mục Flavor phần cứng từ DynamoDB | Trả về vCPU, RAM, Root Disk đồng bộ từ OpenStack |
 | `POST` | `/api/instances` | Khởi tạo máy ảo mới (Launch Instance) | `{"name": "web-01", "flavor": "m1.medium", "image": "ubuntu-22.04", "sizeGb": 20, "keyName": "...", "securityGroup": "..."}` |
 | `PUT` | `/api/instances/{id}` | Cập nhật thông tin cấu hình máy ảo | `{"instanceName": "...", "securityGroupId": "...", "flavor": "..."}` |
 | `POST` | `/api/instances/{id}/actions` | Điều khiển vòng đời máy ảo | `{"action": "START" \| "STOP" \| "REBOOT" \| "TERMINATE"}` |
@@ -588,7 +593,6 @@ xregion/
     │   ├── XRegionApplication.java         # Điểm khởi chạy ứng dụng Spring Boot & Schedule Tasks
     │   ├── Client/                          # Lớp Client tích hợp dịch vụ ngoài
     │   │   ├── AwsSigV4Interceptor.java    # Ký số AWS IAM SigV4 cho HTTP REST Requests
-    │   │   ├── BearerTokenInterceptor.java  # Gắn Header xác thực Bearer Token
     │   │   ├── EventBridgeGatewayClient.java# Ingest sự kiện vào API Gateway / EventBridge Bus
     │   │   └── Model/                       # Payload Request & Response của EventBridge
     │   │       ├── EventBridgeEventRequest.java
@@ -606,11 +610,14 @@ xregion/
     │   │   ├── KeyController.java           # /api/keys (Tạo, Import, Xóa SSH Keypairs)
     │   │   ├── VolumeController.java        # /api/volumes (Cấp phát, Attach, Detach, Copy)
     │   │   ├── ImageController.java         # /api/images (Danh mục ảnh OS Glance & Snapshot)
+    │   │   ├── FlavorController.java        # /api/flavors (Danh mục gói cấu hình Nova Flavor)
     │   │   ├── MonitoringController.java    # /api/metrics (Hiệu năng CPU, RAM, Network IOPS)
     │   │   └── AuditLogController.java      # /api/logs (Lịch sử truy vết thao tác hệ thống)
     │   ├── Entity/                          # DynamoDbBean Entities
     │   │   ├── InstanceEntity.java          # Ánh xạ bảng XRegion-Instances
     │   │   ├── UserEntity.java              # Ánh xạ bảng XRegion-Users
+    │   │   ├── ImageEntity.java             # Ánh xạ bảng XRegion-Images
+    │   │   ├── FlavorEntity.java            # Ánh xạ bảng XRegion-Flavors
     │   │   ├── MigrationEntity.java         # Ánh xạ bảng XRegion-Migrations
     │   │   ├── KeyPairItem.java             # Cấu trúc SSH Keypair lưu trong User/Key
     │   │   ├── ApiTokenItem.java            # Cấu trúc API Token Bearer
@@ -641,8 +648,11 @@ xregion/
     │       ├── VolumeService.java           # Quản lý EBS volumes và snapshot sao chép
     │       ├── AuthService.java             # Xác thực đăng nhập, mã hóa BCrypt, cấp API Token
     │       ├── ImageService.java            # Quản trị catalog ảnh hệ điều hành Glance
+    │       ├── FlavorService.java           # Quản trị danh mục cấu hình phần cứng Nova Flavor
     │       ├── MonitoringService.java       # Thu thập viễn đo, hiệu năng và thống kê chi phí
     │       └── AuditLogService.java         # Ghi nhận và lưu vết nhật ký kiểm toán hệ thống
+    │   └── Utils/                           # Tiện ích bổ trợ
+    │       └── UlidCreator.java             # Bộ sinh ULID 26 ký tự Crockford Base32 tự sắp xếp theo thời gian
     └── resources/
         ├── application.yaml                 # Cấu hình mặc định Spring Boot, Port, ARNs, Logging
         └── static/                          # Giao diện Web SPA Dark Theme

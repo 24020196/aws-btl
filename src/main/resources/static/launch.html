@@ -129,33 +129,12 @@
             </div>
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Chọn ảnh máy ảo hệ điều hành (Glance OS Image) lưu trữ trên cụm Bare Metal:</div>
 
-            <div class="option-grid">
+            <div class="option-grid" id="osOptionsGrid">
               <div class="option-card selected" id="optOsUbuntu" onclick="selectOs('img-u22', 'Ubuntu Server 22.04 LTS')">
                 <input type="radio" name="osRadio" value="img-u22" checked>
                 <div class="option-icon icon-ubuntu">U</div>
                 <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Ubuntu</strong>
                 <div style="font-size: 11px; color: var(--text-muted);">22.04 LTS (x86_64)</div>
-              </div>
-
-              <div class="option-card" id="optOsDebian" onclick="selectOs('img-deb12', 'Debian 12 Bookworm')">
-                <input type="radio" name="osRadio" value="img-deb12">
-                <div class="option-icon icon-debian">D</div>
-                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Debian</strong>
-                <div style="font-size: 11px; color: var(--text-muted);">12 Bookworm</div>
-              </div>
-
-              <div class="option-card" id="optOsRocky" onclick="selectOs('img-rocky9', 'Rocky Linux 9 Enterprise')">
-                <input type="radio" name="osRadio" value="img-rocky9">
-                <div class="option-icon icon-rocky">R</div>
-                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Rocky Linux</strong>
-                <div style="font-size: 11px; color: var(--text-muted);">9 Enterprise</div>
-              </div>
-
-              <div class="option-card" id="optOsAlpine" onclick="selectOs('img-alp319', 'Alpine Linux 3.19 Minimal')">
-                <input type="radio" name="osRadio" value="img-alp319">
-                <div class="option-icon icon-alpine">A</div>
-                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Alpine Linux</strong>
-                <div style="font-size: 11px; color: var(--text-muted);">3.19 Minimal (Micro-VM)</div>
               </div>
             </div>
             <input type="hidden" id="instImage" value="img-u22">
@@ -170,18 +149,7 @@
             <div class="form-group">
               <label class="form-label">Chọn Flavor:</label>
               <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
-                <optgroup label="── Dòng Tiêu Chuẩn (m1) ──">
-                  <option value="m1.tiny">m1.tiny — 1 vCPU • 512 MB RAM • 10 GB Root Disk</option>
-                  <option value="m1.small">m1.small — 1 vCPU • 2048 MB RAM (2 GB) • 10 GB Root Disk</option>
-                  <option value="m1.medium" selected>m1.medium — 2 vCPUs • 4096 MB RAM (4 GB) • 10 GB Root Disk [Mặc định]</option>
-                  <option value="m1.large">m1.large — 4 vCPUs • 8192 MB RAM (8 GB) • 10 GB Root Disk</option>
-                  <option value="m1.xlarge">m1.xlarge — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
-                </optgroup>
-                <optgroup label="── Dòng Hiệu Năng Cao (h1) ──">
-                  <option value="h1.medium">h1.medium — 8 vCPUs • 16384 MB RAM (16 GB) • 10 GB Root Disk</option>
-                  <option value="h1.large">h1.large — 16 vCPUs • 32768 MB RAM (32 GB) • 10 GB Root Disk</option>
-                  <option value="h1.xlarge">h1.xlarge — 32 vCPUs • 65536 MB RAM (64 GB) • 10 GB Root Disk</option>
-                </optgroup>
+                <option value="m1.medium">Đang tải danh sách Flavor từ DynamoDB...</option>
               </select>
             </div>
 
@@ -201,55 +169,12 @@
                       <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Root Disk (GB)</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr id="row-m1-tiny" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td rowspan="5" style="padding: 8px 12px; font-weight: 600; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">Tiêu chuẩn (m1)</td>
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.tiny</td>
-                      <td style="padding: 8px 12px;">1</td>
-                      <td style="padding: 8px 12px;">512</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-m1-small" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.small</td>
-                      <td style="padding: 8px 12px;">1</td>
-                      <td style="padding: 8px 12px;">2048</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-m1-medium" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #38bdf8;">m1.medium ★</td>
-                      <td style="padding: 8px 12px; font-weight: 700; color: #fff;">2</td>
-                      <td style="padding: 8px 12px; font-weight: 700; color: #fff;">4096</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 700;">10</td>
-                    </tr>
-                    <tr id="row-m1-large" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.large</td>
-                      <td style="padding: 8px 12px;">4</td>
-                      <td style="padding: 8px 12px;">8192</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-m1-xlarge" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.xlarge</td>
-                      <td style="padding: 8px 12px;">8</td>
-                      <td style="padding: 8px 12px;">16384</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-h1-medium" style="border-top: 2px solid rgba(255,255,255,0.1); transition: background 0.2s;">
-                      <td rowspan="3" style="padding: 8px 12px; font-weight: 600; color: #a855f7; border-right: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">Hiệu năng cao (h1)</td>
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.medium</td>
-                      <td style="padding: 8px 12px;">8</td>
-                      <td style="padding: 8px 12px;">16384</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-h1-large" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.large</td>
-                      <td style="padding: 8px 12px;">16</td>
-                      <td style="padding: 8px 12px;">32768</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                    <tr id="row-h1-xlarge" style="border-top: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">h1.xlarge</td>
-                      <td style="padding: 8px 12px;">32</td>
-                      <td style="padding: 8px 12px;">65536</td>
+                  <tbody id="flavorMatrixBody">
+                    <tr id="row-m1-medium" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12);">
+                      <td style="padding: 8px 12px; color: #38bdf8;">Tiêu chuẩn (m1)</td>
+                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.medium</td>
+                      <td style="padding: 8px 12px;">2</td>
+                      <td style="padding: 8px 12px;">4096</td>
                       <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
                     </tr>
                   </tbody>
