@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KeyService {
 
-    private final DynamoDbTable<UserEntity> usersTable;
+    private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
 
@@ -50,7 +50,7 @@ public class KeyService {
 
     private List<KeyPairItem> loadUserKeyItems(String username) {
         try {
-            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user != null) {
                 if (user.getSshKeys() != null) {
                     return new ArrayList<>(user.getSshKeys());
@@ -66,9 +66,10 @@ public class KeyService {
     private void saveUserKeyItems(String username, List<KeyPairItem> keys) {
         fallbackUserKeys.put(username, new ArrayList<>(keys));
         try {
-            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user == null) {
                 user = UserEntity.builder()
+                        .userId("usr-" + username.toLowerCase())
                         .username(username)
                         .fullName(username)
                         .role("ROLE_USER")
@@ -79,7 +80,7 @@ public class KeyService {
             } else {
                 user.setSshKeys(keys);
             }
-            usersTable.putItem(user);
+            userRepository.save(user);
         } catch (Exception e) {
             log.warn("Không thể lưu ssh_keys của user [{}] vào DynamoDB: {}", username, e.getMessage());
         }

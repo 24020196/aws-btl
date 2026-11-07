@@ -39,8 +39,8 @@ public class DynamoDbTableInitializer implements ApplicationRunner {
     private void verifyTable(String tableName) {
         try {
             TableDescription table = dynamoDbClient.describeTable(DescribeTableRequest.builder().tableName(tableName).build()).table();
-            log.info("AWS DynamoDB Table [{}] is healthy. Status: {}, Item count: {}, ARN: {}", 
-                    tableName, table.tableStatus(), table.itemCount(), table.tableArn());
+            log.info("AWS DynamoDB Table [{}] is healthy. Status: {}, KeySchema: {}, Attributes: {}, Item count: {}, ARN: {}", 
+                    tableName, table.tableStatus(), table.keySchema(), table.attributeDefinitions(), table.itemCount(), table.tableArn());
         } catch (Exception e) {
             log.warn("Could not describe table [{}]: {}. Ensure AWS credentials and network connection are active.", tableName, e.getMessage());
         }
