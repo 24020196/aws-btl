@@ -253,15 +253,27 @@
           <div class="card" style="padding: 22px;">
             <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
               <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">5</span>
-              Khóa Xác Thực SSH (Key Pair)
+              Khóa Xác Thực SSH (Key Pair - Login)
             </div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Điền tên SSH Key Pair để xác thực truy cập điều khiển từ xa vào máy ảo:</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+              Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file <code>.pem</code> phục vụ SSH vào máy ảo:
+            </div>
 
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên SSH Key Pair:</label>
-              <input type="text" class="form-input" id="instKeyPair" placeholder="vd: xregion-key, my-ssh-key..." oninput="updatePageLaunchSummary()">
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-                Nhập tên khóa SSH xác thực đã đăng ký trên hệ thống (để trống sẽ sử dụng mặc định: <code>xregion-key</code>).
+              <label class="form-label">Tên Key Pair *</label>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;" onchange="updatePageLaunchSummary()" required>
+                  <option value="">-- Chọn Key Pair có sẵn hoặc tạo mới --</option>
+                </select>
+                <button type="button" class="btn btn-secondary" onclick="loadKeyPairsDropdown()" title="Làm mới danh sách Key Pair" style="padding: 10px 12px;">
+                  🔄
+                </button>
+                <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()" style="padding: 10px 16px; white-space: nowrap;">
+                  🔑 + Tạo Key Pair Mới (.pem)
+                </button>
+              </div>
+              <div id="keyPairHintText" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                File khóa riêng tư (<code>.pem</code>) chỉ được tải xuống 1 lần duy nhất khi tạo Key Pair mới. Dùng lệnh: <code>ssh -i &lt;ten-key&gt;.pem ubuntu@&lt;ip-may-ao&gt;</code>
               </div>
             </div>
           </div>
@@ -333,6 +345,35 @@
       </div>
     </form>
   </main>
+
+  <!-- MODAL: CREATE KEY PAIR (EC2 STYLE) -->
+  <div class="modal-overlay" id="createKeyModal">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="card-header">
+        <div class="card-title">🔑 Tạo SSH Key Pair Mới</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">✕</button>
+      </div>
+      <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+          Hệ thống sẽ sinh cặp khóa <strong>RSA 2048-bit</strong> chuẩn PKCS#1. Khóa công khai (Public Key) được lưu trên tài khoản của bạn, còn khóa bí mật (file <code>.pem</code>) sẽ tự động tải xuống máy của bạn.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên Key Pair (Key pair name) *</label>
+          <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: nmcuong, web-prod-key..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Loại Khóa (Key pair type)</label>
+          <input type="text" class="form-input" value="RSA (2048-bit) — Định dạng .pem (OpenSSH / EC2)" disabled>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')">Hủy</button>
+          <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary" style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700;">
+            ⬇ Tạo Key Pair & Tải .pem
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div class="toast-container" id="toastContainer"></div>
 

@@ -1232,52 +1232,90 @@ function initLaunchPage() {
 
   renderUserBadge();
   clearApiError();
+  loadKeyPairsDropdown();
   updatePageLaunchSummary();
 }
 
-async function loadKeyPairsDropdown() {
+async function loadKeyPairsDropdown(selectedName = null) {
   const select = document.getElementById('instKeyPair');
   if (!select) return;
   try {
     const keys = await apiRequest('/keys');
+    const currentVal = selectedName || select.value;
     if (keys && keys.length > 0) {
-      const currentVal = select.value;
-      select.innerHTML = keys.map(k => `<option value="${k.keyName}">${k.keyName} (${k.keyType || 'RSA'})</option>`).join('');
-      if (keys.some(k => k.keyName === currentVal)) {
+      select.innerHTML = keys.map(k => `<option value="${k.keyName}">${k.keyName} (${k.keyType || 'RSA 2048'} • ${k.keyFingerprint ? k.keyFingerprint.substring(0, 22) + '...' : ''})</option>`).join('');
+      if (currentVal && keys.some(k => k.keyName === currentVal)) {
         select.value = currentVal;
+      } else {
+        select.value = keys[0].keyName;
       }
-      updatePageLaunchSummary();
+    } else {
+      select.innerHTML = `<option value="">-- Chưa có Key Pair nào (Bấm "+ Tạo Key Pair Mới" bên cạnh) --</option>`;
     }
+    updatePageLaunchSummary();
   } catch (e) {
     console.warn('Could not load keypairs from API:', e);
   }
 }
 
-async function promptCreateKey() {
-  const name = prompt('Nhập tên cho SSH Key Pair mới (ví dụ: dev-ssh-key):');
-  if (!name || !name.trim()) return;
+function openCreateKeyModal() {
+  const input = document.getElementById('newKeyPairName');
+  if (input) input.value = '';
+  openModal('createKeyModal');
+  setTimeout(() => {
+    if (input) input.focus();
+  }, 100);
+}
+
+function downloadPemFile(filename, pemContent) {
+  const cleanName = filename.endsWith('.pem') ? filename : `${filename}.pem`;
+  const blob = new Blob([pemContent], { type: 'application/x-pem-file;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = cleanName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function submitCreateKeyModal(e) {
+  e.preventDefault();
+  const input = document.getElementById('newKeyPairName');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+
+  const btn = document.getElementById('btnSubmitCreateKey');
+  const origText = btn ? btn.innerHTML : '⬇ Tạo Key Pair & Tải .pem';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang sinh khóa RSA 2048...';
+  }
+
   try {
     const res = await apiRequest('/keys', {
       method: 'POST',
-      body: JSON.stringify({ name: name.trim() })
+      body: JSON.stringify({ name })
     });
-    showToast(`Đã tạo SSH Key Pair [${name.trim()}] thành công!`, 'success');
+    closeModal('createKeyModal');
+    showToast(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem!`, 'success');
     if (res && res.privateKey) {
-      const blob = new Blob([res.privateKey], { type: 'application/x-pem-file' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${name.trim()}.pem`;
-      link.click();
+      downloadPemFile(name, res.privateKey);
     }
-    await loadKeyPairsDropdown();
-    const select = document.getElementById('instKeyPair');
-    if (select) {
-      select.value = name.trim();
-      updatePageLaunchSummary();
-    }
+    await loadKeyPairsDropdown(name);
   } catch (err) {
     showToast(`Lỗi tạo Key Pair: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
   }
+}
+
+async function promptCreateKey() {
+  openCreateKeyModal();
 }
 
 function selectRegion(regionCode) {
