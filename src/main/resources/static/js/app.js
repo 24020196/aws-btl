@@ -1301,56 +1301,109 @@ async function initDetailPage() {
       throw new Error(`Không tìm thấy thông tin máy ảo với ID [${instanceId}]`);
     }
 
-    // Populate header
-    document.getElementById('detInstanceName').textContent = inst.name || inst.id;
-    document.getElementById('detInstanceId').textContent = inst.id;
-    document.getElementById('detRegionName').textContent = inst.regionName || inst.region;
+    // Populate header & summary card
+    const nameEl = document.getElementById('detInstanceName');
+    if (nameEl) nameEl.textContent = inst.name || inst.id;
+    const idEl = document.getElementById('detInstanceId');
+    if (idEl) idEl.textContent = inst.id;
+    const sumIdEl = document.getElementById('summaryCardId');
+    if (sumIdEl) sumIdEl.textContent = inst.id;
+    const regNameEl = document.getElementById('detRegionName');
+    if (regNameEl) regNameEl.textContent = inst.regionName || inst.region;
+    const regCodeEl = document.getElementById('detRegionCode');
+    if (regCodeEl) regCodeEl.textContent = `(${inst.region})`;
 
     const badge = document.getElementById('detStatusBadge');
     const cfg = getStatusBadgeConfig(inst.status);
-    badge.className = 'badge ' + cfg.cssClass;
-    badge.innerHTML = `<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}`;
+    if (badge) {
+      badge.className = 'badge ' + cfg.cssClass;
+      badge.innerHTML = `<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}`;
+    }
 
-    // Populate Cards
-    const spec = FLAVOR_SPECS[inst.flavor];
-    const specDesc = spec ? ` (${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${spec.defaultDisk} GB Root Disk)` : '';
-    document.getElementById('detFlavor').textContent = `${inst.flavor}${specDesc}`;
+    const sumStat = document.getElementById('detSummaryStatus');
+    if (sumStat) {
+      sumStat.innerHTML = `<span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span>`;
+    }
+
+    // Populate Summary & Tabs
+    const spec = FLAVOR_SPECS[inst.flavor] || FLAVOR_SPECS['m1.medium'];
+    const specDesc = spec ? ` (${spec.vcpu} vCPU • ${spec.ramDisplay})` : '';
+    const flavEl = document.getElementById('detFlavor');
+    if (flavEl) flavEl.textContent = `${inst.flavor}${specDesc}`;
+
     const detKeyEl = document.getElementById('detKeyName');
     if (detKeyEl) detKeyEl.textContent = inst.keyName || 'xregion-key';
     const detSgEl = document.getElementById('detSecurityGroup');
     if (detSgEl) detSgEl.textContent = inst.securityGroup || 'sg-default';
-    document.getElementById('detImageName').textContent = inst.imageName || 'Ubuntu Server 22.04 LTS';
-    document.getElementById('detRegionCode').textContent = inst.region;
-    document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
-    document.getElementById('detPublicIp').textContent = inst.publicIp || 'Chưa gán';
-    document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
-    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
+    const detPrivEl = document.getElementById('detPrivateIp');
+    if (detPrivEl) detPrivEl.textContent = inst.privateIp || '10.0.1.10';
+    const detPubEl = document.getElementById('detPublicIp');
+    if (detPubEl) detPubEl.textContent = inst.publicIp || 'Chưa gán';
+    const detDnsEl = document.getElementById('detDnsDomain');
+    if (detDnsEl) detDnsEl.textContent = inst.dnsDomain || 'N/A';
+    const detUpEl = document.getElementById('detUpdatedAt');
+    if (detUpEl) detUpEl.textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
 
-    const volIdEl = document.getElementById('detEbsVolumeId');
-    if (volIdEl) volIdEl.textContent = inst.ebsVolumeId || `vol-${inst.id.replace('i-', '')}`;
-    const diskSizeEl = document.getElementById('detRootDiskSize');
-    if (diskSizeEl) diskSizeEl.textContent = `${spec ? spec.defaultDisk : 10} GB`;
+    const cdEl = document.getElementById('detCooldownDisplay');
+    if (cdEl) {
+      cdEl.textContent = inst.cooldownSeconds && inst.cooldownSeconds > 0 ? `${inst.cooldownSeconds}s (Đang cooldown)` : '0 giây (Sẵn sàng)';
+    }
 
-    const consoleLink = document.getElementById('detConsoleLink');
-    if (consoleLink) {
-      consoleLink.href = inst.consoleUrl || '#';
-      consoleLink.onclick = (e) => {
-        if (!inst.consoleUrl || inst.consoleUrl === '#') {
-          e.preventDefault();
-          showToast(`Đang mở Web Terminal VNC cho ${inst.id}...`, 'success');
-        }
-      };
+    // Tab 1: Details
+    const tfName = document.getElementById('tabFlavorName');
+    if (tfName) tfName.textContent = inst.flavor;
+    const tfVcpu = document.getElementById('tabFlavorVcpu');
+    if (tfVcpu) tfVcpu.textContent = spec ? spec.vcpu : 2;
+    const tfRam = document.getElementById('tabFlavorRam');
+    if (tfRam) tfRam.textContent = spec ? spec.ramDisplay : '4 GB';
+    const tfDisk = document.getElementById('tabFlavorDisk');
+    if (tfDisk) tfDisk.textContent = spec ? spec.defaultDisk : 10;
+    const tInstName = document.getElementById('tabInstanceName');
+    if (tInstName) tInstName.textContent = inst.name || inst.id;
+    const tInstId = document.getElementById('tabInstanceId');
+    if (tInstId) tInstId.textContent = inst.id;
+    const tRegName = document.getElementById('tabRegionName');
+    if (tRegName) tRegName.textContent = `${inst.regionName || inst.region} [${inst.region}]`;
+    const tUser = document.getElementById('tabUsername');
+    if (tUser) tUser.textContent = inst.username || 'admin';
+
+    // Tab 2: Networking & Security
+    const tNetDns = document.getElementById('tabNetDns');
+    if (tNetDns) tNetDns.textContent = inst.dnsDomain || 'N/A';
+    const tNetPub = document.getElementById('tabNetPublicIp');
+    if (tNetPub) tNetPub.textContent = inst.publicIp || 'Chưa gán';
+    const tNetPriv = document.getElementById('tabNetPrivateIp');
+    if (tNetPriv) tNetPriv.textContent = inst.privateIp || '10.0.1.10';
+    const tNetSg = document.getElementById('tabNetSecurityGroup');
+    if (tNetSg) tNetSg.textContent = inst.securityGroup || 'sg-default';
+    const tNetKey = document.getElementById('tabNetKeyName');
+    if (tNetKey) tNetKey.textContent = inst.keyName || 'xregion-key';
+
+    // Tab 3: Migration
+    const tMigCur = document.getElementById('tabMigCurrentRegion');
+    if (tMigCur) tMigCur.textContent = `${inst.regionName || inst.region} (${inst.region})`;
+    const isSydney = (inst.region || '').includes('Sydney') || (inst.region || '').includes('Region A');
+    const tMigTar = document.getElementById('tabMigTargetRegion');
+    if (tMigTar) tMigTar.textContent = isSydney ? 'Melbourne (Region B - ap-southeast-4)' : 'Sydney (Region A - ap-southeast-2)';
+    const tMigUp = document.getElementById('tabMigUpdatedAt');
+    if (tMigUp) tMigUp.textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
+
+    const isRunning = (inst.status || '').toUpperCase() === 'RUNNING' || (inst.status || '').toUpperCase() === 'ACTIVE';
+    const isTrans = cfg.isTransitioning;
+    const isTerminated = (inst.status || '').toUpperCase() === 'TERMINATED';
+
+    const tabMigBtn = document.getElementById('tabMigrateActionBtn');
+    if (tabMigBtn) {
+      tabMigBtn.disabled = !isRunning || isTrans || isTerminated;
+      tabMigBtn.onclick = () => triggerDirectMigration(inst.id);
     }
 
     // Render Actions Toolbar (disables buttons if instance is transitioning)
     const actionsContainer = document.getElementById('detailActionButtons');
-    const isTrans = cfg.isTransitioning;
-    const isRunning = (inst.status || '').toUpperCase() === 'RUNNING' || (inst.status || '').toUpperCase() === 'ACTIVE';
-    const isTerminated = (inst.status || '').toUpperCase() === 'TERMINATED';
-
     if (actionsContainer) {
       actionsContainer.innerHTML = `
-        <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary ${isTrans || isTerminated ? 'disabled' : ''}" style="text-decoration:none; color:var(--accent-cyan);" ${isTrans || isTerminated ? 'tabindex="-1"' : ''}>✏️ Chỉnh Sửa (Modify)</a>
+        <button class="btn btn-secondary" onclick="initDetailPage()" title="Làm mới trạng thái">⟳ Làm Mới</button>
+        <a href="/instance-edit.html?id=${inst.id}" class="btn btn-secondary ${isTrans || isTerminated ? 'disabled' : ''}" style="text-decoration:none; color:var(--accent-cyan);" ${isTrans || isTerminated ? 'tabindex="-1"' : ''}>✏️ Chỉnh Sửa</a>
         ${isRunning
           ? `<button class="btn btn-secondary ${isTrans ? 'disabled' : ''}" ${isTrans ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'STOP')">⏸ Dừng Máy (Stop)</button>`
           : `<button class="btn btn-success ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="executeDetailAction('${inst.id}', 'START')">▶ Bật Máy (Start)</button>`}
@@ -1362,7 +1415,7 @@ async function initDetailPage() {
 
     // Auto-refresh if currently transitioning
     if (isTrans) {
-      setTimeout(initInstanceDetailPage, 2500);
+      setTimeout(initDetailPage, 2500);
     }
   } catch (err) {
     console.error('Failed to load instance detail:', err);
