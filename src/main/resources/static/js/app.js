@@ -2571,4 +2571,339 @@ async function handleEditInstanceSubmit(e) {
   }
 }
 
+// ============================================================
+// 8. SECURITY GROUPS PAGE (security-groups.html)
+// ============================================================
+let currentSecurityGroups = [];
+
+async function initSecurityGroupsPage() {
+  if (!requireAuthGuard()) return;
+  renderUserBadge();
+  clearApiError();
+
+  // Load instances for attach dropdown
+  populateAttachInstanceSelect();
+
+  // Load security groups list
+  await loadSecurityGroups();
+
+  // Add a default SSH rule
+  const rulesBody = document.getElementById('inboundRulesBody');
+  if (rulesBody && rulesBody.children.length === 0) {
+    addPresetRule('SSH');
+  }
+}
+
+async function loadSecurityGroups() {
+  const tbody = document.getElementById('securityGroupsTableBody');
+  const countBadge = document.getElementById('sgCountBadge');
+  if (!tbody) return;
+
+  try {
+    const list = await apiRequest('/network/security-groups');
+    currentSecurityGroups = Array.isArray(list) ? list : [];
+
+    if (countBadge) {
+      countBadge.textContent = `${currentSecurityGroups.length} nhóm bảo mật`;
+    }
+
+    if (currentSecurityGroups.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            Chưa có Security Group nào. Hãy tạo Security Group mới ở biểu mẫu phía trên.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = currentSecurityGroups.map(sg => {
+      const gid = sg.groupId || 'sg-unknown';
+      const name = sg.name || gid;
+      const desc = sg.description || '--';
+      const region = sg.region || 'all';
+      const owner = sg.owner || 'system';
+
+      const inRules = Array.isArray(sg.inboundRules) ? sg.inboundRules : [];
+      let inRulesHtml = inRules.map(r => {
+        const proto = (r.protocol || 'tcp').toUpperCase();
+        const portStr = (proto === 'ALL' || proto === 'ICMP') ? proto : (r.fromPort === r.toPort ? `${r.fromPort}` : `${r.fromPort}-${r.toPort}`);
+        const cidr = r.cidr || '0.0.0.0/0';
+        return `<span class="rule-pill" title="${r.description || ''}">${proto}:${portStr} (${cidr})</span>`;
+      }).join(' ');
+
+      if (!inRulesHtml) {
+        inRulesHtml = '<span style="color: var(--text-muted); font-size: 12px;">Không có quy tắc</span>';
+      }
+
+      return `
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <code style="color: var(--accent-cyan); font-weight: 700;">${gid}</code>
+              <button class="aws-copy-btn" onclick="copyToClipboard('${gid}', 'Group ID')" title="Sao chép ID">📋</button>
+            </div>
+          </td>
+          <td><strong style="color: #fff;">${name}</strong></td>
+          <td style="color: var(--text-muted); font-size: 12.5px;">${desc}</td>
+          <td><span class="badge" style="background: #1e293b; color: #38bdf8;">${region}</span></td>
+          <td><div style="max-width: 320px; display: flex; flex-wrap: wrap;">${inRulesHtml}</div></td>
+          <td><span class="badge" style="background: rgba(255,255,255,0.06); color: #cbd5e1;">${owner}</span></td>
+          <td style="text-align: center;">
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="promptAttachGroupToVm('${gid}', '${name}')" title="Gán vào máy ảo">
+              🔗 Gán VM
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load security groups:', err);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: #f87171; padding: 25px;">
+          Lỗi tải danh sách Security Groups: ${err.message}
+        </td>
+      </tr>
+    `;
+    showApiError('/network/security-groups', err.message);
+  }
+}
+
+async function populateAttachInstanceSelect() {
+  const sel = document.getElementById('sgAttachInstance');
+  if (!sel) return;
+
+  try {
+    const list = await apiRequest('/instances');
+    const instances = Array.isArray(list) ? list : [];
+    sel.innerHTML = '<option value="">-- Không gán ngay (Tạo độc lập) --</option>' +
+      instances.map(i => `<option value="${i.id}">${i.name || i.id} (${i.id} • ${i.region})</option>`).join('');
+  } catch (err) {
+    console.debug('Could not load instances for SG attach select:', err.message);
+  }
+}
+
+const SG_RULE_PRESETS = {
+  'SSH':    { proto: 'tcp', fromPort: 22,   toPort: 22,   cidr: '0.0.0.0/0', desc: 'SSH remote management' },
+  'HTTP':   { proto: 'tcp', fromPort: 80,   toPort: 80,   cidr: '0.0.0.0/0', desc: 'Web traffic HTTP' },
+  'HTTPS':  { proto: 'tcp', fromPort: 443,  toPort: 443,  cidr: '0.0.0.0/0', desc: 'Secure web traffic HTTPS' },
+  'MYSQL':  { proto: 'tcp', fromPort: 3306, toPort: 3306, cidr: '0.0.0.0/0', desc: 'MySQL / Aurora database' },
+  'ICMP':   { proto: 'icmp',fromPort: 0,    toPort: 0,    cidr: '0.0.0.0/0', desc: 'Echo Request (Ping)' },
+  'ALL':    { proto: 'all', fromPort: 0,    toPort: 65535,cidr: '0.0.0.0/0', desc: 'All traffic - Warning: open all ports' }
+};
+
+function addPresetRule(type) {
+  const preset = SG_RULE_PRESETS[type] || SG_RULE_PRESETS['SSH'];
+  addInboundRuleRow({
+    type: type,
+    protocol: preset.proto,
+    fromPort: preset.fromPort,
+    toPort: preset.toPort,
+    cidr: preset.cidr,
+    description: preset.desc
+  });
+}
+
+function addInboundRuleRow(initial) {
+  const tbody = document.getElementById('inboundRulesBody');
+  if (!tbody) return;
+
+  const data = initial || {
+    type: 'CUSTOM',
+    protocol: 'tcp',
+    fromPort: 8080,
+    toPort: 8080,
+    cidr: '0.0.0.0/0',
+    description: 'Custom TCP Rule'
+  };
+
+  const tr = document.createElement('tr');
+  tr.className = 'sg-rule-row';
+  tr.innerHTML = `
+    <td>
+      <select class="rule-select rule-type-select" onchange="onRuleTypeSelectChange(this)">
+        <option value="SSH" ${data.type === 'SSH' ? 'selected' : ''}>SSH (22)</option>
+        <option value="HTTP" ${data.type === 'HTTP' ? 'selected' : ''}>HTTP (80)</option>
+        <option value="HTTPS" ${data.type === 'HTTPS' ? 'selected' : ''}>HTTPS (443)</option>
+        <option value="MYSQL" ${data.type === 'MYSQL' ? 'selected' : ''}>MySQL (3306)</option>
+        <option value="ICMP" ${data.type === 'ICMP' ? 'selected' : ''}>All ICMP (Ping)</option>
+        <option value="ALL" ${data.type === 'ALL' ? 'selected' : ''}>All Traffic</option>
+        <option value="CUSTOM" ${data.type === 'CUSTOM' ? 'selected' : ''}>Custom TCP</option>
+      </select>
+    </td>
+    <td>
+      <select class="rule-select rule-proto">
+        <option value="tcp" ${data.protocol === 'tcp' ? 'selected' : ''}>TCP</option>
+        <option value="udp" ${data.protocol === 'udp' ? 'selected' : ''}>UDP</option>
+        <option value="icmp" ${data.protocol === 'icmp' ? 'selected' : ''}>ICMP</option>
+        <option value="all" ${data.protocol === 'all' ? 'selected' : ''}>ALL</option>
+      </select>
+    </td>
+    <td>
+      <div style="display: flex; gap: 4px; align-items: center;">
+        <input type="number" class="rule-input rule-from-port" min="0" max="65535" value="${data.fromPort}" placeholder="From" style="width: 70px;">
+        <span style="color: var(--text-muted);">-</span>
+        <input type="number" class="rule-input rule-to-port" min="0" max="65535" value="${data.toPort}" placeholder="To" style="width: 70px;">
+      </div>
+    </td>
+    <td>
+      <input type="text" class="rule-input rule-cidr" value="${data.cidr || '0.0.0.0/0'}" placeholder="0.0.0.0/0" pattern="^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$|^sg-[a-zA-Z0-9-]+$" required>
+    </td>
+    <td>
+      <input type="text" class="rule-input rule-desc" value="${data.description || ''}" placeholder="Mô tả mục đích rule">
+    </td>
+    <td style="text-align: center;">
+      <button type="button" class="btn btn-danger" onclick="removeRuleRow(this)" style="padding: 4px 8px; font-size: 11px;" title="Xóa quy tắc này">
+        🗑
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function onRuleTypeSelectChange(sel) {
+  const tr = sel.closest('tr');
+  const type = sel.value;
+  const preset = SG_RULE_PRESETS[type];
+  if (!preset) return;
+
+  const protoEl = tr.querySelector('.rule-proto');
+  const fromEl = tr.querySelector('.rule-from-port');
+  const toEl = tr.querySelector('.rule-to-port');
+  const descEl = tr.querySelector('.rule-desc');
+
+  if (protoEl) protoEl.value = preset.proto;
+  if (fromEl) fromEl.value = preset.fromPort;
+  if (toEl) toEl.value = preset.toPort;
+  if (descEl && !descEl.value) descEl.value = preset.desc;
+}
+
+function removeRuleRow(btn) {
+  const tr = btn.closest('tr');
+  if (tr) tr.remove();
+}
+
+function resetCreateForm() {
+  const form = document.getElementById('createSgForm');
+  if (form) form.reset();
+  const tbody = document.getElementById('inboundRulesBody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    addPresetRule('SSH');
+  }
+}
+
+function scrollToCreateForm() {
+  const card = document.getElementById('createSecurityGroupCard');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth' });
+    const nameInput = document.getElementById('sgName');
+    if (nameInput) setTimeout(() => nameInput.focus(), 300);
+  }
+}
+
+async function handleCreateSecurityGroup(event) {
+  event.preventDefault();
+  clearApiError();
+
+  const nameInput = document.getElementById('sgName');
+  const descInput = document.getElementById('sgDescription');
+  const regionInput = document.getElementById('sgRegion');
+  const attachInput = document.getElementById('sgAttachInstance');
+  const btn = document.getElementById('createSgSubmitBtn');
+
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  const region = regionInput.value;
+  const attachInstanceId = attachInput.value ? attachInput.value.trim() : null;
+
+  // Collect Inbound Rules
+  const rows = document.querySelectorAll('#inboundRulesBody tr.sg-rule-row');
+  const inboundRules = [];
+
+  rows.forEach(tr => {
+    const proto = tr.querySelector('.rule-proto')?.value || 'tcp';
+    const fromPort = parseInt(tr.querySelector('.rule-from-port')?.value) || 0;
+    const toPort = parseInt(tr.querySelector('.rule-to-port')?.value) || fromPort;
+    const cidr = tr.querySelector('.rule-cidr')?.value?.trim() || '0.0.0.0/0';
+    const desc = tr.querySelector('.rule-desc')?.value?.trim() || '';
+
+    inboundRules.push({
+      protocol: proto,
+      fromPort: Math.min(fromPort, toPort),
+      toPort: Math.max(fromPort, toPort),
+      cidr: cidr,
+      description: desc
+    });
+  });
+
+  const payload = {
+    name: name,
+    description: description,
+    region: region,
+    attachInstanceId: attachInstanceId,
+    inboundRules: inboundRules
+  };
+
+  const origText = btn ? btn.innerHTML : 'Tạo Security Group';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang tạo...';
+  }
+
+  try {
+    const res = await apiRequest('/network/security-groups', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    const newGid = res ? res.groupId : name;
+    showToast(`Đã tạo thành công Security Group [${name}] (${newGid})!`, 'success');
+    resetCreateForm();
+    await loadSecurityGroups();
+  } catch (err) {
+    console.error('Failed to create security group:', err);
+    showToast(`Lỗi tạo Security Group: ${err.message}`, 'error');
+    showApiError('/network/security-groups', err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
+async function promptAttachGroupToVm(groupId, groupName) {
+  try {
+    const list = await apiRequest('/instances');
+    const instances = Array.isArray(list) ? list : [];
+    if (instances.length === 0) {
+      showToast('Không có máy ảo nào đang chạy để gán nhóm bảo mật!', 'info');
+      return;
+    }
+
+    const options = instances.map((inst, idx) => `${idx + 1}. ${inst.name || inst.id} (${inst.id})`).join('\n');
+    const input = prompt(`Chọn số thứ tự máy ảo muốn gán nhóm [${groupName}] (${groupId}):\n\n${options}\n\nNhập số:`);
+    if (!input) return;
+
+    const selectedIdx = parseInt(input.trim()) - 1;
+    if (isNaN(selectedIdx) || selectedIdx < 0 || selectedIdx >= instances.length) {
+      showToast('Lựa chọn máy ảo không hợp lệ!', 'error');
+      return;
+    }
+
+    const targetVm = instances[selectedIdx];
+    await apiRequest(`/network/security-groups/instances/${targetVm.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ groupIds: [groupId, 'sg-default'] })
+    });
+
+    showToast(`Đã gán thành công Security Group [${groupName}] vào máy ảo ${targetVm.name || targetVm.id}!`, 'success');
+  } catch (err) {
+    showToast(`Lỗi gán nhóm bảo mật: ${err.message}`, 'error');
+  }
+}
+
 

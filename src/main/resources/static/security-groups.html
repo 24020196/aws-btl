@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Groups - XRegion-EC2 Cloud Console</title>
+  <script>
+    if (!localStorage.getItem('xregion_jwt')) {
+      window.location.replace('/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+    }
+  </script>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .rule-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .rule-table th {
+      background: rgba(15, 23, 42, 0.6);
+      color: #94a3b8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .rule-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+    .rule-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      width: 100%;
+      font-family: inherit;
+    }
+    .rule-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+    .rule-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      width: 100%;
+      font-family: inherit;
+    }
+    .preset-btn-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+    .btn-preset {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-preset:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
+    .rule-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #1e293b;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-family: monospace;
+      color: #38bdf8;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Global Header -->
+  <header class="header">
+    <div class="logo-container">
+      <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">XREGION</div>
+        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+      </a>
+    </div>
+
+    <div class="header-status">
+      <div class="health-pill">
+        <div class="health-dot"></div>
+        <span>Global</span>
+      </div>
+
+      <div class="user-badge" id="userBadgeContainer"></div>
+    </div>
+  </header>
+
+  <!-- Sub Navigation Bar -->
+  <nav class="sub-nav">
+    <a href="/index.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Trang Chủ Overview
+    </a>
+    <a href="/instances.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+      Danh Sách Máy Ảo (Instances)
+    </a>
+    <a href="/launch.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+    <a href="/security-groups.html" class="sub-nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Tường Lửa & Security Groups
+    </a>
+    <a href="/account-tokens.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Tài Khoản & API Token
+    </a>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <div class="breadcrumb">
+      <a href="/index.html">XRegion-EC2</a>
+      <span>&gt;</span>
+      <a href="/security-groups.html">Network &amp; Security</a>
+      <span>&gt;</span>
+      <span style="color: var(--accent-cyan); font-weight: 700;">Security Groups</span>
+    </div>
+
+    <!-- On-screen API Error Banner -->
+    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+
+    <!-- Header Actions Bar -->
+    <div class="aws-header-bar">
+      <div class="aws-header-title">
+        <h1 class="aws-instance-h1">Tường Lửa &amp; Security Groups</h1>
+        <span class="badge badge-active" id="sgCountBadge">0 nhóm bảo mật</span>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" onclick="loadSecurityGroups()" title="Làm mới danh sách">
+          ⟳ Làm Mới
+        </button>
+        <button class="btn btn-primary" onclick="scrollToCreateForm()">
+          + Tạo Security Group Mới
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 1: Create Security Group Form Card -->
+    <div class="card" id="createSecurityGroupCard" style="margin-bottom: 28px;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Tạo Nhóm Bảo Mật Mới (Create Security Group)</span>
+        </div>
+        <span style="font-size: 12px; color: var(--text-muted);">Chuẩn AWS VPC Firewall</span>
+      </div>
+
+      <form id="createSgForm" onsubmit="handleCreateSecurityGroup(event)">
+        <!-- Basic Info 2x2 Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Tên Security Group (Name) *</label>
+            <input type="text" class="form-input" id="sgName" required placeholder="sg-web-public" pattern="^[a-zA-Z0-9._-]{2,64}$" title="Chỉ gồm chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)">
+            <small style="color: var(--text-muted); font-size: 11px;">Mã định danh nhóm tường lửa (2-64 ký tự)</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Mô Tả Mục Đích (Description) *</label>
+            <input type="text" class="form-input" id="sgDescription" required placeholder="Cho phép truy cập HTTP 80, HTTPS 443 và SSH 22">
+            <small style="color: var(--text-muted); font-size: 11px;">Mô tả chi tiết mục đích sử dụng</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Vùng Áp Dụng (Region)</label>
+            <select class="form-select" id="sgRegion">
+              <option value="all">Toàn bộ vùng (Global / All Regions)</option>
+              <option value="ap-southeast-2">Sydney (Region A - ap-southeast-2)</option>
+              <option value="ap-southeast-4">Melbourne (Region B - ap-southeast-4)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Gán Ngay Cho Máy Ảo (Tùy chọn)</label>
+            <select class="form-select" id="sgAttachInstance">
+              <option value="">-- Không gán ngay (Tạo độc lập) --</option>
+              <!-- Populated dynamically with running instances -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Inbound Rules Section -->
+        <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 18px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="font-weight: 700; color: #fff; font-size: 14px;">Quy Tắc Chiều Vào (Inbound Rules)</div>
+              <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Kiểm soát các cổng và dải địa chỉ IP được phép kết nối tới máy ảo</div>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="addInboundRuleRow()" style="padding: 6px 12px; font-size: 12.5px;">
+              + Thêm Quy Tắc Tùy Chỉnh
+            </button>
+          </div>
+
+          <!-- Quick Preset Buttons -->
+          <div class="preset-btn-bar">
+            <span style="font-size: 12px; color: var(--text-muted); align-self: center; margin-right: 4px;">Thêm mẫu nhanh:</span>
+            <button type="button" class="btn-preset" onclick="addPresetRule('SSH')">+ SSH (Port 22)</button>
+            <button type="button" class="btn-preset" onclick="addPresetRule('HTTP')">+ HTTP (Port 80)</button>
+            <button type="button" class="btn-preset" onclick="addPresetRule('HTTPS')">+ HTTPS (Port 443)</button>
+            <button type="button" class="btn-preset" onclick="addPresetRule('MYSQL')">+ MySQL (Port 3306)</button>
+            <button type="button" class="btn-preset" onclick="addPresetRule('ICMP')">+ Ping (ICMP All)</button>
+            <button type="button" class="btn-preset" onclick="addPresetRule('ALL')">+ Mở Tất Cả Cổng (All Traffic)</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="rule-table">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Loại (Type)</th>
+                  <th style="width: 100px;">Giao thức</th>
+                  <th style="width: 150px;">Dải Cổng (Port)</th>
+                  <th style="width: 180px;">Nguồn (Source CIDR)</th>
+                  <th>Mô Tả / Ghi Chú</th>
+                  <th style="width: 60px; text-align: center;">Xóa</th>
+                </tr>
+              </thead>
+              <tbody id="inboundRulesBody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Outbound Rules Notice -->
+        <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-weight: 600; color: #cbd5e1; font-size: 13px;">Quy Tắc Chiều Ra (Outbound Rules)</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">
+              Mặc định: <code style="color: #34d399;">All Traffic | All Ports | 0.0.0.0/0</code> (Cho phép máy ảo gửi mọi lưu lượng ra Internet)
+            </div>
+          </div>
+          <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Mặc Định AWS</span>
+        </div>
+
+        <!-- Form Submit Bar -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end; align-items: center;">
+          <button type="button" class="btn btn-secondary" onclick="resetCreateForm()">
+            Hủy Bỏ / Làm Mới
+          </button>
+          <button type="submit" id="createSgSubmitBtn" class="btn btn-primary" style="padding: 10px 24px; font-weight: 700;">
+            🛡️ Tạo Security Group
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Section 2: Security Groups List Table -->
+    <div class="card">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-title">Danh Sách Security Groups Đang Hoạt Động</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Tự động đồng bộ với AWS VPC Firewall</div>
+      </div>
+
+      <div class="table-container" style="overflow-x: auto;">
+        <table class="table" id="securityGroupsTable">
+          <thead>
+            <tr>
+              <th style="width: 180px;">Mã Security Group ID</th>
+              <th>Tên Nhóm (Name)</th>
+              <th>Mô Tả (Description)</th>
+              <th style="width: 140px;">Vùng (Region)</th>
+              <th>Quy Tắc Chiều Vào (Inbound Rules)</th>
+              <th style="width: 110px;">Chủ Sở Hữu</th>
+              <th style="width: 100px; text-align: center;">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="securityGroupsTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                Đang tải danh sách Security Groups từ API...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initSecurityGroupsPage();
+    });
+  </script>
+</body>
+</html>
+
