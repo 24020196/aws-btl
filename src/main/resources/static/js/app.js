@@ -1095,6 +1095,13 @@ async function initOverviewPage() {
 // 2. INSTANCES LIST PAGE (instances.html)
 function initInstancesPage() {
   renderUserBadge();
+  if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
+    sessionStorage.removeItem('xregion_launch_completed');
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', () => {
+      window.history.pushState(null, '', window.location.href);
+    });
+  }
   loadInstances();
 }
 
@@ -1205,6 +1212,24 @@ async function executeDetailAction(id, action) {
 
 // 4. LAUNCH INSTANCE PAGE (launch.html)
 function initLaunchPage() {
+  if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
+    sessionStorage.removeItem('xregion_launch_completed');
+    window.location.replace('/instances.html');
+    return;
+  }
+
+  window.addEventListener('pageshow', (event) => {
+    const form = document.getElementById('launchInstancePageForm');
+    if (event.persisted || sessionStorage.getItem('xregion_launch_completed') === 'true') {
+      if (form) form.reset();
+      sessionStorage.removeItem('xregion_launch_completed');
+      window.location.replace('/instances.html');
+    }
+  });
+
+  const form = document.getElementById('launchInstancePageForm');
+  if (form) form.reset();
+
   renderUserBadge();
   clearApiError();
   updatePageLaunchSummary();
@@ -1373,10 +1398,14 @@ async function handleLaunchPageSubmit(e) {
       body: JSON.stringify(payload)
     });
 
+    const form = document.getElementById('launchInstancePageForm');
+    if (form) form.reset();
+    sessionStorage.setItem('xregion_launch_completed', 'true');
+
     showToast(`Khởi tạo máy ảo [${payload.name}] (${res ? res.id : ''}) thành công!`, 'success');
     setTimeout(() => {
-      window.location.href = '/instances.html';
-    }, 1200);
+      window.location.replace('/instances.html');
+    }, 800);
   } catch (err) {
     console.error('Launch failed:', err);
     if (errBox) {
@@ -1384,7 +1413,6 @@ async function handleLaunchPageSubmit(e) {
       errBox.style.display = 'block';
     }
     showToast(`Lỗi khởi tạo: ${err.message}`, 'error');
-  } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = origText;

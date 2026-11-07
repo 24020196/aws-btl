@@ -20,11 +20,7 @@
     <div class="header-status">
       <div class="health-pill">
         <div class="health-dot"></div>
-        <span>Sydney (ap-southeast-2): Healthy</span>
-      </div>
-      <div class="health-pill">
-        <div class="health-dot"></div>
-        <span>N. Virginia (us-east-1): Standby</span>
+        <span>Global</span>
       </div>
 
       <div class="user-badge" id="userBadgeContainer"></div>
@@ -71,7 +67,7 @@
       </p>
     </div>
 
-    <form id="launchInstancePageForm" onsubmit="handleLaunchPageSubmit(event)">
+    <form id="launchInstancePageForm" autocomplete="off" onsubmit="handleLaunchPageSubmit(event)">
       <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
         
         <!-- Left Column: 5 Configuration Steps -->
