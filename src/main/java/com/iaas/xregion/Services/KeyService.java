@@ -48,9 +48,26 @@ public class KeyService {
         return "admin";
     }
 
+    private UserEntity findUserByUsername(String username) {
+        if (username == null) return null;
+        try {
+            UserEntity user = usersTable.index("username-index")
+                    .query(software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
+                    .stream()
+                    .flatMap(page -> page.items().stream())
+                    .findFirst()
+                    .orElse(null);
+            if (user != null) return user;
+        } catch (Exception ex) {
+            log.debug("GSI lookup error in KeyService: {}", ex.getMessage());
+        }
+        String userId = username.startsWith("usr-") ? username : "usr-" + username;
+        return usersTable.getItem(Key.builder().partitionValue(userId).build());
+    }
+
     private List<KeyPairItem> loadUserKeyItems(String username) {
         try {
-            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            UserEntity user = findUserByUsername(username);
             if (user != null) {
                 if (user.getSshKeys() != null) {
                     return new ArrayList<>(user.getSshKeys());
@@ -66,9 +83,11 @@ public class KeyService {
     private void saveUserKeyItems(String username, List<KeyPairItem> keys) {
         fallbackUserKeys.put(username, new ArrayList<>(keys));
         try {
-            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            UserEntity user = findUserByUsername(username);
             if (user == null) {
+                String userId = username.startsWith("usr-") ? username : "usr-" + username;
                 user = UserEntity.builder()
+                        .userId(userId)
                         .username(username)
                         .fullName(username)
                         .role("ROLE_USER")

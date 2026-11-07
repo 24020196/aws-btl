@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -38,18 +39,35 @@ public class AuthService {
     private final DynamoDbTable<UserEntity> usersTable;
     private final PasswordEncoder passwordEncoder;
 
+    public UserEntity findUserByUsername(String username) {
+        if (username == null) return null;
+        try {
+            UserEntity user = usersTable.index("username-index")
+                    .query(QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
+                    .stream()
+                    .flatMap(page -> page.items().stream())
+                    .findFirst()
+                    .orElse(null);
+            if (user != null) return user;
+        } catch (Exception ex) {
+            log.debug("GSI lookup error for {}: {}", username, ex.getMessage());
+        }
+        String userId = username.startsWith("usr-") ? username : "usr-" + username;
+        return usersTable.getItem(Key.builder().partitionValue(userId).build());
+    }
+
     public JwtResponse login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String token = tokenProvider.generateToken(authentication);
+
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-            auditLogService.logAction("LOGIN", "USER", userDetails.getUsername(), "Successful JWT login");
-
             long expMs = tokenProvider.getExpirationMs();
+
+            auditLogService.logAction("LOGIN", "USER", userDetails.getUsername(), "User logged in successfully");
+
             return JwtResponse.builder()
                     .token(token)
                     .type("Bearer")
@@ -60,7 +78,8 @@ public class AuthService {
                     .expiresAt(TimeSyncUtil.nowEpochMillis() + expMs)
                     .build();
         } catch (Exception e) {
-            throw new AppException("Authentication failed: " + e.getMessage());
+            log.error("Login failed for user {}: {}", request.getUsername(), e.getMessage());
+            throw new AppException("Tên đăng nhập hoặc mật khẩu không chính xác!");
         }
     }
 
@@ -71,7 +90,7 @@ public class AuthService {
             throw new ConflictException("Username already exists: " + username);
         }
 
-        UserEntity existing = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity existing = findUserByUsername(username);
         if (existing != null) {
             throw new ConflictException("Username already exists: " + username);
         }
@@ -83,7 +102,9 @@ public class AuthService {
                 ? request.getRole().trim()
                 : "ROLE_USER";
 
+        String userId = "usr-" + username;
         UserEntity newUser = UserEntity.builder()
+                .userId(userId)
                 .username(username)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(fullName)
@@ -113,7 +134,7 @@ public class AuthService {
     }
 
     public List<ApiTokenItem> getApiTokens(String username) {
-        UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity user = findUserByUsername(username);
         if (user == null) {
             throw new ResourceNotFoundException("User not found: " + username);
         }
@@ -121,7 +142,7 @@ public class AuthService {
     }
 
     public ApiTokenItem createApiToken(String username, CreateApiTokenRequest request) {
-        UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity user = findUserByUsername(username);
         if (user == null) {
             throw new ResourceNotFoundException("User not found: " + username);
         }
@@ -163,7 +184,7 @@ public class AuthService {
     }
 
     public void revokeApiToken(String username, String tokenId) {
-        UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity user = findUserByUsername(username);
         if (user == null) {
             throw new ResourceNotFoundException("User not found: " + username);
         }
@@ -183,7 +204,7 @@ public class AuthService {
     }
 
     public void changePassword(String username, ChangePasswordRequest request) {
-        UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity user = findUserByUsername(username);
         if (user == null) {
             throw new ResourceNotFoundException("User not found: " + username);
         }
@@ -198,7 +219,7 @@ public class AuthService {
     }
 
     public UserEntity getUserProfile(String username) {
-        UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+        UserEntity user = findUserByUsername(username);
         if (user == null) {
             throw new ResourceNotFoundException("User not found: " + username);
         }
