@@ -1,0 +1,37 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: xregion-test
+  profiles:
+    active: test
+  main:
+    allow-bean-definition-overriding: true
+    banner-mode: "off"
+
+aws:
+  region: ap-southeast-2
+  accessKeyId: mock-test-key
+  secretAccessKey: mock-test-secret
+  apigateway:
+    eventEndpoint: http://localhost:9999/prod/events
+
+dynamodb:
+  endpoint: http://localhost:8000
+  instancesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Instances
+  migrationsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Migrations
+  usersTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Users
+  imagesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Images
+  flavorsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Flavors
+
+jwt:
+  secret: TestMockSecretKeyForXRegionEnterpriseUnitAndIntegrationTestingOnly12345
+  expirationHours: 24
+
+logging:
+  level:
+    root: WARN
+    com.iaas.xregion: INFO
