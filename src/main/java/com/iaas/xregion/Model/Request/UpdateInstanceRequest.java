@@ -22,6 +22,16 @@ public class UpdateInstanceRequest {
 
     private String domainName;
 
+    private String securityGroupId;
+
+    /**
+     * KEEP | ALLOCATE_NEW | DISASSOCIATE
+     */
+    private String elasticIpAction;
+
+    private String customElasticIp;
+
+    private Integer ebsSizeGb;
+
     private Integer cooldownSeconds;
 }
-

@@ -29,6 +29,7 @@ public class InstanceResponse {
     private String keyId;
     private String keyName;
     private String volumeId;
+    private Integer ebsSizeGb;
     private String securityGroupId;
     private Integer cooldownSeconds;
 }
