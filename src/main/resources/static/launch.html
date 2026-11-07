@@ -20,11 +20,7 @@
     <div class="header-status">
       <div class="health-pill">
         <div class="health-dot"></div>
-        <span>Sydney (ap-southeast-2): Healthy</span>
-      </div>
-      <div class="health-pill">
-        <div class="health-dot"></div>
-        <span>N. Virginia (us-east-1): Standby</span>
+        <span>Global</span>
       </div>
 
       <div class="user-badge" id="userBadgeContainer"></div>
@@ -44,6 +40,10 @@
     <a href="/launch.html" class="sub-nav-item active">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Khởi Tạo Máy Ảo (+ Launch VM)
+    </a>
+    <a href="/account-tokens.html" class="sub-nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Tài Khoản & API Token
     </a>
   </nav>
 
@@ -67,7 +67,7 @@
       </p>
     </div>
 
-    <form id="launchInstancePageForm" onsubmit="handleLaunchPageSubmit(event)">
+    <form id="launchInstancePageForm" autocomplete="off" onsubmit="handleLaunchPageSubmit(event)">
       <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
         
         <!-- Left Column: 5 Configuration Steps -->
@@ -249,10 +249,39 @@
             </div>
           </div>
 
-          <!-- Step 5: Block Storage & DNS -->
+          <!-- Step 5: SSH Key Pair Authentication -->
           <div class="card" style="padding: 22px;">
             <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
               <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">5</span>
+              Khóa Xác Thực SSH (Key Pair - Login)
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+              Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file <code>.pem</code> phục vụ SSH vào máy ảo:
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên Key Pair *</label>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;" onchange="updatePageLaunchSummary()" required>
+                  <option value="">-- Chọn Key Pair có sẵn hoặc tạo mới --</option>
+                </select>
+                <button type="button" class="btn btn-secondary" onclick="loadKeyPairsDropdown()" title="Làm mới danh sách Key Pair" style="padding: 10px 12px;">
+                  🔄
+                </button>
+                <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()" style="padding: 10px 16px; white-space: nowrap;">
+                  🔑 + Tạo Key Pair Mới (.pem)
+                </button>
+              </div>
+              <div id="keyPairHintText" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                File khóa riêng tư (<code>.pem</code>) chỉ được tải xuống 1 lần duy nhất khi tạo Key Pair mới. Dùng lệnh: <code>ssh -i &lt;ten-key&gt;.pem ubuntu@&lt;ip-may-ao&gt;</code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 6: Block Storage & DNS -->
+          <div class="card" style="padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">6</span>
               Ổ Đĩa Root EBS & Tên Miền DNS
             </div>
 
@@ -294,6 +323,11 @@
               <div id="sumOsText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Ubuntu Server 22.04 LTS</div>
             </div>
 
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">KHÓA XÁC THỰC (KEY PAIR)</div>
+              <div id="sumKeyText" style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 3px;">xregion-key</div>
+            </div>
+
             <div style="margin-bottom: 20px;">
               <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">THÔNG SỐ PHẦN CỨNG</div>
               <div id="sumSpecsText" style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">2 vCPUs • 4096 MB RAM • 10 GB Root Disk</div>
@@ -311,6 +345,35 @@
       </div>
     </form>
   </main>
+
+  <!-- MODAL: CREATE KEY PAIR (EC2 STYLE) -->
+  <div class="modal-overlay" id="createKeyModal">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="card-header">
+        <div class="card-title">🔑 Tạo SSH Key Pair Mới</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">✕</button>
+      </div>
+      <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+          Hệ thống sẽ sinh cặp khóa <strong>RSA 2048-bit</strong> chuẩn PKCS#1. Khóa công khai (Public Key) được lưu trên tài khoản của bạn, còn khóa bí mật (file <code>.pem</code>) sẽ tự động tải xuống máy của bạn.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tên Key Pair (Key pair name) *</label>
+          <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: nmcuong, web-prod-key..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Loại Khóa (Key pair type)</label>
+          <input type="text" class="form-input" value="RSA (2048-bit) — Định dạng .pem (OpenSSH / EC2)" disabled>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')">Hủy</button>
+          <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary" style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700;">
+            ⬇ Tạo Key Pair & Tải .pem
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div class="toast-container" id="toastContainer"></div>
 

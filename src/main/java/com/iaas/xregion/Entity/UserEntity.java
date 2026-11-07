@@ -25,6 +25,8 @@ public class UserEntity {
     private String role;
     private Boolean active;
     private Long createdAt;
+    private java.util.List<ApiTokenItem> apiTokens;
+    private java.util.List<KeyPairItem> sshKeys;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("username")
@@ -55,6 +57,16 @@ public class UserEntity {
     @DynamoDbAttribute("created_at")
     public Long getCreatedAt() {
         return createdAt;
+    }
+
+    @DynamoDbAttribute("api_tokens")
+    public java.util.List<ApiTokenItem> getApiTokens() {
+        return apiTokens;
+    }
+
+    @DynamoDbAttribute("ssh_keys")
+    public java.util.List<KeyPairItem> getSshKeys() {
+        return sshKeys;
     }
 }
 

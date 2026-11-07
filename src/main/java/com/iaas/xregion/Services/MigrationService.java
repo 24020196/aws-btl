@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
 import com.iaas.xregion.Entity.MigrationStep;
@@ -10,6 +11,8 @@ import com.iaas.xregion.Model.Response.MigrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
@@ -32,10 +35,26 @@ public class MigrationService {
 
     private final Map<String, MigrationResponse> activeRuns = new ConcurrentHashMap<>();
 
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "admin";
+    }
+
     public List<Map<String, Object>> getAllScenarios() {
+        String currentUser = getCurrentUsername();
         List<Map<String, Object>> scenarios = new ArrayList<>();
         try {
-            List<MigrationEntity> migrations = migrationsTable.scan().items().stream().collect(Collectors.toList());
+            Set<String> userInstanceIds = instancesTable.scan().items().stream()
+                    .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
+                    .map(InstanceEntity::getInstanceId)
+                    .collect(Collectors.toSet());
+
+            List<MigrationEntity> migrations = migrationsTable.scan().items().stream()
+                    .filter(m -> userInstanceIds.contains(m.getInstanceId()))
+                    .collect(Collectors.toList());
             for (MigrationEntity m : migrations) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", m.getMigrationId());
@@ -80,8 +99,9 @@ public class MigrationService {
                     .orElse("i-0a3f9c21e7b4d5810");
         }
 
+        String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
-        if (instance == null) {
+        if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
         }
 
@@ -90,10 +110,27 @@ public class MigrationService {
             throw new ConflictException("Instance [" + instanceId + "] is currently LOCKED by an ongoing migration.");
         }
 
+        // Kiểm tra thời gian Cooldown nếu máy ảo đã từng thực hiện chuyển vùng trước đó
+        final String targetInstId = instanceId;
+        Optional<Long> lastCompletedMigrationSec = migrationsTable.scan().items().stream()
+                .filter(m -> targetInstId.equals(m.getInstanceId()) && "COMPLETED".equalsIgnoreCase(m.getStatus()) && m.getCompletedAt() != null && m.getCompletedAt() > 0)
+                .map(m -> TimeSyncUtil.toEpochSeconds(m.getCompletedAt()))
+                .max(Long::compareTo);
+
+        if (lastCompletedMigrationSec.isPresent()) {
+            long remainingCooldown = TimeSyncUtil.getRemainingCooldownSeconds(lastCompletedMigrationSec.get(), instance.getCooldownSeconds());
+            if (remainingCooldown > 0) {
+                throw new ConflictException("Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.");
+            }
+        }
+
+        long startEpochSec = TimeSyncUtil.nowEpochSeconds();
+        long startEpochMs = TimeSyncUtil.nowEpochMillis();
+
         try {
             instance.setMigrationLock(true);
             instance.setCurrentStatus("MIGRATING");
-            instance.setLockAcquiredAt(System.currentTimeMillis());
+            instance.setLockAcquiredAt(startEpochSec);
 
             UpdateItemEnhancedRequest<InstanceEntity> lockReq = UpdateItemEnhancedRequest.builder(InstanceEntity.class)
                     .item(instance)
@@ -104,17 +141,16 @@ public class MigrationService {
                     .build();
 
             instancesTable.updateItem(lockReq);
-            log.info("Acquired atomic migration lock on AWS DynamoDB for instance {}", instanceId);
+            log.info("Acquired atomic migration lock on AWS DynamoDB for instance {} at epochSec={}", instanceId, startEpochSec);
         } catch (Exception e) {
             throw new ConflictException("Concurrent lock acquisition failed for instance " + instanceId + ": " + e.getMessage());
         }
 
-        long startTime = System.currentTimeMillis();
-        String migrationId = "mig_" + (startTime / 1000);
+        String migrationId = "mig_" + startEpochSec;
         String srcRegion = instance.getCurrentRegion() != null ? instance.getCurrentRegion() : "ap-southeast-2";
         String dstRegion = srcRegion.contains("southeast") ? "us-east-1" : "ap-southeast-2";
 
-        // Create initial record in XRegion-Migrations
+        // Create initial record in XRegion-Migrations (all timestamps in UTC Epoch Seconds)
         MigrationEntity migrationRecord = MigrationEntity.builder()
                 .instanceId(instanceId)
                 .migrationId(migrationId)
@@ -122,15 +158,15 @@ public class MigrationService {
                 .destRegion(dstRegion)
                 .status("IN_PROGRESS")
                 .copyProgress(15)
-                .startedAt(startTime / 1000)
+                .startedAt(startEpochSec)
                 .completedAt(0L)
                 .errorMessage("")
                 .build();
         migrationsTable.putItem(migrationRecord);
 
         List<String> logs = new ArrayList<>();
-        logs.add("[" + new Date() + "] Migration initiated for instance " + instanceId);
-        logs.add("[" + new Date() + "] Acquired migration_lock on AWS Cloud DynamoDB (XRegion-Instances)");
+        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Migration initiated for instance " + instanceId);
+        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Acquired migration_lock on AWS Cloud DynamoDB (XRegion-Instances)");
 
         MigrationResponse response = MigrationResponse.builder()
                 .scenarioId(migrationId)
@@ -143,7 +179,7 @@ public class MigrationService {
                 .stepNumber(1)
                 .progressPercent(15)
                 .status("IN_PROGRESS")
-                .startedAt(startTime)
+                .startedAt(startEpochMs)
                 .finishedAt(0L)
                 .logs(logs)
                 .build();
@@ -198,20 +234,23 @@ public class MigrationService {
             Thread.sleep(1500);
             updateStep(run, 6, 100, MigrationStep.ROUTE53_DNS_CUTOVER.getDescription(), "Route 53 DNS updated. Automated switchover completed!");
 
-            // FINALIZE: Release migration_lock on AWS Cloud DynamoDB
+            // FINALIZE: Release migration_lock on AWS Cloud DynamoDB (store UTC Epoch Seconds)
+            long completedSec = TimeSyncUtil.nowEpochSeconds();
+            long completedMs = TimeSyncUtil.nowEpochMillis();
+
             instance.setMigrationLock(false);
             instance.setCurrentStatus("RUNNING");
-            instance.setLastMigrationTimestamp(System.currentTimeMillis() / 1000);
+            instance.setLastMigrationTimestamp(completedSec);
             instancesTable.putItem(instance);
 
             migrationRecord.setStatus("COMPLETED");
             migrationRecord.setCopyProgress(100);
-            migrationRecord.setCompletedAt(System.currentTimeMillis() / 1000);
+            migrationRecord.setCompletedAt(completedSec);
             migrationsTable.putItem(migrationRecord);
 
             run.setStatus("COMPLETED");
             run.setCurrentStep(MigrationStep.COMPLETED.getDescription());
-            run.setFinishedAt(System.currentTimeMillis());
+            run.setFinishedAt(completedMs);
 
             auditLogService.logAction("MIGRATE_COMPLETED", "INSTANCE", instanceId, "Migration completed to " + dstRegion);
         } catch (Exception e) {
@@ -226,7 +265,7 @@ public class MigrationService {
             migrationsTable.putItem(migrationRecord);
 
             run.setStatus("ROLLED_BACK");
-            run.getLogs().add("[" + new Date() + "] ERROR: " + e.getMessage() + ". Migration lock released.");
+            run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] ERROR: " + e.getMessage() + ". Migration lock released.");
         }
     }
 
@@ -234,7 +273,7 @@ public class MigrationService {
         run.setStepNumber(stepNum);
         run.setProgressPercent(percent);
         run.setCurrentStep(stepName);
-        run.getLogs().add("[" + new Date() + "] Step " + stepNum + "/6: " + logMsg);
+        run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] Step " + stepNum + "/6: " + logMsg);
     }
 
     public MigrationResponse getProgress(String instanceId) {
