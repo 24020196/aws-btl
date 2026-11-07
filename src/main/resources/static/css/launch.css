@@ -1,0 +1,71 @@
+/* Trang khởi tạo máy ảo (launch.html): thẻ chọn OS, vùng, flavor. */
+
+/* ============================================================
+   CARD SELECTION OPTIONS (OS, Region, Flavor in Launch Form)
+   ============================================================ */
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.option-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.option-card:hover {
+  border-color: var(--accent-blue);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.option-card.selected {
+  border-color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.08);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+}
+
+.option-card input[type="radio"] {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  accent-color: var(--accent-amber);
+}
+
+.option-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.icon-ubuntu {
+  background: #e95420;
+  color: #fff;
+}
+
+.icon-debian {
+  background: #d70a53;
+  color: #fff;
+}
+
+.icon-rocky {
+  background: #10b981;
+  color: #fff;
+}
+
+.icon-alpine {
+  background: #0d597f;
+  color: #fff;
+}
