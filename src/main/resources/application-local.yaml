@@ -1,0 +1,39 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: xregion-local
+  devtools:
+    restart:
+      enabled: false
+
+aws:
+  region: ap-southeast-2
+  accessKeyId: mock-local-key
+  secretAccessKey: mock-local-secret
+  apigateway:
+    eventEndpoint: http://localhost:9999/prod/events
+
+apigateway:
+  eventEndpoint: http://localhost:9999/prod/events
+
+dynamodb:
+  endpoint: http://localhost:8000
+  instancesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Instances
+  migrationsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Migrations
+  usersTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Users
+  imagesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Images
+  flavorsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Flavors
+
+jwt:
+  secret: XRegionEnterpriseSecretKeyWithAtLeast256BitsLengthForSecureHMACSHA256Tokens
+  expirationHours: 24
+
+logging:
+  level:
+    root: INFO
+    com.iaas.xregion: DEBUG
+    software.amazon.awssdk: INFO
