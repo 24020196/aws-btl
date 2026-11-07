@@ -183,7 +183,7 @@ function filterInstancesUI() {
           
           <button class="btn btn-secondary btn-sm ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'REBOOT')" title="Khởi động lại (Reboot)">Reboot</button>
           
-          <button class="btn btn-primary btn-sm ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="triggerDirectMigration('${inst.id}')" title="Chuyển vùng máy ảo tức thì (Fast Migrate)">⚡ Migrate</button>
+          <button class="btn btn-primary btn-sm ${!isRunning || isTrans ? 'disabled' : ''}" ${!isRunning || isTrans ? 'disabled' : ''} onclick="location.href='/instance-detail.html?id=${encodeURIComponent(inst.id)}&action=migrate'" title="Chuyển vùng máy ảo tức thì (Fast Migrate): mở trang chi tiết để theo dõi 6 bước">⚡ Migrate</button>
           
           <button class="btn btn-danger btn-sm ${isTrans || isTerminated ? 'disabled' : ''}" ${isTrans || isTerminated ? 'disabled' : ''} onclick="instanceAction('${inst.id}', 'TERMINATE')" title="Xóa máy ảo vĩnh viễn (Terminate)">Xóa</button>
         </div>

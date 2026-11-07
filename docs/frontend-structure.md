@@ -28,7 +28,7 @@ Mọi trang vẫn chỉ nạp **một** file `css/dashboard.css`. File này gi�
 Thứ tự import quyết định CSS nào ghi đè CSS nào, **không đổi thứ tự** nếu chưa kiểm tra lại giao diện.
 
 Ngoài ra có CSS **chỉ dành cho một trang**, nằm trong `css/pages/` và chỉ trang đó nạp bằng `<link>` riêng (trước đây viết thẳng trong thẻ `<style>`):
-`pages/login.css`, `pages/register.css` (Cường), `pages/account-tokens.css` (Cường), `pages/instance-edit.css` (Cường).
+`pages/auth-shared.css` (phần chung của đăng nhập/đăng ký, nạp trước), `pages/login.css`, `pages/register.css` (Cường), `pages/account-tokens.css` (Cường), `pages/instance-edit.css` (Cường).
 Thêm CSS cho trang mình thì viết vào file của trang đó. Cần file mới thì thêm một dòng `@import` vào **cuối** `dashboard.css`.
 
 ## JavaScript (`js/`)
@@ -39,7 +39,6 @@ js/core/api.js           apiRequest
 js/core/session.js       biến toàn cục (API_BASE, authToken...), chặn trang khi chưa đăng nhập, đồng bộ giờ server, tự đăng xuất
 js/core/auth.js          đăng nhập, đăng ký, đăng xuất
 js/core/i18n.js          song ngữ Việt/Anh (t, setGlobalLang, applyPageTranslations), badge người dùng
-js/shared/legacy-console.js  code console một trang cũ; instances.html vẫn cần (triggerDirectMigration → switchTab → load*)
 js/pages/overview.js           trang chủ                (index.html)
 js/pages/overview-migration.js khung chuyển vùng trang chủ (index.html)      — Lực
 js/pages/instances.js          danh sách máy ảo         (instances.html)     — Duy Anh
@@ -78,7 +77,7 @@ Sau đó mỗi trang nạp thêm file của mình:
 | `register.html` | `pages/register.js` |
 | `account-tokens.html` | `pages/account-tokens.js` |
 | `index.html` | `pages/overview.js`, `pages/overview-migration.js` |
-| `instances.html` | `shared/legacy-console.js`, `pages/instances.js` |
+| `instances.html` | `pages/instances.js` |
 | `launch.html` | `pages/launch.js` |
 | `instance-edit.html` | `pages/launch.js`, `pages/instance-edit.js` |
 | `instance-detail.html` | `pages/instance-detail/core.js`, `migration.js`, `dialogs.js`, `security.js`, `storage.js`, `monitoring.js` (đúng thứ tự này) |
