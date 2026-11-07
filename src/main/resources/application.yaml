@@ -21,13 +21,14 @@ aws:
   secretAccessKey: ${AWS_SECRET_ACCESS_KEY:}
   apigateway:
     eventEndpoint: ${AWS_APIGATEWAY_EVENT_ENDPOINT:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
-    apiToken: ${AWS_APIGATEWAY_API_TOKEN:}
 
 # DynamoDB Live Cloud Configuration via Table ARN
 dynamodb:
   instancesTableArn: ${DYNAMODB_INSTANCES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}
   migrationsTableArn: ${DYNAMODB_MIGRATIONS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}
   usersTableArn: ${DYNAMODB_USERS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}
+  imagesTableArn: ${DYNAMODB_IMAGES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Images}
+  flavorsTableArn: ${DYNAMODB_FLAVORS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}
   endpoint: ${DYNAMODB_ENDPOINT:}
 
 # Security Configuration (JWT)

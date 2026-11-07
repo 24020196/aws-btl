@@ -35,9 +35,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 log.debug("GSI lookup error, falling back to direct user_id lookup: {}", ex.getMessage());
             }
 
-            if (user == null) {
-                String userId = username.startsWith("usr-") ? username : "usr-" + username;
-                user = usersTable.getItem(Key.builder().partitionValue(userId).build());
+            if (user == null && username.startsWith("usr-")) {
+                user = usersTable.getItem(Key.builder().partitionValue(username).build());
             }
 
             if (user != null) {

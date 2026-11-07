@@ -13,6 +13,7 @@ import com.iaas.xregion.Model.Request.RegisterRequest;
 import com.iaas.xregion.Model.Response.JwtResponse;
 import com.iaas.xregion.Security.CustomUserDetails;
 import com.iaas.xregion.Security.JwtTokenProvider;
+import com.iaas.xregion.Utils.UlidCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -52,8 +53,10 @@ public class AuthService {
         } catch (Exception ex) {
             log.debug("GSI lookup error for {}: {}", username, ex.getMessage());
         }
-        String userId = username.startsWith("usr-") ? username : "usr-" + username;
-        return usersTable.getItem(Key.builder().partitionValue(userId).build());
+        if (username.startsWith("usr-")) {
+            return usersTable.getItem(Key.builder().partitionValue(username).build());
+        }
+        return null;
     }
 
     public JwtResponse login(LoginRequest request) {
@@ -102,7 +105,7 @@ public class AuthService {
                 ? request.getRole().trim()
                 : "ROLE_USER";
 
-        String userId = "usr-" + username;
+        String userId = "usr-" + UlidCreator.nextUlid();
         UserEntity newUser = UserEntity.builder()
                 .userId(userId)
                 .username(username)

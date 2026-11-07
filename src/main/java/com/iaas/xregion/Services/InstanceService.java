@@ -4,6 +4,7 @@ import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
+import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
@@ -29,7 +30,7 @@ public class InstanceService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
-    private final Map<String, Integer> instanceEbsSizeMap = new java.util.concurrent.ConcurrentHashMap<>();
+    private final AuthService authService;
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -86,7 +87,10 @@ public class InstanceService {
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
-        String userId = "usr-" + currentUser;
+        UserEntity currentUserEntity = authService.findUserByUsername(currentUser);
+        String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
+                ? currentUserEntity.getUserId()
+                : ("usr-" + currentUser);
         String keyId = "key-" + keyName;
         String volumeId = "vol-" + (id.length() > 8 ? id.substring(0, 8) : id);
         String securityGroupId = "7295eaec-b17d-4dd0-be49-97389e6b361a";
@@ -113,14 +117,20 @@ public class InstanceService {
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Requested launch for instance [" + request.getName() + "] in AWS region [" + region + "]");
 
-        // Bắn sự kiện qua API Gateway vào EventBridge để Step Function và Lambda tự động cấp phát và đồng bộ DynamoDB
+        // Bắn sự kiện qua API Gateway vào EventBridge để Step Function LaunchInstance tự động cấp phát và đồng bộ DynamoDB
         try {
+            int ebsSize = request.getEbsSizeGb() > 0 ? request.getEbsSizeGb() : 10;
+            String volType = (request.getEbsVolumeType() != null && !request.getEbsVolumeType().trim().isEmpty())
+                    ? request.getEbsVolumeType().trim() : "gp3";
+            String imageId = (request.getImageId() != null && !request.getImageId().trim().isEmpty())
+                    ? request.getImageId().trim() : "72e9830a-53ef-4c36-8b5c-fae3b96a3fd0";
+
             eventBridgeGatewayClient.sendInstanceLaunchEvent(
-                    request.getName(),
-                    10,
-                    "gp3",
+                    request.getName().trim(),
+                    ebsSize,
+                    volType,
                     request.getFlavor(),
-                    "cirros",
+                    imageId,
                     keyName,
                     currentUser
             );
@@ -299,7 +309,7 @@ public class InstanceService {
 
         return InstanceResponse.builder()
                 .username(entity.getUsername())
-                .userId(entity.getUserId() != null ? entity.getUserId() : ("usr-" + (entity.getUsername() != null ? entity.getUsername() : "admin")))
+                .userId(entity.getUserId() != null ? entity.getUserId() : "")
                 .id(entity.getInstanceId())
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)
