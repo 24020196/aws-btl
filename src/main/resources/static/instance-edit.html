@@ -106,18 +106,19 @@
             </div>
           </div>
 
-          <!-- Section 2: Edit Instance Name -->
+          <!-- Section 2: Edit Instance Name & DNS -->
           <div class="card" style="padding: 22px;">
             <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
               <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">1</span>
-              Tên Máy Ảo (Instance Name & Route 53 Hostname)
+              Tên Máy Ảo & Tên Miền DNS (Instance Name & Route 53 DNS)
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
+            <div class="form-group">
               <label class="form-label">Tên Máy Ảo Mới *</label>
               <input type="text" class="form-input" id="editInstName" required placeholder="vd: web-prod-01" oninput="updateEditInstanceSummary()">
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-                Tên miền DNS tự động cập nhật theo tên máy ảo: <code id="editDnsPreview" style="color: var(--accent-cyan);">app.xregion.net</code>
-              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Tên Miền DNS (Cột <code>dns</code> trên DynamoDB)</label>
+              <input type="text" class="form-input" id="editInstDomain" placeholder="vd: web-prod-01.xregion.net" oninput="updateEditInstanceSummary()">
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.RegionType;
 import com.iaas.xregion.Exceptions.AppException;
@@ -71,7 +72,7 @@ public class InstanceService {
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
         String currentUser = getCurrentUsername();
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
-        long now = System.currentTimeMillis();
+        long nowSec = TimeSyncUtil.nowEpochSeconds();
 
         String region = request.getRegion();
         String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
@@ -80,6 +81,9 @@ public class InstanceService {
         String keyName = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
+        String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
+                ? request.getDomainName().trim()
+                : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
         InstanceEntity entity = InstanceEntity.builder()
                 .username(currentUser)
@@ -91,10 +95,11 @@ public class InstanceService {
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
                 .keyName(keyName)
+                .dns(dns)
                 .migrationLock(false)
                 .lockAcquiredAt(0L)
                 .cooldownSeconds(300)
-                .lastMigrationTimestamp(now)
+                .lastMigrationTimestamp(nowSec)
                 .build();
 
         try {
@@ -146,10 +151,13 @@ public class InstanceService {
         if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
             entity.setKeyName(request.getKeyPairName().trim());
         }
+        if (request.getDomainName() != null && !request.getDomainName().trim().isEmpty()) {
+            entity.setDns(request.getDomainName().trim());
+        }
         if (request.getCooldownSeconds() != null && request.getCooldownSeconds() >= 0) {
             entity.setCooldownSeconds(request.getCooldownSeconds());
         }
-        entity.setLastMigrationTimestamp(System.currentTimeMillis());
+        entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
 
         try {
             instancesTable.putItem(entity);
@@ -263,9 +271,7 @@ public class InstanceService {
             uiStatus = "REBOOTING";
         }
 
-        long timestamp = entity.getLastMigrationTimestamp() != null && entity.getLastMigrationTimestamp() > 0
-                ? entity.getLastMigrationTimestamp()
-                : System.currentTimeMillis();
+        long timestampMs = TimeSyncUtil.toEpochMillis(entity.getLastMigrationTimestamp());
 
         return InstanceResponse.builder()
                 .username(entity.getUsername())
@@ -277,13 +283,14 @@ public class InstanceService {
                 .status(uiStatus)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
-                .dnsDomain(entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net"
-                        : "app.xregion.net")
+                .dnsDomain((entity.getDns() != null && !entity.getDns().trim().isEmpty())
+                        ? entity.getDns()
+                        : (entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net"))
                 .imageId("img-u22")
                 .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
-                .createdAt(timestamp)
-                .updatedAt(timestamp)
+                .createdAt(timestampMs)
+                .updatedAt(timestampMs)
                 .keyName(entity.getKeyName() != null ? entity.getKeyName() : "xregion-key")
                 .cooldownSeconds(entity.getCooldownSeconds() != null ? entity.getCooldownSeconds() : 300)
                 .build();

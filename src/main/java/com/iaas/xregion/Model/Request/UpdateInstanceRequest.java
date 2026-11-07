@@ -20,6 +20,8 @@ public class UpdateInstanceRequest {
 
     private String keyPairName;
 
+    private String domainName;
+
     private Integer cooldownSeconds;
 }
 

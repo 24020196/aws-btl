@@ -4,6 +4,53 @@ const API_BASE = '/api';
 let authToken = localStorage.getItem('xregion_jwt') || '';
 let performanceChart = null;
 let migrationPollInterval = null;
+let serverClockOffsetMs = 0;
+
+// Đồng bộ đồng hồ trình duyệt với Server & AWS DynamoDB
+async function syncServerClock() {
+  try {
+    const clientBefore = Date.now();
+    const res = await fetch(API_BASE + '/auth/health');
+    if (res.ok) {
+      const data = await res.json();
+      const clientAfter = Date.now();
+      const rttHalf = Math.round((clientAfter - clientBefore) / 2);
+      const serverTs = Number(data.timestamp);
+      if (!isNaN(serverTs) && serverTs > 0) {
+        serverClockOffsetMs = (serverTs + rttHalf) - clientAfter;
+      }
+    }
+  } catch (e) {
+    console.warn('Clock sync skipped:', e);
+  }
+}
+
+function getSyncedNowMs() {
+  return Date.now() + serverClockOffsetMs;
+}
+
+function getSyncedNowSec() {
+  return Math.floor(getSyncedNowMs() / 1000);
+}
+
+// Tự động chuẩn hóa cả Epoch Seconds (10 chữ số trên DynamoDB) lẫn Milliseconds (13 chữ số)
+function toNormalizedMillis(rawTs) {
+  if (!rawTs || isNaN(Number(rawTs))) return getSyncedNowMs();
+  const num = Number(rawTs);
+  return num < 10000000000 ? num * 1000 : num;
+}
+
+function formatSyncedDateTime(rawTs) {
+  if (!rawTs) return 'Vừa xong';
+  const ms = toNormalizedMillis(rawTs);
+  return new Date(ms).toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour12: false
+  });
+}
+
+// Khởi chạy đồng bộ thời gian ngay khi tải script
+syncServerClock();
 
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
@@ -952,7 +999,7 @@ async function loadAuditLogs() {
 
     logs.forEach(log => {
       const tr = document.createElement('tr');
-      const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
+      const timeStr = log.timestamp ? formatSyncedDateTime(log.timestamp) : 'N/A';
       tr.innerHTML = `
         <td style="color:var(--text-muted); font-size:12px;">${timeStr}</td>
         <td><strong>${log.username || 'system'}</strong></td>
@@ -1076,7 +1123,7 @@ async function initOverviewPage() {
         tbodyLogs.innerHTML = '';
         logs.slice(0, 5).forEach(l => {
           const tr = document.createElement('tr');
-          const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'N/A';
+          const time = l.timestamp ? formatSyncedDateTime(l.timestamp) : 'N/A';
           tr.innerHTML = `
             <td style="color:var(--text-muted); font-size:12px;">${time}</td>
             <td><strong>${l.username || 'admin'}</strong></td>
@@ -1150,7 +1197,7 @@ async function initDetailPage() {
     document.getElementById('detPrivateIp').textContent = inst.privateIp || '10.0.1.10';
     document.getElementById('detPublicIp').textContent = inst.publicIp || 'Chưa gán';
     document.getElementById('detDnsDomain').textContent = inst.dnsDomain || 'N/A';
-    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? new Date(inst.updatedAt).toLocaleString() : 'Vừa xong';
+    document.getElementById('detUpdatedAt').textContent = inst.updatedAt ? formatSyncedDateTime(inst.updatedAt) : 'Vừa xong';
 
     const volIdEl = document.getElementById('detEbsVolumeId');
     if (volIdEl) volIdEl.textContent = inst.ebsVolumeId || `vol-${inst.id.replace('i-', '')}`;
@@ -1509,6 +1556,10 @@ async function initEditInstancePage() {
     }
 
     document.getElementById('editInstName').value = inst.name || inst.id;
+    const domainInput = document.getElementById('editInstDomain');
+    if (domainInput) {
+      domainInput.value = inst.dnsDomain || `${(inst.name || inst.id).toLowerCase()}.xregion.net`;
+    }
     const flavorSelect = document.getElementById('editInstFlavor');
     if (flavorSelect && inst.flavor) {
       flavorSelect.value = inst.flavor;
@@ -1601,6 +1652,7 @@ async function handleEditInstanceSubmit(e) {
     name: document.getElementById('editInstName').value.trim(),
     flavor: document.getElementById('editInstFlavor').value,
     keyPairName: document.getElementById('instKeyPair')?.value || currentEditingInstance.keyName || 'xregion-key',
+    domainName: document.getElementById('editInstDomain')?.value.trim() || '',
     cooldownSeconds: parseInt(document.getElementById('editInstCooldown')?.value) || 300
   };
 

@@ -33,6 +33,7 @@ public class InstanceEntity {
     private Integer cooldownSeconds;
     private Long lastMigrationTimestamp;
     private String keyName;
+    private String dns;
 
     @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
     @DynamoDbAttribute("username")
@@ -99,5 +100,10 @@ public class InstanceEntity {
     @DynamoDbAttribute("key_name")
     public String getKeyName() {
         return keyName;
+    }
+
+    @DynamoDbAttribute("dns")
+    public String getDns() {
+        return dns;
     }
 }

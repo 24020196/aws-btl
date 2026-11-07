@@ -1,5 +1,6 @@
 package com.iaas.xregion.Controllers;
 
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.ApiTokenItem;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Model.Request.ChangePasswordRequest;
@@ -88,10 +89,14 @@ public class AuthController {
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> healthCheck() {
+        long nowMs = TimeSyncUtil.nowEpochMillis();
         Map<String, String> health = new HashMap<>();
         health.put("status", "UP");
         health.put("service", "xregion");
-        health.put("timestamp", String.valueOf(System.currentTimeMillis()));
+        health.put("timestamp", String.valueOf(nowMs));
+        health.put("epochSeconds", String.valueOf(TimeSyncUtil.nowEpochSeconds()));
+        health.put("timezone", "Asia/Ho_Chi_Minh (UTC+7)");
+        health.put("formattedTime", TimeSyncUtil.formatVietnamTime(nowMs));
         return ResponseEntity.ok(health);
     }
 }
