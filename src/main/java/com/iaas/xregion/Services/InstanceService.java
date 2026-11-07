@@ -10,6 +10,8 @@ import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -26,11 +28,21 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
 
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "admin";
+    }
+
     public List<InstanceResponse> getAllInstances() {
+        String currentUser = getCurrentUsername();
         try {
             return instancesTable.scan()
                     .items()
                     .stream()
+                    .filter(entity -> currentUser.equalsIgnoreCase(entity.getUsername()))
                     .map(this::mapToResponse)
                     .sorted((a, b) -> Long.compare(b.getUpdatedAt(), a.getUpdatedAt()))
                     .collect(Collectors.toList());
@@ -41,6 +53,7 @@ public class InstanceService {
     }
 
     public InstanceResponse getInstanceById(String id) {
+        String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
             entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
@@ -48,13 +61,14 @@ public class InstanceService {
             log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
         }
-        if (entity == null) {
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
             throw new ResourceNotFoundException("Instance not found in AWS DynamoDB: " + id);
         }
         return mapToResponse(entity);
     }
 
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
+        String currentUser = getCurrentUsername();
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
         long now = System.currentTimeMillis();
 
@@ -67,6 +81,7 @@ public class InstanceService {
                 : "xregion-key";
 
         InstanceEntity entity = InstanceEntity.builder()
+                .username(currentUser)
                 .instanceId(id)
                 .instanceName(request.getName())
                 .currentRegion(region)
@@ -94,7 +109,7 @@ public class InstanceService {
         // Bắn sự kiện qua API Gateway vào EventBridge
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, "admin"
+                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
@@ -104,6 +119,7 @@ public class InstanceService {
     }
 
     public InstanceResponse executeAction(String id, InstanceActionRequest request) {
+        String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
             entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
@@ -112,7 +128,7 @@ public class InstanceService {
             throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
         }
 
-        if (entity == null) {
+        if (entity == null || !currentUser.equalsIgnoreCase(entity.getUsername())) {
             throw new ResourceNotFoundException("Instance not found: " + id);
         }
 
@@ -167,7 +183,7 @@ public class InstanceService {
         // Bắn sự kiện qua API Gateway vào EventBridge
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), "admin"
+                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
@@ -196,6 +212,7 @@ public class InstanceService {
                 : System.currentTimeMillis();
 
         return InstanceResponse.builder()
+                .username(entity.getUsername())
                 .id(entity.getInstanceId())
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)

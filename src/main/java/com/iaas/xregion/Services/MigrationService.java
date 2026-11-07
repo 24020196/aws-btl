@@ -10,6 +10,8 @@ import com.iaas.xregion.Model.Response.MigrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
@@ -32,10 +34,26 @@ public class MigrationService {
 
     private final Map<String, MigrationResponse> activeRuns = new ConcurrentHashMap<>();
 
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            return auth.getName();
+        }
+        return "admin";
+    }
+
     public List<Map<String, Object>> getAllScenarios() {
+        String currentUser = getCurrentUsername();
         List<Map<String, Object>> scenarios = new ArrayList<>();
         try {
-            List<MigrationEntity> migrations = migrationsTable.scan().items().stream().collect(Collectors.toList());
+            Set<String> userInstanceIds = instancesTable.scan().items().stream()
+                    .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
+                    .map(InstanceEntity::getInstanceId)
+                    .collect(Collectors.toSet());
+
+            List<MigrationEntity> migrations = migrationsTable.scan().items().stream()
+                    .filter(m -> userInstanceIds.contains(m.getInstanceId()))
+                    .collect(Collectors.toList());
             for (MigrationEntity m : migrations) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", m.getMigrationId());
@@ -80,8 +98,9 @@ public class MigrationService {
                     .orElse("i-0a3f9c21e7b4d5810");
         }
 
+        String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
-        if (instance == null) {
+        if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
         }
 

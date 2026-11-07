@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InstanceResponse {
+    private String username;
     private String id;
     private String name;
     private String region;
@@ -26,4 +27,3 @@ public class InstanceResponse {
     private String consoleUrl;
     private String keyName;
 }
-
