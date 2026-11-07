@@ -52,6 +52,71 @@ function formatSyncedDateTime(rawTs) {
 // Khởi chạy đồng bộ thời gian ngay khi tải script
 syncServerClock();
 
+// ============================================================
+// SESSION GUARD, AUTO-LOGOUT & REQUIRE AUTH ON ALL PAGES (INCLUDING /index.html)
+// ============================================================
+function isJwtTokenExpired() {
+  const token = localStorage.getItem('xregion_jwt');
+  if (!token) return true;
+  const expiresAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
+  if (expiresAt > 0 && getSyncedNowMs() >= expiresAt) {
+    return true;
+  }
+  // Fallback: giải mã payload JWT (`exp` tính bằng giây) nếu chưa có `xregion_jwt_expires_at`
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload.exp && getSyncedNowSec() >= payload.exp) {
+        return true;
+      }
+    }
+  } catch (e) {
+    // ignore decode errors
+  }
+  return false;
+}
+
+function enforceAuthGuard() {
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html');
+  const token = localStorage.getItem('xregion_jwt');
+  const expired = isJwtTokenExpired();
+
+  if (token && expired) {
+    localStorage.removeItem('xregion_jwt');
+    localStorage.removeItem('xregion_user');
+    localStorage.removeItem('xregion_jwt_expires_at');
+    authToken = '';
+    if (!isAuthPage) {
+      alert('Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại!');
+      window.location.replace('/login.html');
+    }
+    return;
+  }
+
+  // Nếu chưa đăng nhập thì chặn toàn bộ trang (bao gồm cả / và /index.html) và đẩy về /login.html
+  if (!isAuthPage && !token) {
+    window.location.replace('/login.html');
+  }
+}
+
+enforceAuthGuard();
+setInterval(() => {
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html');
+  if (!isAuthPage && isJwtTokenExpired()) {
+    localStorage.removeItem('xregion_jwt');
+    localStorage.removeItem('xregion_user');
+    localStorage.removeItem('xregion_jwt_expires_at');
+    authToken = '';
+    showToast('Phiên đăng nhập đã hết hạn, đang tự động đăng xuất...', 'error');
+    setTimeout(() => {
+      window.location.replace('/login.html');
+    }, 600);
+  }
+}, 5000);
+
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
   'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
@@ -205,7 +270,10 @@ async function submitLogin(e) {
     const data = await res.json();
     if (res.ok && data.data && data.data.token) {
       authToken = data.data.token;
+      const expiresAt = data.data.expiresAt || (getSyncedNowMs() + (data.data.expiresIn || 86400) * 1000);
       localStorage.setItem('xregion_jwt', authToken);
+      localStorage.setItem('xregion_user', data.data.fullName || username);
+      localStorage.setItem('xregion_jwt_expires_at', String(expiresAt));
       document.getElementById('userNameDisplay').textContent = data.data.fullName || username;
       closeModal('loginModal');
       clearApiError();
@@ -225,10 +293,11 @@ async function submitLogin(e) {
 function logout() {
   localStorage.removeItem('xregion_jwt');
   localStorage.removeItem('xregion_user');
+  localStorage.removeItem('xregion_jwt_expires_at');
   authToken = '';
   showToast('Đã đăng xuất khỏi hệ thống', 'success');
   setTimeout(() => {
-    window.location.href = '/login.html';
+    window.location.replace('/login.html');
   }, 400);
 }
 

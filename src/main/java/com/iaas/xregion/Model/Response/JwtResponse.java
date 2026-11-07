@@ -16,5 +16,6 @@ public class JwtResponse {
     private String fullName;
     private String role;
     private long expiresIn;
+    private long expiresAt;
 }
 
