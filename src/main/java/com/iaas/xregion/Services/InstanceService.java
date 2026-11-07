@@ -21,6 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,7 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final ScheduledExecutorService stateTransitionExecutor = Executors.newScheduledThreadPool(4);
+    private final Map<String, Integer> instanceEbsSizeMap = new ConcurrentHashMap<>();
 
     @PreDestroy
     public void cleanup() {

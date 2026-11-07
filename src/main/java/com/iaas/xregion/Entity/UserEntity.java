@@ -8,7 +8,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 /**
  * Maps to live AWS DynamoDB table: XRegion-Users
@@ -23,7 +22,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 public class UserEntity {
 
     private String userId;
-    private String userId;
     private String username;
     private String password;
     private String fullName;
@@ -34,12 +32,6 @@ public class UserEntity {
     private java.util.List<KeyPairItem> sshKeys;
 
     @DynamoDbPartitionKey
-    @DynamoDbAttribute("user_id")
-    public String getUserId() {
-        return userId;
-    }
-
-    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
     @DynamoDbAttribute("user_id")
     public String getUserId() {
         return userId;
