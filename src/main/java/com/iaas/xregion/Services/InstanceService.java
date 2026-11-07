@@ -37,6 +37,29 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final AuthService authService;
+    private final Map<String, Integer> instanceEbsSizeMap = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService stateTransitionExecutor = Executors.newScheduledThreadPool(4);
+
+    @PreDestroy
+    public void cleanup() {
+        stateTransitionExecutor.shutdown();
+    }
+
+    private void scheduleStateTransition(String instanceId, InstanceStatus expectedIntermediate, InstanceStatus targetStatus, long delayMs) {
+        stateTransitionExecutor.schedule(() -> {
+            try {
+                InstanceEntity fresh = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+                if (fresh != null && expectedIntermediate.name().equalsIgnoreCase(fresh.getCurrentStatus())) {
+                    fresh.setCurrentStatus(targetStatus.name());
+                    fresh.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                    instancesTable.putItem(fresh);
+                    log.info("Async state transition complete: [{}] {} -> {}", instanceId, expectedIntermediate, targetStatus);
+                }
+            } catch (Exception e) {
+                log.error("Async state transition failed for [{}]: {}", instanceId, e.getMessage());
+            }
+        }, delayMs, TimeUnit.MILLISECONDS);
+    }
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

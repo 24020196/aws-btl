@@ -53,21 +53,7 @@ public class KeyService {
 
     private UserEntity findUserByUsername(String username) {
         if (username == null) return null;
-        try {
-            UserEntity user = usersTable.index("username-index")
-                    .query(software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
-                    .stream()
-                    .flatMap(page -> page.items().stream())
-                    .findFirst()
-                    .orElse(null);
-            if (user != null) return user;
-        } catch (Exception ex) {
-            log.debug("GSI lookup error in KeyService: {}", ex.getMessage());
-        }
-        if (username.startsWith("usr-")) {
-            return usersTable.getItem(Key.builder().partitionValue(username).build());
-        }
-        return null;
+        return userRepository.findByUsername(username).orElse(null);
     }
 
     private List<KeyPairItem> loadUserKeyItems(String username) {
