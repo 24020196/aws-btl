@@ -27,4 +27,5 @@ public class InstanceResponse {
     private String consoleUrl;
     private String keyName;
     private Integer cooldownSeconds;
+    private String securityGroup;
 }

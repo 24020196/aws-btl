@@ -34,6 +34,7 @@ public class InstanceEntity {
     private Long lastMigrationTimestamp;
     private String keyName;
     private String dns;
+    private String securityGroup;
 
     @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
     @DynamoDbAttribute("username")
@@ -105,5 +106,10 @@ public class InstanceEntity {
     @DynamoDbAttribute("dns")
     public String getDns() {
         return dns;
+    }
+
+    @DynamoDbAttribute("security_group")
+    public String getSecurityGroup() {
+        return securityGroup;
     }
 }

@@ -10,6 +10,8 @@ import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
 import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
+import com.iaas.xregion.Entity.InstanceStatus;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -19,6 +21,9 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -29,6 +34,28 @@ public class InstanceService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
+    private final ScheduledExecutorService stateTransitionExecutor = Executors.newScheduledThreadPool(4);
+
+    @PreDestroy
+    public void cleanup() {
+        stateTransitionExecutor.shutdown();
+    }
+
+    private void scheduleStateTransition(String instanceId, InstanceStatus expectedIntermediate, InstanceStatus targetStatus, long delayMs) {
+        stateTransitionExecutor.schedule(() -> {
+            try {
+                InstanceEntity fresh = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+                if (fresh != null && expectedIntermediate.name().equalsIgnoreCase(fresh.getCurrentStatus())) {
+                    fresh.setCurrentStatus(targetStatus.name());
+                    fresh.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                    instancesTable.putItem(fresh);
+                    log.info("Async state transition complete: [{}] {} -> {}", instanceId, expectedIntermediate, targetStatus);
+                }
+            } catch (Exception e) {
+                log.error("Async state transition failed for [{}]: {}", instanceId, e.getMessage());
+            }
+        }, delayMs, TimeUnit.MILLISECONDS);
+    }
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -81,6 +108,9 @@ public class InstanceService {
         String keyName = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
+        String securityGroup = (request.getSecurityGroup() != null && !request.getSecurityGroup().trim().isEmpty())
+                ? request.getSecurityGroup().trim()
+                : "sg-default";
         String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
@@ -90,11 +120,12 @@ public class InstanceService {
                 .instanceId(id)
                 .instanceName(request.getName())
                 .currentRegion(region)
-                .currentStatus("RUNNING")
+                .currentStatus(InstanceStatus.PENDING.name())
                 .elasticIp(elasticIp)
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
                 .keyName(keyName)
+                .securityGroup(securityGroup)
                 .dns(dns)
                 .migrationLock(false)
                 .lockAcquiredAt(0L)
@@ -108,6 +139,9 @@ public class InstanceService {
             log.error("Failed to put instance into AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
         }
+
+        // Schedule async transition: PENDING -> RUNNING after 3500ms
+        scheduleStateTransition(id, InstanceStatus.PENDING, InstanceStatus.RUNNING, 3500);
 
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
                 "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
@@ -201,34 +235,27 @@ public class InstanceService {
 
         switch (action) {
             case "START":
-                entity.setCurrentStatus("RUNNING");
+                entity.setCurrentStatus(InstanceStatus.PENDING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.PENDING, InstanceStatus.RUNNING, 3500);
                 break;
             case "STOP":
-                entity.setCurrentStatus("STOPPED");
+                entity.setCurrentStatus(InstanceStatus.STOPPING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.STOPPING, InstanceStatus.STOPPED, 3500);
                 break;
             case "REBOOT":
-                entity.setCurrentStatus("REBOOTING");
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        entity.setCurrentStatus("RUNNING");
-                        try {
-                            instancesTable.putItem(entity);
-                        } catch (Exception e) {
-                            log.error("Failed to update reboot status in DynamoDB: {}", e.getMessage());
-                        }
-                    }
-                }, 3000);
+                entity.setCurrentStatus(InstanceStatus.REBOOTING.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.REBOOTING, InstanceStatus.RUNNING, 3500);
                 break;
             case "TERMINATE":
             case "DELETE":
-                try {
-                    instancesTable.deleteItem(Key.builder().partitionValue(id).build());
-                } catch (Exception e) {
-                    log.error("Failed to delete instance from AWS DynamoDB: {}", e.getMessage());
-                    throw new AppException("Lỗi xóa máy ảo trên AWS DynamoDB: " + e.getMessage());
-                }
-                auditLogService.logAction("TERMINATE_VM", "INSTANCE", id, "Terminated instance " + id);
+                entity.setCurrentStatus(InstanceStatus.SHUTTING_DOWN.name());
+                entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+                scheduleStateTransition(id, InstanceStatus.SHUTTING_DOWN, InstanceStatus.TERMINATED, 3500);
+                break;
+            case "CONSOLE":
                 return mapToResponse(entity);
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
@@ -260,15 +287,22 @@ public class InstanceService {
         String regionCode = entity.getCurrentRegion() != null ? entity.getCurrentRegion() : "ap-southeast-2";
         RegionType regionType = RegionType.fromCode(regionCode);
 
-        // Normalize status for UI display (RUNNING -> ACTIVE)
-        String uiStatus = "ACTIVE";
+        // Standard EC2 Statuses: PENDING, RUNNING, STOPPING, STOPPED, REBOOTING, SHUTTING_DOWN, TERMINATED, MIGRATING
+        String status = InstanceStatus.RUNNING.name();
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "MIGRATING";
-        } else if ("STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
-                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "SHUTOFF";
-        } else if ("REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            uiStatus = "REBOOTING";
+            status = InstanceStatus.MIGRATING.name();
+        } else if (entity.getCurrentStatus() != null) {
+            try {
+                status = InstanceStatus.valueOf(entity.getCurrentStatus().toUpperCase().trim()).name();
+            } catch (IllegalArgumentException e) {
+                if ("SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus())) {
+                    status = InstanceStatus.STOPPED.name();
+                } else if ("ACTIVE".equalsIgnoreCase(entity.getCurrentStatus())) {
+                    status = InstanceStatus.RUNNING.name();
+                } else {
+                    status = entity.getCurrentStatus().toUpperCase().trim();
+                }
+            }
         }
 
         long timestampMs = TimeSyncUtil.toEpochMillis(entity.getLastMigrationTimestamp());
@@ -280,9 +314,10 @@ public class InstanceService {
                 .region(regionCode)
                 .regionName(regionType.getDisplayName())
                 .flavor(entity.getFlavor() != null ? entity.getFlavor() : "m1.medium")
-                .status(uiStatus)
+                .status(status)
                 .privateIp(entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10")
                 .publicIp(entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán")
+                .securityGroup(entity.getSecurityGroup() != null ? entity.getSecurityGroup() : "sg-default")
                 .dnsDomain((entity.getDns() != null && !entity.getDns().trim().isEmpty())
                         ? entity.getDns()
                         : (entity.getInstanceName() != null ? entity.getInstanceName().toLowerCase() + ".xregion.net" : "app.xregion.net"))
