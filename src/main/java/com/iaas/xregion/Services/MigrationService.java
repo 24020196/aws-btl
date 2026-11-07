@@ -7,20 +7,22 @@ import com.iaas.xregion.Entity.MigrationStep;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateScenarioRequest;
+import com.iaas.xregion.Model.Request.UpdateDnsRequest;
 import com.iaas.xregion.Model.Response.MigrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -32,8 +34,18 @@ public class MigrationService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final DynamoDbTable<MigrationEntity> migrationsTable;
     private final AuditLogService auditLogService;
+    private final NetworkService networkService;
 
     private final Map<String, MigrationResponse> activeRuns = new ConcurrentHashMap<>();
+
+    /** Trạng thái chuyển tiếp kiểu EC2: máy đang đổi trạng thái thì không được chuyển vùng. */
+    private static final Set<String> TRANSITIONAL_STATES = Set.of("PENDING", "STOPPING", "SHUTTING_DOWN", "TERMINATING", "REBOOTING");
+
+    /** Giống giá trị mặc định InstanceService trả về cho giao diện khi cooldown_seconds trống. */
+    private static final int DEFAULT_COOLDOWN_SECONDS = 300;
+
+    /** Khóa giữ quá lâu mà không có tiến trình nào chạy trong bộ nhớ = khóa treo (vd backend restart giữa chừng). */
+    private static final long STALE_LOCK_SECONDS = 120;
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -105,23 +117,30 @@ public class MigrationService {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
         }
 
+        // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp (PENDING, STOPPING, SHUTTING_DOWN...)
+        String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
+        if ("TERMINATED".equals(status) || "TERMINATING".equals(status)) {
+            throw new ConflictException("Máy ảo [" + instanceId + "] đã bị xóa (" + status + "), không thể chuyển vùng.");
+        }
+        if (TRANSITIONAL_STATES.contains(status)) {
+            throw new ConflictException("Máy ảo [" + instanceId + "] đang ở trạng thái " + status
+                    + ". Hãy đợi máy chuyển sang RUNNING hoặc STOPPED rồi mới chuyển vùng.");
+        }
+
         // 1. ATOMIC CONDITIONAL WRITE ON AWS CLOUD DYNAMODB
         if (Boolean.TRUE.equals(instance.getMigrationLock())) {
-            throw new ConflictException("Instance [" + instanceId + "] is currently LOCKED by an ongoing migration.");
+            if (isLockStale(instance)) {
+                releaseStaleLock(instance);
+            } else {
+                throw new ConflictException("Máy ảo [" + instanceId + "] đang có một lần chuyển vùng chạy (migration_lock đang khóa). "
+                        + "Mở trang chi tiết máy ảo, tab Chuyển vùng, để xem tiến trình.");
+            }
         }
 
         // Kiểm tra thời gian Cooldown nếu máy ảo đã từng thực hiện chuyển vùng trước đó
-        final String targetInstId = instanceId;
-        Optional<Long> lastCompletedMigrationSec = migrationsTable.scan().items().stream()
-                .filter(m -> targetInstId.equals(m.getInstanceId()) && "COMPLETED".equalsIgnoreCase(m.getStatus()) && m.getCompletedAt() != null && m.getCompletedAt() > 0)
-                .map(m -> TimeSyncUtil.toEpochSeconds(m.getCompletedAt()))
-                .max(Long::compareTo);
-
-        if (lastCompletedMigrationSec.isPresent()) {
-            long remainingCooldown = TimeSyncUtil.getRemainingCooldownSeconds(lastCompletedMigrationSec.get(), instance.getCooldownSeconds());
-            if (remainingCooldown > 0) {
-                throw new ConflictException("Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.");
-            }
+        long remainingCooldown = getRemainingCooldownSeconds(instance, findMigrations(instanceId));
+        if (remainingCooldown > 0) {
+            throw new ConflictException("Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.");
         }
 
         long startEpochSec = TimeSyncUtil.nowEpochSeconds();
@@ -187,56 +206,77 @@ public class MigrationService {
         activeRuns.put(instanceId, response);
         auditLogService.logAction("MIGRATE_START", "INSTANCE", instanceId, "Started migration to " + dstRegion);
 
-        // Run 6-step async execution
-        execute6StepAsync(instanceId, migrationRecord, response, instance, dstRegion);
+        // Run 6-step execution on a background thread so the API returns immediately
+        // and the dashboard can poll /progress for real-time logs.
+        // (@Async has no effect when called from inside the same class, so we start the thread explicitly.)
+        final String runInstanceId = instanceId;
+        CompletableFuture.runAsync(() -> execute6StepAsync(runInstanceId, migrationRecord, response, instance, dstRegion));
 
         return response;
     }
 
-    @Async
     public void execute6StepAsync(String instanceId, MigrationEntity migrationRecord, 
                                  MigrationResponse run, InstanceEntity instance, String dstRegion) {
         try {
             // STEP 1: Stop Source VM
             Thread.sleep(2000);
             updateStep(run, 1, 20, MigrationStep.STOP_SOURCE_VM.getDescription(), "Flushed disk cache and stopped source VM.");
+            long sourceStoppedMs = TimeSyncUtil.nowEpochMillis();
             migrationRecord.setCopyProgress(20);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 2: Create EBS Snapshot
             Thread.sleep(2000);
             updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(), "EBS gp3 Snapshot created successfully.");
             migrationRecord.setCopyProgress(40);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 3: Cross-Region Transfer
             Thread.sleep(3000);
             updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(), "Transferred snapshot across regions to " + dstRegion);
             migrationRecord.setCopyProgress(65);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 4: Target Volume
             Thread.sleep(2000);
             updateStep(run, 4, 80, MigrationStep.CREATE_TARGET_VOLUME.getDescription(), "Restored target EBS volume in " + dstRegion);
             migrationRecord.setCopyProgress(80);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 5: Boot VM in Target Region
             Thread.sleep(2500);
             String newIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
+            // Private IP mới nằm trong subnet của vùng đích (cùng quy tắc với InstanceService khi tạo máy)
+            String newPrivateIp = (dstRegion.contains("southeast") ? "10.0.1." : "10.1.1.") + (100 + new Random().nextInt(150));
             instance.setElasticIp(newIp);
+            instance.setPrivateIp(newPrivateIp);
             instance.setCurrentRegion(dstRegion);
             updateStep(run, 5, 90, MigrationStep.BOOT_TARGET_VM.getDescription(), "Booted NovaVM in " + dstRegion + " with IP: " + newIp);
             migrationRecord.setCopyProgress(90);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 6: Route 53 Cutover
             Thread.sleep(1500);
-            updateStep(run, 6, 100, MigrationStep.ROUTE53_DNS_CUTOVER.getDescription(), "Route 53 DNS updated. Automated switchover completed!");
+            String domain = (instance.getDns() != null && !instance.getDns().trim().isEmpty())
+                    ? instance.getDns().trim()
+                    : (instance.getInstanceName() != null ? instance.getInstanceName().toLowerCase() : instanceId) + ".xregion.net";
+            UpdateDnsRequest dnsRequest = new UpdateDnsRequest();
+            dnsRequest.setDomainName(domain);
+            dnsRequest.setTargetIp(newIp);
+            dnsRequest.setTtl(60);
+            networkService.updateDnsRecord(dnsRequest);
+            updateStep(run, 6, 100, MigrationStep.ROUTE53_DNS_CUTOVER.getDescription(), "Route 53 A record " + domain + " -> " + newIp + " (TTL 60s). Automated switchover completed!");
 
             // FINALIZE: Release migration_lock on AWS Cloud DynamoDB (store UTC Epoch Seconds)
             long completedSec = TimeSyncUtil.nowEpochSeconds();
             long completedMs = TimeSyncUtil.nowEpochMillis();
+            long downtimeSec = Math.max(1, Math.round((completedMs - sourceStoppedMs) / 1000.0));
+            run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(completedMs) + "] Released migration_lock. Downtime (RTO) = " + downtimeSec + "s.");
 
             instance.setMigrationLock(false);
             instance.setCurrentStatus("RUNNING");
@@ -246,6 +286,8 @@ public class MigrationService {
             migrationRecord.setStatus("COMPLETED");
             migrationRecord.setCopyProgress(100);
             migrationRecord.setCompletedAt(completedSec);
+            migrationRecord.setDowntimeSeconds(downtimeSec);
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             run.setStatus("COMPLETED");
@@ -260,12 +302,14 @@ public class MigrationService {
             instance.setCurrentStatus("RUNNING");
             instancesTable.putItem(instance);
 
-            migrationRecord.setStatus("FAILED");
-            migrationRecord.setErrorMessage(e.getMessage());
-            migrationsTable.putItem(migrationRecord);
-
             run.setStatus("ROLLED_BACK");
             run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] ERROR: " + e.getMessage() + ". Migration lock released.");
+
+            migrationRecord.setStatus("FAILED");
+            migrationRecord.setErrorMessage(e.getMessage());
+            migrationRecord.setCompletedAt(TimeSyncUtil.nowEpochSeconds());
+            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
+            migrationsTable.putItem(migrationRecord);
         }
     }
 
@@ -274,6 +318,187 @@ public class MigrationService {
         run.setProgressPercent(percent);
         run.setCurrentStep(stepName);
         run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] Step " + stepNum + "/6: " + logMsg);
+    }
+
+    private boolean isLockStale(InstanceEntity instance) {
+        if (!Boolean.TRUE.equals(instance.getMigrationLock())) {
+            return false;
+        }
+        MigrationResponse run = activeRuns.get(instance.getInstanceId());
+        if (run != null && "IN_PROGRESS".equals(run.getStatus())) {
+            return false;
+        }
+        Long acquired = instance.getLockAcquiredAt();
+        long heldSeconds = (acquired == null || acquired <= 0)
+                ? Long.MAX_VALUE
+                : TimeSyncUtil.nowEpochSeconds() - TimeSyncUtil.toEpochSeconds(acquired);
+        return heldSeconds > STALE_LOCK_SECONDS;
+    }
+
+    /** Nhả khóa treo và đánh dấu các bản ghi IN_PROGRESS bị bỏ dở là FAILED. */
+    private void releaseStaleLock(InstanceEntity instance) {
+        String instanceId = instance.getInstanceId();
+        log.warn("Releasing stale migration_lock on instance {} (lock_acquired_at={})", instanceId, instance.getLockAcquiredAt());
+        instance.setMigrationLock(false);
+        if ("MIGRATING".equalsIgnoreCase(instance.getCurrentStatus())) {
+            instance.setCurrentStatus("RUNNING");
+        }
+        instancesTable.putItem(instance);
+
+        long nowSec = TimeSyncUtil.nowEpochSeconds();
+        findMigrations(instanceId).stream()
+                .filter(m -> "IN_PROGRESS".equalsIgnoreCase(m.getStatus()))
+                .forEach(m -> {
+                    m.setStatus("FAILED");
+                    m.setCompletedAt(nowSec);
+                    m.setErrorMessage("Tiến trình bị gián đoạn (backend khởi động lại), khóa đã được giải phóng tự động.");
+                    migrationsTable.putItem(m);
+                });
+        auditLogService.logAction("MIGRATE_LOCK_RECOVERED", "INSTANCE", instanceId, "Released stale migration_lock");
+    }
+
+    private List<MigrationEntity> findMigrations(String instanceId) {
+        return migrationsTable.query(QueryConditional.keyEqualTo(Key.builder().partitionValue(instanceId).build()))
+                .items().stream()
+                .collect(Collectors.toList());
+    }
+
+    private int effectiveCooldown(InstanceEntity instance) {
+        return instance.getCooldownSeconds() != null && instance.getCooldownSeconds() > 0
+                ? instance.getCooldownSeconds()
+                : DEFAULT_COOLDOWN_SECONDS;
+    }
+
+    private long getRemainingCooldownSeconds(InstanceEntity instance, List<MigrationEntity> migrations) {
+        Optional<Long> lastCompletedSec = migrations.stream()
+                .filter(m -> "COMPLETED".equalsIgnoreCase(m.getStatus()) && m.getCompletedAt() != null && m.getCompletedAt() > 0)
+                .map(m -> TimeSyncUtil.toEpochSeconds(m.getCompletedAt()))
+                .max(Long::compareTo);
+        return lastCompletedSec
+                .map(sec -> TimeSyncUtil.getRemainingCooldownSeconds(sec, effectiveCooldown(instance)))
+                .orElse(0L);
+    }
+
+    /**
+     * Lịch sử chuyển vùng của một máy ảo (mới nhất trước) kèm trạng thái migration_lock và cooldown còn lại.
+     * Mọi mốc thời gian trả về là Epoch Milliseconds để Dashboard dùng trực tiếp với new Date(ms).
+     */
+    public Map<String, Object> getHistory(String instanceId) {
+        String currentUser = getCurrentUsername();
+        InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
+            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+        }
+
+        List<MigrationEntity> migrations = findMigrations(instanceId);
+        List<Map<String, Object>> history = migrations.stream()
+                .sorted(Comparator.comparing((MigrationEntity m) -> m.getStartedAt() != null ? TimeSyncUtil.toEpochSeconds(m.getStartedAt()) : 0L).reversed())
+                .map(m -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    boolean finished = m.getCompletedAt() != null && m.getCompletedAt() > 0;
+                    long startedMs = m.getStartedAt() != null && m.getStartedAt() > 0 ? TimeSyncUtil.toEpochMillis(m.getStartedAt()) : 0L;
+                    long completedMs = finished ? TimeSyncUtil.toEpochMillis(m.getCompletedAt()) : 0L;
+                    row.put("migrationId", m.getMigrationId());
+                    row.put("sourceRegion", m.getSourceRegion());
+                    row.put("destRegion", m.getDestRegion());
+                    row.put("startedAt", startedMs);
+                    row.put("completedAt", completedMs);
+                    row.put("durationSeconds", finished && startedMs > 0 ? Math.max(0, (completedMs - startedMs) / 1000) : null);
+                    row.put("status", m.getStatus());
+                    row.put("progressPercent", m.getCopyProgress() != null ? m.getCopyProgress() : 0);
+                    row.put("errorMessage", m.getErrorMessage() != null && !m.getErrorMessage().isBlank() ? m.getErrorMessage() : null);
+                    row.put("downtimeSeconds", m.getDowntimeSeconds());
+                    row.put("logs", m.getStepLogs() != null ? m.getStepLogs() : Collections.emptyList());
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+        int cooldown = effectiveCooldown(instance);
+        long remaining = getRemainingCooldownSeconds(instance, migrations);
+        String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("instanceId", instanceId);
+        result.put("currentRegion", instance.getCurrentRegion());
+        result.put("currentStatus", status);
+        result.put("migrationLock", Boolean.TRUE.equals(instance.getMigrationLock()));
+        result.put("lockStale", isLockStale(instance));
+        result.put("lockAcquiredAt", instance.getLockAcquiredAt() != null && instance.getLockAcquiredAt() > 0
+                ? TimeSyncUtil.toEpochMillis(instance.getLockAcquiredAt()) : null);
+        result.put("cooldownSeconds", cooldown);
+        result.put("cooldownRemainingSeconds", remaining);
+        result.put("transitional", TRANSITIONAL_STATES.contains(status));
+        result.put("serverTime", TimeSyncUtil.nowEpochMillis());
+        result.put("history", history);
+        return result;
+    }
+
+    /**
+     * Tóm tắt chuyển vùng của mọi máy ảo thuộc người dùng hiện tại, cho trang Tổng quan:
+     * số lần thành công/thất bại/đang chạy, lần gần nhất, các máy đang giữ migration_lock, RTO trung bình.
+     */
+    public Map<String, Object> getSummary() {
+        String currentUser = getCurrentUsername();
+        Map<String, InstanceEntity> mine = instancesTable.scan().items().stream()
+                .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
+                .filter(i -> !"TERMINATED".equalsIgnoreCase(i.getCurrentStatus()))
+                .collect(Collectors.toMap(InstanceEntity::getInstanceId, i -> i, (a, b) -> a, LinkedHashMap::new));
+
+        List<MigrationEntity> all = new ArrayList<>();
+        mine.keySet().forEach(id -> all.addAll(findMigrations(id)));
+
+        long completed = all.stream().filter(m -> "COMPLETED".equalsIgnoreCase(m.getStatus())).count();
+        long failed = all.stream().filter(m -> "FAILED".equalsIgnoreCase(m.getStatus())).count();
+        long inProgress = all.stream().filter(m -> "IN_PROGRESS".equalsIgnoreCase(m.getStatus())).count();
+        OptionalDouble avgDowntime = all.stream()
+                .filter(m -> m.getDowntimeSeconds() != null && m.getDowntimeSeconds() > 0)
+                .mapToLong(MigrationEntity::getDowntimeSeconds).average();
+
+        Map<String, Object> latest = all.stream()
+                .filter(m -> m.getStartedAt() != null && m.getStartedAt() > 0)
+                .max(Comparator.comparing((MigrationEntity m) -> TimeSyncUtil.toEpochSeconds(m.getStartedAt())))
+                .map(m -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    InstanceEntity inst = mine.get(m.getInstanceId());
+                    boolean finished = m.getCompletedAt() != null && m.getCompletedAt() > 0;
+                    row.put("migrationId", m.getMigrationId());
+                    row.put("instanceId", m.getInstanceId());
+                    row.put("instanceName", inst != null && inst.getInstanceName() != null ? inst.getInstanceName() : m.getInstanceId());
+                    row.put("sourceRegion", m.getSourceRegion());
+                    row.put("destRegion", m.getDestRegion());
+                    row.put("status", m.getStatus());
+                    row.put("startedAt", TimeSyncUtil.toEpochMillis(m.getStartedAt()));
+                    row.put("completedAt", finished ? TimeSyncUtil.toEpochMillis(m.getCompletedAt()) : 0L);
+                    row.put("downtimeSeconds", m.getDowntimeSeconds());
+                    return row;
+                })
+                .orElse(null);
+
+        List<Map<String, Object>> locked = mine.values().stream()
+                .filter(i -> Boolean.TRUE.equals(i.getMigrationLock()))
+                .map(i -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("instanceId", i.getInstanceId());
+                    row.put("instanceName", i.getInstanceName());
+                    row.put("currentRegion", i.getCurrentRegion());
+                    row.put("lockAcquiredAt", i.getLockAcquiredAt() != null && i.getLockAcquiredAt() > 0
+                            ? TimeSyncUtil.toEpochMillis(i.getLockAcquiredAt()) : null);
+                    row.put("stale", isLockStale(i));
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", all.size());
+        result.put("completed", completed);
+        result.put("failed", failed);
+        result.put("inProgress", inProgress);
+        result.put("successRate", completed + failed > 0 ? Math.round(completed * 1000.0 / (completed + failed)) / 10.0 : null);
+        result.put("avgDowntimeSeconds", avgDowntime.isPresent() ? Math.round(avgDowntime.getAsDouble() * 10) / 10.0 : null);
+        result.put("latest", latest);
+        result.put("locked", locked);
+        result.put("serverTime", TimeSyncUtil.nowEpochMillis());
+        return result;
     }
 
     public MigrationResponse getProgress(String instanceId) {

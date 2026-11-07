@@ -30,6 +30,8 @@ public class MigrationEntity {
     private Long startedAt;
     private Long completedAt;
     private String errorMessage;
+    private java.util.List<String> stepLogs;
+    private Long downtimeSeconds;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -77,5 +79,16 @@ public class MigrationEntity {
     public String getErrorMessage() {
         return errorMessage;
     }
-}
 
+    /** Log 6 bước của lần chuyển vùng, lưu lại để xem sau khi tiến trình đã kết thúc. */
+    @DynamoDbAttribute("step_logs")
+    public java.util.List<String> getStepLogs() {
+        return stepLogs;
+    }
+
+    /** Thời gian dịch vụ gián đoạn (RTO): từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới. */
+    @DynamoDbAttribute("downtime_seconds")
+    public Long getDowntimeSeconds() {
+        return downtimeSeconds;
+    }
+}

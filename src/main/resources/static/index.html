@@ -7,6 +7,7 @@
   <title>Overview - XRegion-EC2 Cloud Console</title>
   <link rel="stylesheet" href="/css/dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230ea5e9'/%3E%3Cpath d='M9 12h11l-3-3M23 20H12l3 3' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 
 <body>
@@ -173,6 +174,33 @@
       </div>
     </div>
 
+    <!-- Cross-region migration summary -->
+    <section class="card mig-summary" aria-labelledby="migSumTitle">
+      <div class="card-header">
+        <div>
+          <div class="card-title" id="migSumTitle">Chuyển vùng xuyên vùng (Cross-Region Migration)</div>
+          <div class="card-sub">Tổng hợp từ bảng XRegion-Migrations cho các máy ảo của bạn. <span id="migSumUpdated"></span></div>
+        </div>
+        <a href="/instances.html" class="btn btn-secondary btn-sm">Chọn máy để chuyển vùng →</a>
+      </div>
+      <div class="mig-sum-grid">
+        <div class="mig-sum-tile"><div class="mig-sum-label">Thành công</div><div class="mig-sum-value ok" id="migSumCompleted">–</div><div class="mig-sum-foot" id="migSumRate">&nbsp;</div></div>
+        <div class="mig-sum-tile"><div class="mig-sum-label">Thất bại / rollback</div><div class="mig-sum-value bad" id="migSumFailed">–</div><div class="mig-sum-foot">Khóa được nhả tự động</div></div>
+        <div class="mig-sum-tile"><div class="mig-sum-label">Đang chạy</div><div class="mig-sum-value run" id="migSumRunning">–</div><div class="mig-sum-foot" id="migSumLockedCount">&nbsp;</div></div>
+        <div class="mig-sum-tile"><div class="mig-sum-label">Downtime TB (RTO)</div><div class="mig-sum-value" id="migSumRto">–</div><div class="mig-sum-foot">Từ lúc dừng VM nguồn tới khi DNS đổi IP</div></div>
+      </div>
+      <div class="mig-sum-row">
+        <div class="mig-sum-block">
+          <div class="mig-sum-block-title">Lần chuyển vùng gần nhất</div>
+          <div id="migSumLatest" class="muted">Đang tải…</div>
+        </div>
+        <div class="mig-sum-block">
+          <div class="mig-sum-block-title">Máy đang giữ migration_lock</div>
+          <div id="migSumLocked" class="muted">Đang tải…</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Active Instances Quick Preview -->
     <div class="card">
       <div class="card-header">
@@ -181,6 +209,7 @@
         </div>
         <a href="/instances.html" class="btn btn-secondary btn-sm">Xem Toàn Bộ Máy Ảo →</a>
       </div>
+      <div class="table-scroll">
       <table class="data-table">
         <thead>
           <tr>
@@ -201,6 +230,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Recent System Audit Logs -->
@@ -208,6 +238,7 @@
       <div class="card-header">
         <div class="card-title">Nhật Ký Thao Tác Hệ Thống (Recent Audit Logs)</div>
       </div>
+      <div class="table-scroll">
       <table class="data-table">
         <thead>
           <tr>
@@ -224,15 +255,18 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </main>
 
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="/js/app.js"></script>
+  <script src="/js/overview.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       initOverviewPage();
+      initOverviewExtras();
     });
   </script>
 </body>
