@@ -254,8 +254,8 @@ function renderInstance() {
   setText('detImageId', inst.imageId || '–');
   setText('detKeyName', inst.keyName || '–');
   setHtml('detState', stateTag(inst.status));
-  setText('detEbsVolumeId', inst.ebsVolumeId || `vol-${String(inst.id).replace('i-', '')}`);
-  setText('detRootDiskSize', `${spec ? spec.defaultDisk : 10} GB`);
+  setText('detEbsVolumeId', inst.volumeId || inst.ebsVolumeId || `vol-${String(inst.id).replace('i-', '')}`);
+  setText('detRootDiskSize', `${inst.ebsSizeGb || (spec ? spec.defaultDisk : 10)} GB`);
   const consoleLink = document.getElementById('detConsoleLink');
   if (consoleLink) consoleLink.href = inst.consoleUrl || '#';
 
@@ -320,24 +320,79 @@ function renderActions() {
   const item = (action, label, disabled, cls = '', hint = '') =>
     `<button type="button" role="menuitem" class="state-menu-item ${cls}" ${disabled ? `disabled title="${esc(hint)}"` : ''}
        onclick="closeStateMenu(); runDetailAction('${id}', '${action}')">${label}</button>`;
-  const busyHint = 'Máy đang chuyển trạng thái hoặc đang chuyển vùng';
+  const busyHint = t('Máy đang chuyển trạng thái hoặc đang chuyển vùng', 'Instance is transitioning or migrating');
+
+  const editLink = (section, labelVi, labelEn, requiresStop = false, immutableVi = '', immutableEn = '') => {
+    const label = t(labelVi, labelEn);
+    const url = `/instance-edit.html?id=${encodeURIComponent(inst.id)}&section=${section}`;
+    if (immutableVi) {
+      const msg = t(immutableVi, immutableEn || immutableVi);
+      return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(msg)}" title="${esc(msg)}">${label}</span>`;
+    }
+    if (requiresStop && (powered || busy)) {
+      const stopMsg = t('Cần dừng máy ảo (Stop instance) trước khi ' + labelVi, `Stop the instance before using "${labelEn}"`);
+      return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(stopMsg)}" title="${esc(stopMsg)}">${label}</span>`;
+    }
+    return `<a role="menuitem" href="${url}" class="ec2-actions-item">${label}</a>`;
+  };
 
   setHtml('detailActionButtons', `
-    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="Làm mới" aria-label="Làm mới">⟳</button>
-    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : 'disabled title="Máy phải đang chạy mới kết nối được"'}>🔌 Kết nối</button>
-    <a href="/instance-edit.html?id=${encodeURIComponent(inst.id)}" class="btn btn-secondary">✏️ Chỉnh sửa</a>
+    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">⟳</button>
+    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${t('Kết nối (Connect)', 'Connect')}</button>
     <div class="state-menu" id="stateMenu">
       <button type="button" class="btn btn-secondary" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
-        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>Instance state ▾</button>
+        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Trạng thái máy ảo ▾', 'Instance state ▾')}</button>
       <div class="state-menu-list" id="stateMenuList" role="menu" aria-labelledby="stateMenuBtn" hidden>
-        ${item('START', '▶ Start instance', powered || busy, '', powered ? 'Máy đang chạy' : busyHint)}
-        ${item('STOP', '⏸ Stop instance', !powered || busy, '', !powered ? 'Máy đã dừng' : busyHint)}
-        ${item('REBOOT', '🔄 Reboot instance', !running || busy, '', !running ? 'Chỉ reboot được máy đang chạy' : busyHint)}
+        ${item('START', t('▶ Khởi động máy ảo (Start)', '▶ Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
+        ${item('STOP', t('⏸ Dừng máy ảo (Stop)', '⏸ Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
+        ${item('REBOOT', t('🔄 Khởi động lại (Reboot)', '🔄 Reboot instance'), !running || busy, '', !running ? t('Chỉ reboot được máy đang chạy', 'Instance must be running to reboot') : busyHint)}
         <div class="state-menu-sep" role="separator"></div>
-        ${item('TERMINATE', '🗑 Terminate (delete) instance', busy, 'danger', busyHint)}
+        ${item('TERMINATE', t('🗑 Xóa vĩnh viễn (Terminate)', '🗑 Terminate (delete) instance'), busy, 'danger', busyHint)}
       </div>
     </div>
-    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || 'Chuyển sang ' + regionLabel(otherRegion(inst.region)))}">⚡ Fast Migrate X-Region</button>
+    <div class="ec2-actions-menu" id="ec2ActionsMenu">
+      <button type="button" class="btn btn-secondary" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
+        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Hành động ▾', 'Actions ▾')}</button>
+      <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Quản lý vòng đời & Nhãn', 'Protection and lifecycle management')}</div>
+            ${editLink('tags', 'Đổi tên máy ảo & nhãn (Tags)', 'Change instance name & tags', false)}
+            ${editLink('cooldown', 'Đổi thời gian chờ Cooldown', 'Change migration cooldown', false)}
+            <div class="ec2-actions-sep"></div>
+            <div class="ec2-actions-subhead">${t('Cấu hình phần cứng', 'Instance configuration')}</div>
+            ${editLink('instance-type', 'Đổi loại máy ảo (Instance type)', 'Change instance type', true)}
+            ${editLink('cpu-options', 'Tùy chọn vi xử lý (CPU options)', 'Change CPU options', true, 'Cần dừng máy ảo (Stop instance) để cấu hình CPU options', 'Instance must be stopped to modify CPU options')}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Mạng (Networking)', 'Networking')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Địa chỉ IP & Tên miền', 'IP & DNS configuration')}</div>
+            ${editLink('elastic-ip', 'Quản lý địa chỉ Elastic IP', 'Manage Elastic IP address', false)}
+            ${editLink('dns', 'Cập nhật tên miền Route 53 DNS', 'Change Route 53 DNS record', false)}
+            ${editLink('vpc', 'Đổi mạng VPC / Subnet', 'Change VPC / Subnet', false, 'Không thể đổi trực tiếp VPC/Subnet. Vui lòng dùng Fast Migrate X-Region để chuyển vùng', 'VPC/Subnet cannot be changed directly. Use Fast Migrate X-Region instead')}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Bảo mật (Security)', 'Security')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
+            ${editLink('security-groups', 'Đổi nhóm bảo mật (Security groups)', 'Change security groups', false)}
+            ${editLink('key-pair', 'Đổi khóa truy cập SSH Key Pair', 'Change SSH key pair', false)}
+          </div>
+        </div>
+        <div class="ec2-actions-group">
+          <button type="button" class="ec2-actions-trigger"><span>${t('Lưu trữ (Storage)', 'Storage')}</span><span>▸</span></button>
+          <div class="ec2-actions-submenu">
+            <div class="ec2-actions-subhead">${t('Ổ đĩa EBS Elastic Volumes', 'EBS Elastic Volumes')}</div>
+            ${editLink('storage', 'Mở rộng ổ cứng gốc EBS (gp3)', 'Modify EBS root volume (gp3)', false)}
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">⚡ Fast Migrate X-Region</button>
   `);
 
   setText('detActionHint', reason ? 'Fast Migrate tạm khóa: ' + reason : '');
@@ -1138,12 +1193,13 @@ function confirmDialog({ title, message, confirmText = 'Xác nhận', cancelText
 }
 
 
-// ---------------- Instance state dropdown ----------------
+// ---------------- Instance state & Actions dropdowns ----------------
 function toggleStateMenu(force) {
   const list = document.getElementById('stateMenuList');
   const btn = document.getElementById('stateMenuBtn');
   if (!list || !btn) return;
   const open = force !== undefined ? force : list.hidden;
+  if (open) closeEc2ActionsMenu();
   list.hidden = !open;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) {
@@ -1154,10 +1210,26 @@ function toggleStateMenu(force) {
 
 function closeStateMenu() { toggleStateMenu(false); }
 
+function toggleEc2ActionsMenu(force) {
+  const list = document.getElementById('ec2ActionsList');
+  const btn = document.getElementById('ec2ActionsBtn');
+  if (!list || !btn) return;
+  const open = force !== undefined ? force : list.hidden;
+  if (open) closeStateMenu();
+  list.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function closeEc2ActionsMenu() { toggleEc2ActionsMenu(false); }
+
 document.addEventListener('click', e => {
   if (!e.target.closest('#stateMenu')) closeStateMenu();
+  if (!e.target.closest('#ec2ActionsMenu')) closeEc2ActionsMenu();
 });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeEc2ActionsMenu();
+  }
   const list = document.getElementById('stateMenuList');
   if (!list || list.hidden) return;
   if (e.key === 'Escape') { closeStateMenu(); document.getElementById('stateMenuBtn').focus(); return; }
