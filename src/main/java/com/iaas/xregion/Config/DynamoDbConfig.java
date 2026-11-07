@@ -1,5 +1,7 @@
 package com.iaas.xregion.Config;
 
+import com.iaas.xregion.Entity.FlavorEntity;
+import com.iaas.xregion.Entity.ImageEntity;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
 import com.iaas.xregion.Entity.UserEntity;
@@ -40,6 +42,12 @@ public class DynamoDbConfig {
 
     @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}")
     private String usersTableArn;
+
+    @Value("${dynamodb.imagesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Images}")
+    private String imagesTableArn;
+
+    @Value("${dynamodb.flavorsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}")
+    private String flavorsTableArn;
 
     @Value("${dynamodb.endpoint:}")
     private String endpoint;
@@ -123,5 +131,19 @@ public class DynamoDbConfig {
         String tableName = parseTableNameFromArn(usersTableArn, "XRegion-Users");
         log.info("Initialized DynamoDB table bean for users: {}", tableName);
         return enhancedClient.table(tableName, TableSchema.fromBean(UserEntity.class));
+    }
+
+    @Bean
+    public DynamoDbTable<ImageEntity> imagesTable(DynamoDbEnhancedClient enhancedClient) {
+        String tableName = parseTableNameFromArn(imagesTableArn, "XRegion-Images");
+        log.info("Initialized DynamoDB table bean for images: {}", tableName);
+        return enhancedClient.table(tableName, TableSchema.fromBean(ImageEntity.class));
+    }
+
+    @Bean
+    public DynamoDbTable<FlavorEntity> flavorsTable(DynamoDbEnhancedClient enhancedClient) {
+        String tableName = parseTableNameFromArn(flavorsTableArn, "XRegion-Flavors");
+        log.info("Initialized DynamoDB table bean for flavors: {}", tableName);
+        return enhancedClient.table(tableName, TableSchema.fromBean(FlavorEntity.class));
     }
 }

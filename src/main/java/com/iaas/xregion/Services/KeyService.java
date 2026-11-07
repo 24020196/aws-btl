@@ -1,12 +1,15 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Client.Model.EventBridgeEventResponse;
 import com.iaas.xregion.Entity.KeyPairItem;
 import com.iaas.xregion.Entity.UserEntity;
+import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateKeyPairRequest;
 import com.iaas.xregion.Model.Response.KeyPairResponse;
+import com.iaas.xregion.Utils.UlidCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -49,9 +52,22 @@ public class KeyService {
     }
 
     private UserEntity findUserByUsername(String username) {
-        if (username == null)
-            return null;
-        return userRepository.findByUsername(username).orElse(null);
+        if (username == null) return null;
+        try {
+            UserEntity user = usersTable.index("username-index")
+                    .query(software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
+                    .stream()
+                    .flatMap(page -> page.items().stream())
+                    .findFirst()
+                    .orElse(null);
+            if (user != null) return user;
+        } catch (Exception ex) {
+            log.debug("GSI lookup error in KeyService: {}", ex.getMessage());
+        }
+        if (username.startsWith("usr-")) {
+            return usersTable.getItem(Key.builder().partitionValue(username).build());
+        }
+        return null;
     }
 
     private List<KeyPairItem> loadUserKeyItems(String username) {
@@ -74,7 +90,7 @@ public class KeyService {
         try {
             UserEntity user = userRepository.findByUsername(username).orElse(null);
             if (user == null) {
-                String userId = username.startsWith("usr-") ? username : "usr-" + username;
+                String userId = "usr-" + UlidCreator.nextUlid();
                 user = UserEntity.builder()
                         .userId("usr-" + username.toLowerCase())
                         .username(username)
@@ -176,7 +192,30 @@ public class KeyService {
                 ? request.getDescription().trim()
                 : "Khóa SSH RSA 2048 tạo bởi " + currentUser;
 
-        // Lưu chỉ Public Key + Metadata vào DynamoDB (Tuyệt đối không lưu Private Key)
+        // 1. Gửi sự kiện Import Public Key đồng bộ qua API Gateway vào EventBridge với chữ ký AWS IAM SigV4
+        try {
+            EventBridgeEventResponse ebResp = eventBridgeGatewayClient.sendKeySyncEvent(
+                    name,
+                    "RSA 2048",
+                    publicKeyStr,
+                    fingerprint,
+                    List.of("ap-southeast-2", "us-east-1"),
+                    currentUser
+            );
+            if (ebResp == null || ebResp.getFailedEntryCount() > 0) {
+                log.error("API Gateway từ chối hoặc lỗi đồng bộ SSH Key [{}]: {}", name, ebResp);
+                throw new AppException("Gửi sự kiện import SSH Key qua API Gateway thất bại. Không thể tạo khóa.");
+            }
+            log.info("API Gateway đã xác nhận gửi thành công sự kiện SSH Key [{}] với EventId={}",
+                    name, (ebResp.getEntries() != null && !ebResp.getEntries().isEmpty()) ? ebResp.getEntries().get(0).get("EventId") : "OK");
+        } catch (AppException ae) {
+            throw ae;
+        } catch (Exception e) {
+            log.error("Lỗi khi kết nối API Gateway để import SSH Key [{}]: {}", name, e.getMessage(), e);
+            throw new AppException("Không thể kết nối API Gateway để import SSH Key: " + e.getMessage());
+        }
+
+        // 2. Chỉ khi API Gateway phản hồi thành công mới lưu Public Key vào DynamoDB
         KeyPairItem itemToSave = KeyPairItem.builder()
                 .keyName(name)
                 .keyFingerprint(fingerprint)
@@ -192,25 +231,7 @@ public class KeyService {
         auditLogService.logAction("CREATE_KEYPAIR", "KEY", name,
                 "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
 
-        // Đồng bộ Public Key sang EventBridge bất đồng bộ để phản hồi tải file .pem tức
-        // thì
-        final String syncPubKey = publicKeyStr;
-        final String syncFp = fingerprint;
-        CompletableFuture.runAsync(() -> {
-            try {
-                eventBridgeGatewayClient.sendKeySyncEvent(
-                        name,
-                        "RSA 2048",
-                        syncPubKey,
-                        syncFp,
-                        List.of("ap-southeast-2", "us-east-1"),
-                        currentUser);
-            } catch (Exception e) {
-                log.warn("Không thể gửi sự kiện đồng bộ SSH Key qua API Gateway EventBridge: {}", e.getMessage());
-            }
-        });
-
-        // Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <name>.pem
+        // 3. Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <name>.pem
         return KeyPairResponse.builder()
                 .keyName(name)
                 .keyFingerprint(fingerprint)

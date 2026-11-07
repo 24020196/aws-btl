@@ -77,17 +77,18 @@ public class EventBridgeGatewayClient {
     }
 
     /**
-     * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qua Step Function OpenStack-NovaVM-EBS-Provisioner
+ung    * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qua Step Function LaunchInstance
      */
     public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceName, int sizeGb, String volumeType,
-                                                            String flavorName, String imageName, String keyName, String username) {
+                                                            String flavorName, String imageId, String keyName, String username) {
         Map<String, Object> detail = new HashMap<>();
         detail.put("event_id", "evt-launch-" + UUID.randomUUID().toString().substring(0, 8));
         detail.put("instance_name", instanceName);
         detail.put("size_gb", sizeGb);
         detail.put("volume_type", volumeType != null ? volumeType : "gp3");
         detail.put("flavor_name", flavorName);
-        detail.put("image_name", imageName);
+        detail.put("image_id", imageId);
+        detail.put("image_name", imageId);
         detail.put("key_name", keyName);
         detail.put("username", username);
         detail.put("timestamp", System.currentTimeMillis());
