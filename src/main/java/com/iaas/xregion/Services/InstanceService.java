@@ -85,8 +85,17 @@ public class InstanceService {
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
+        String userId = "usr-" + currentUser;
+        String keyId = "key-" + keyName;
+        String volumeId = "vol-" + (id.length() > 8 ? id.substring(0, 8) : id);
+        String securityGroupId = "7295eaec-b17d-4dd0-be49-97389e6b361a";
+
         InstanceEntity entity = InstanceEntity.builder()
                 .username(currentUser)
+                .userId(userId)
+                .keyId(keyId)
+                .volumeId(volumeId)
+                .securityGroupId(securityGroupId)
                 .instanceId(id)
                 .instanceName(request.getName())
                 .currentRegion(region)
@@ -94,28 +103,23 @@ public class InstanceService {
                 .elasticIp(elasticIp)
                 .privateIp(privateIp)
                 .flavor(request.getFlavor())
-                .keyName(keyName)
                 .dns(dns)
                 .migrationLock(false)
-                .lockAcquiredAt(0L)
-                .cooldownSeconds(300)
-                .lastMigrationTimestamp(nowSec)
                 .build();
 
-        try {
-            instancesTable.putItem(entity);
-        } catch (Exception e) {
-            log.error("Failed to put instance into AWS DynamoDB: {}", e.getMessage());
-            throw new AppException("Lỗi ghi máy ảo vào AWS DynamoDB: " + e.getMessage());
-        }
-
         auditLogService.logAction("LAUNCH_VM", "INSTANCE", id,
-                "Launched instance [" + request.getName() + "] in AWS region [" + region + "] with IP " + elasticIp);
+                "Requested launch for instance [" + request.getName() + "] in AWS region [" + region + "]");
 
-        // Bắn sự kiện qua API Gateway vào EventBridge
+        // Bắn sự kiện qua API Gateway vào EventBridge để Step Function và Lambda tự động cấp phát và đồng bộ DynamoDB
         try {
-            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    "LAUNCH", id, request.getName(), request.getFlavor(), region, keyName, currentUser
+            eventBridgeGatewayClient.sendInstanceLaunchEvent(
+                    request.getName(),
+                    10,
+                    "gp3",
+                    request.getFlavor(),
+                    "cirros",
+                    keyName,
+                    currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
@@ -144,20 +148,16 @@ public class InstanceService {
 
         String oldName = entity.getInstanceName();
         String oldFlavor = entity.getFlavor();
-        String oldKey = entity.getKeyName();
+        String oldKey = entity.getKeyId();
 
         entity.setInstanceName(request.getName().trim());
-        entity.setFlavor(request.getFlavor().trim());
         if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
-            entity.setKeyName(request.getKeyPairName().trim());
+            String newKey = request.getKeyPairName().trim();
+            entity.setKeyId(newKey.startsWith("key-") ? newKey : "key-" + newKey);
         }
         if (request.getDomainName() != null && !request.getDomainName().trim().isEmpty()) {
             entity.setDns(request.getDomainName().trim());
         }
-        if (request.getCooldownSeconds() != null && request.getCooldownSeconds() >= 0) {
-            entity.setCooldownSeconds(request.getCooldownSeconds());
-        }
-        entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
 
         try {
             instancesTable.putItem(entity);
@@ -168,12 +168,12 @@ public class InstanceService {
 
         auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
                 String.format("Updated instance [%s -> %s], flavor [%s -> %s], key [%s -> %s]",
-                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(), oldKey, entity.getKeyName()));
+                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(), oldKey, entity.getKeyId()));
 
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
                     "MODIFY", id, entity.getInstanceName(), entity.getFlavor(),
-                    entity.getCurrentRegion(), entity.getKeyName(), currentUser
+                    entity.getCurrentRegion(), entity.getKeyId(), currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện MODIFY qua API Gateway EventBridge: {}", e.getMessage());
@@ -197,57 +197,26 @@ public class InstanceService {
         }
 
         String action = request.getAction().toUpperCase();
-        String currentStatus = entity.getCurrentStatus();
 
         switch (action) {
             case "START":
-                entity.setCurrentStatus("RUNNING");
-                break;
             case "STOP":
-                entity.setCurrentStatus("STOPPED");
-                break;
             case "REBOOT":
-                entity.setCurrentStatus("REBOOTING");
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        entity.setCurrentStatus("RUNNING");
-                        try {
-                            instancesTable.putItem(entity);
-                        } catch (Exception e) {
-                            log.error("Failed to update reboot status in DynamoDB: {}", e.getMessage());
-                        }
-                    }
-                }, 3000);
-                break;
             case "TERMINATE":
             case "DELETE":
-                try {
-                    instancesTable.deleteItem(Key.builder().partitionValue(id).build());
-                } catch (Exception e) {
-                    log.error("Failed to delete instance from AWS DynamoDB: {}", e.getMessage());
-                    throw new AppException("Lỗi xóa máy ảo trên AWS DynamoDB: " + e.getMessage());
-                }
-                auditLogService.logAction("TERMINATE_VM", "INSTANCE", id, "Terminated instance " + id);
-                return mapToResponse(entity);
+                break;
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
         }
 
-        try {
-            instancesTable.putItem(entity);
-        } catch (Exception e) {
-            log.error("Failed to update instance on AWS DynamoDB: {}", e.getMessage());
-            throw new AppException("Lỗi cập nhật trạng thái máy ảo trên AWS DynamoDB: " + e.getMessage());
-        }
-
         auditLogService.logAction(action + "_VM", "INSTANCE", id,
-                "Changed status from " + currentStatus + " to " + entity.getCurrentStatus());
+                "Requested lifecycle action " + action + " for instance " + id);
 
-        // Bắn sự kiện qua API Gateway vào EventBridge
+        // Bắn sự kiện qua API Gateway vào EventBridge để Lambda NovaLifecycleManager thực thi OpenStack
+        // và OpenStack event forwarder tự động trigger Lambda SyncNovaToDynamoDB cập nhật trạng thái thực tế vào DynamoDB
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyName(), currentUser
+                    action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(), entity.getKeyId(), currentUser
             );
         } catch (Exception e) {
             log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
@@ -271,10 +240,11 @@ public class InstanceService {
             uiStatus = "REBOOTING";
         }
 
-        long timestampMs = TimeSyncUtil.toEpochMillis(entity.getLastMigrationTimestamp());
+        long timestampMs = System.currentTimeMillis();
 
         return InstanceResponse.builder()
                 .username(entity.getUsername())
+                .userId(entity.getUserId() != null ? entity.getUserId() : ("usr-" + (entity.getUsername() != null ? entity.getUsername() : "admin")))
                 .id(entity.getInstanceId())
                 .name(entity.getInstanceName() != null ? entity.getInstanceName() : entity.getInstanceId())
                 .region(regionCode)
@@ -291,8 +261,10 @@ public class InstanceService {
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
                 .createdAt(timestampMs)
                 .updatedAt(timestampMs)
-                .keyName(entity.getKeyName() != null ? entity.getKeyName() : "xregion-key")
-                .cooldownSeconds(entity.getCooldownSeconds() != null ? entity.getCooldownSeconds() : 300)
+                .keyId(entity.getKeyId())
+                .keyName(entity.getKeyId())
+                .volumeId(entity.getVolumeId())
+                .securityGroupId(entity.getSecurityGroupId())
                 .build();
     }
 }

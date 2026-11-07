@@ -149,7 +149,6 @@ public class MigrationService {
         try {
             instance.setMigrationLock(true);
             instance.setCurrentStatus("MIGRATING");
-            instance.setLockAcquiredAt(startEpochSec);
 
             UpdateItemEnhancedRequest<InstanceEntity> lockReq = UpdateItemEnhancedRequest.builder(InstanceEntity.class)
                     .item(instance)
@@ -280,7 +279,6 @@ public class MigrationService {
 
             instance.setMigrationLock(false);
             instance.setCurrentStatus("RUNNING");
-            instance.setLastMigrationTimestamp(completedSec);
             instancesTable.putItem(instance);
 
             migrationRecord.setStatus("COMPLETED");
@@ -325,20 +323,13 @@ public class MigrationService {
             return false;
         }
         MigrationResponse run = activeRuns.get(instance.getInstanceId());
-        if (run != null && "IN_PROGRESS".equals(run.getStatus())) {
-            return false;
-        }
-        Long acquired = instance.getLockAcquiredAt();
-        long heldSeconds = (acquired == null || acquired <= 0)
-                ? Long.MAX_VALUE
-                : TimeSyncUtil.nowEpochSeconds() - TimeSyncUtil.toEpochSeconds(acquired);
-        return heldSeconds > STALE_LOCK_SECONDS;
+        return run == null || !"IN_PROGRESS".equals(run.getStatus());
     }
 
     /** Nhả khóa treo và đánh dấu các bản ghi IN_PROGRESS bị bỏ dở là FAILED. */
     private void releaseStaleLock(InstanceEntity instance) {
         String instanceId = instance.getInstanceId();
-        log.warn("Releasing stale migration_lock on instance {} (lock_acquired_at={})", instanceId, instance.getLockAcquiredAt());
+        log.warn("Releasing stale migration_lock on instance {}", instanceId);
         instance.setMigrationLock(false);
         if ("MIGRATING".equalsIgnoreCase(instance.getCurrentStatus())) {
             instance.setCurrentStatus("RUNNING");
@@ -364,9 +355,7 @@ public class MigrationService {
     }
 
     private int effectiveCooldown(InstanceEntity instance) {
-        return instance.getCooldownSeconds() != null && instance.getCooldownSeconds() > 0
-                ? instance.getCooldownSeconds()
-                : DEFAULT_COOLDOWN_SECONDS;
+        return DEFAULT_COOLDOWN_SECONDS;
     }
 
     private long getRemainingCooldownSeconds(InstanceEntity instance, List<MigrationEntity> migrations) {
@@ -423,8 +412,7 @@ public class MigrationService {
         result.put("currentStatus", status);
         result.put("migrationLock", Boolean.TRUE.equals(instance.getMigrationLock()));
         result.put("lockStale", isLockStale(instance));
-        result.put("lockAcquiredAt", instance.getLockAcquiredAt() != null && instance.getLockAcquiredAt() > 0
-                ? TimeSyncUtil.toEpochMillis(instance.getLockAcquiredAt()) : null);
+        result.put("lockAcquiredAt", null);
         result.put("cooldownSeconds", cooldown);
         result.put("cooldownRemainingSeconds", remaining);
         result.put("transitional", TRANSITIONAL_STATES.contains(status));
@@ -481,8 +469,7 @@ public class MigrationService {
                     row.put("instanceId", i.getInstanceId());
                     row.put("instanceName", i.getInstanceName());
                     row.put("currentRegion", i.getCurrentRegion());
-                    row.put("lockAcquiredAt", i.getLockAcquiredAt() != null && i.getLockAcquiredAt() > 0
-                            ? TimeSyncUtil.toEpochMillis(i.getLockAcquiredAt()) : null);
+                    row.put("lockAcquiredAt", null);
                     row.put("stale", isLockStale(i));
                     return row;
                 })

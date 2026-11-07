@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class InstanceResponse {
     private String username;
+    private String userId;
     private String id;
     private String name;
     private String region;
@@ -25,6 +26,9 @@ public class InstanceResponse {
     private long createdAt;
     private long updatedAt;
     private String consoleUrl;
+    private String keyId;
     private String keyName;
+    private String volumeId;
+    private String securityGroupId;
     private Integer cooldownSeconds;
 }

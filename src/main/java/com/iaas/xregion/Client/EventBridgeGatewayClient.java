@@ -110,7 +110,23 @@ public class EventBridgeGatewayClient {
         detail.put("created_by", createdBy);
         detail.put("timestamp", System.currentTimeMillis());
 
-        return sendEvent("xregion.backend.key", "Keypair Created Event", detail);
+        return sendEvent("xregion.backend.key", "key.import", detail);
+    }
+
+    /**
+     * Gửi sự kiện tạo Security Group qua OpenStack Neutron & DynamoDB
+     */
+    public EventBridgeEventResponse sendSecurityGroupCreateEvent(String name, String description,
+                                                                List<Map<String, Object>> inboundRules, String createdBy) {
+        Map<String, Object> detail = new HashMap<>();
+        detail.put("event_id", "evt-sg-" + UUID.randomUUID().toString().substring(0, 8));
+        detail.put("name", name);
+        detail.put("description", description);
+        detail.put("inbound_rules", inboundRules);
+        detail.put("created_by", createdBy);
+        detail.put("timestamp", System.currentTimeMillis());
+
+        return sendEvent("xregion.backend.security", "security.create", detail);
     }
 
     /**

@@ -10,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 
 @Slf4j
 @Service
@@ -22,7 +23,23 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-            UserEntity user = usersTable.getItem(Key.builder().partitionValue(username).build());
+            UserEntity user = null;
+            try {
+                user = usersTable.index("username-index")
+                        .query(QueryConditional.keyEqualTo(Key.builder().partitionValue(username).build()))
+                        .stream()
+                        .flatMap(page -> page.items().stream())
+                        .findFirst()
+                        .orElse(null);
+            } catch (Exception ex) {
+                log.debug("GSI lookup error, falling back to direct user_id lookup: {}", ex.getMessage());
+            }
+
+            if (user == null) {
+                String userId = username.startsWith("usr-") ? username : "usr-" + username;
+                user = usersTable.getItem(Key.builder().partitionValue(userId).build());
+            }
+
             if (user != null) {
                 return CustomUserDetails.builder()
                         .username(user.getUsername())

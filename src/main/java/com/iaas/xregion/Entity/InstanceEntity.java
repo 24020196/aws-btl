@@ -12,6 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 /**
  * Maps to live AWS DynamoDB table: XRegion-Instances
  * Primary Key: instance_id (S)
+ * GSI: username-index (username)
  */
 @DynamoDbBean
 @Setter
@@ -20,26 +21,20 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 @AllArgsConstructor
 public class InstanceEntity {
 
-    private String username;
     private String instanceId;
     private String instanceName;
+    private String userId;
+    private String keyId;
+    private String volumeId;
+    private String securityGroupId;
+    private String username;
     private String currentRegion;
     private String currentStatus;
     private String elasticIp;
     private String privateIp;
     private String flavor;
     private Boolean migrationLock;
-    private Long lockAcquiredAt;
-    private Integer cooldownSeconds;
-    private Long lastMigrationTimestamp;
-    private String keyName;
     private String dns;
-
-    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
-    @DynamoDbAttribute("username")
-    public String getUsername() {
-        return username;
-    }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -50,6 +45,32 @@ public class InstanceEntity {
     @DynamoDbAttribute("instance_name")
     public String getInstanceName() {
         return instanceName;
+    }
+
+    @DynamoDbAttribute("user_id")
+    public String getUserId() {
+        return userId;
+    }
+
+    @DynamoDbAttribute("key_id")
+    public String getKeyId() {
+        return keyId;
+    }
+
+    @DynamoDbAttribute("volume_id")
+    public String getVolumeId() {
+        return volumeId;
+    }
+
+    @DynamoDbAttribute("security_group_id")
+    public String getSecurityGroupId() {
+        return securityGroupId;
+    }
+
+    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
+    @DynamoDbAttribute("username")
+    public String getUsername() {
+        return username;
     }
 
     @DynamoDbAttribute("current_region")
@@ -80,26 +101,6 @@ public class InstanceEntity {
     @DynamoDbAttribute("migration_lock")
     public Boolean getMigrationLock() {
         return migrationLock;
-    }
-
-    @DynamoDbAttribute("lock_acquired_at")
-    public Long getLockAcquiredAt() {
-        return lockAcquiredAt;
-    }
-
-    @DynamoDbAttribute("cooldown_seconds")
-    public Integer getCooldownSeconds() {
-        return cooldownSeconds;
-    }
-
-    @DynamoDbAttribute("last_migration_timestamp")
-    public Long getLastMigrationTimestamp() {
-        return lastMigrationTimestamp;
-    }
-
-    @DynamoDbAttribute("key_name")
-    public String getKeyName() {
-        return keyName;
     }
 
     @DynamoDbAttribute("dns")

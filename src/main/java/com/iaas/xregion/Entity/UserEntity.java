@@ -7,10 +7,12 @@ import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 /**
  * Maps to live AWS DynamoDB table: XRegion-Users
- * Primary Key: username (S)
+ * Primary Key: user_id (S)
+ * GSI: username-index (username)
  */
 @DynamoDbBean
 @Setter
@@ -19,6 +21,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 @AllArgsConstructor
 public class UserEntity {
 
+    private String userId;
     private String username;
     private String password;
     private String fullName;
@@ -29,6 +32,12 @@ public class UserEntity {
     private java.util.List<KeyPairItem> sshKeys;
 
     @DynamoDbPartitionKey
+    @DynamoDbAttribute("user_id")
+    public String getUserId() {
+        return userId;
+    }
+
+    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
     @DynamoDbAttribute("username")
     public String getUsername() {
         return username;
@@ -69,4 +78,3 @@ public class UserEntity {
         return sshKeys;
     }
 }
-
