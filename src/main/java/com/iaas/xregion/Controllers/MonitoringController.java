@@ -15,8 +15,9 @@ public class MonitoringController {
     private final MonitoringService monitoringService;
 
     @GetMapping("/instances/{instanceId}")
-    public ResponseEntity<ApiResponse<MetricsResponse>> getMetrics(@PathVariable String instanceId) {
-        return ResponseEntity.ok(ApiResponse.ok(monitoringService.getMetricsForInstance(instanceId)));
+    public ResponseEntity<ApiResponse<MetricsResponse>> getMetrics(@PathVariable String instanceId,
+                                                                   @RequestParam(defaultValue = "1") int hours) {
+        return ResponseEntity.ok(ApiResponse.ok(monitoringService.getMetricsForInstance(instanceId, hours)));
     }
 }
 

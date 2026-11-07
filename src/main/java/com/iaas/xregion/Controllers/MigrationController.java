@@ -37,6 +37,18 @@ public class MigrationController {
         return ResponseEntity.ok(ApiResponse.ok("Cross-region migration workflow started", response));
     }
 
+    /** Lịch sử chuyển vùng của riêng một máy ảo + trạng thái migration_lock và cooldown còn lại. */
+    @GetMapping("/history/{instanceId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getHistory(@PathVariable String instanceId) {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.getHistory(instanceId)));
+    }
+
+    /** Tóm tắt chuyển vùng của người dùng hiện tại cho trang Tổng quan. */
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSummary() {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.getSummary()));
+    }
+
     @GetMapping("/progress/{instanceId}")
     public ResponseEntity<ApiResponse<MigrationResponse>> getProgress(@PathVariable String instanceId) {
         return ResponseEntity.ok(ApiResponse.ok(migrationService.getProgress(instanceId)));

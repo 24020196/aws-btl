@@ -11,17 +11,30 @@ import java.util.*;
 public class MonitoringService {
 
     private final AuditLogService auditLogService;
-    private final Random random = new Random();
 
     public MetricsResponse getMetricsForInstance(String instanceId) {
+        return getMetricsForInstance(instanceId, 1);
+    }
+
+    /**
+     * Chuỗi chỉ số trong {@code hours} giờ gần nhất (1, 3 hoặc 12). Chu kỳ lấy mẫu giống CloudWatch:
+     * 5 phút cho 1h/3h, 15 phút cho 12h. Mỗi mốc được seed theo instance + thời điểm nên làm mới không đổi lịch sử.
+     */
+    public MetricsResponse getMetricsForInstance(String instanceId, int hours) {
+        int range = hours >= 12 ? 12 : hours >= 3 ? 3 : 1;
+        long periodMs = range == 12 ? 900_000L : 300_000L;
+        int points = (int) (range * 3_600_000L / periodMs);
         long now = System.currentTimeMillis();
         List<Map<String, Object>> timeSeries = new ArrayList<>();
+        long lastBucket = now - (now % periodMs);
 
-        // Generate last 12 data points (5-min intervals)
-        for (int i = 11; i >= 0; i--) {
-            long ts = now - (i * 300_000L);
+        for (int i = points - 1; i >= 0; i--) {
+            long ts = lastBucket - (i * periodMs);
+            Random random = new Random((instanceId.hashCode() * 31L + ts / periodMs) * 0x9E3779B97F4A7C15L);
             double baseCpu = 25.0 + (Math.abs(instanceId.hashCode()) % 20);
-            double cpu = Math.min(95.0, Math.max(5.0, baseCpu + (random.nextDouble() * 20.0 - 10.0)));
+            double hourWave = 12.0 * Math.sin(2 * Math.PI * ((ts / 60_000L) % 720) / 720.0);
+            double spike = random.nextDouble() < 0.06 ? 30.0 + random.nextDouble() * 20.0 : 0.0;
+            double cpu = Math.min(98.0, Math.max(3.0, baseCpu + hourWave + spike + (random.nextDouble() * 20.0 - 10.0)));
             double ram = 48.0 + (random.nextDouble() * 10.0);
             double netIn = 120.0 + (random.nextDouble() * 180.0);
             double netOut = 90.0 + (random.nextDouble() * 140.0);
