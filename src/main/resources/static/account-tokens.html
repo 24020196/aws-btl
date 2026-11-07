@@ -5,6 +5,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tài Khoản & API Token - XRegion-EC2 Cloud Console</title>
+  <script>
+    if (!localStorage.getItem('xregion_jwt')) {
+      window.location.replace('/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
+    }
+  </script>
   <link rel="stylesheet" href="/css/dashboard.css">
   <style>
     .token-grid {

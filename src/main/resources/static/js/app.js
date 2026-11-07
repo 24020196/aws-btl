@@ -6,6 +6,23 @@ let performanceChart = null;
 let migrationPollInterval = null;
 let serverClockOffsetMs = 0;
 
+// Auth Guard: Tự động kiểm tra phiên đăng nhập và chuyển hướng nếu chưa xác thực
+function requireAuthGuard() {
+  const token = localStorage.getItem('xregion_jwt');
+  const path = window.location.pathname;
+  const isAuthPage = path.endsWith('/login.html') || path.endsWith('/register.html') || path.endsWith('login') || path.endsWith('register');
+
+  if (!token && !isAuthPage) {
+    const currentUrl = window.location.pathname + window.location.search;
+    window.location.replace('/login.html?redirect=' + encodeURIComponent(currentUrl));
+    return false;
+  }
+  return true;
+}
+
+// Chạy kiểm tra Auth Guard ngay khi nạp file app.js
+requireAuthGuard();
+
 // Đồng bộ đồng hồ trình duyệt với Server & AWS DynamoDB
 async function syncServerClock() {
   try {
@@ -152,20 +169,29 @@ function showToast(message, type = 'success') {
 
 // Authenticated Fetch wrapper
 async function apiRequest(endpoint, options = {}) {
+  const token = localStorage.getItem('xregion_jwt') || authToken;
   const headers = {
     'Content-Type': 'application/json',
-    ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {})
+    ...(token ? { 'Authorization': 'Bearer ' + token } : {})
   };
 
   try {
     const res = await fetch(API_BASE + endpoint, { ...options, headers });
-    if (res.status === 401) {
-      const err = new Error('Phiên đăng nhập hết hạn hoặc chưa xác thực (HTTP 401). Vui lòng đăng nhập lại.');
-      showApiError(endpoint, err.message, 401);
-      setTimeout(() => {
-        window.location.href = '/login.html';
-      }, 1500);
-      throw err;
+    if (res.status === 401 || res.status === 403) {
+      console.warn(`Auth error (${res.status}) on endpoint: ${endpoint}`);
+      localStorage.removeItem('xregion_jwt');
+      localStorage.removeItem('xregion_user');
+      authToken = '';
+
+      const isAuthPage = window.location.pathname.endsWith('login.html') || window.location.pathname.endsWith('register.html');
+      if (!isAuthPage) {
+        showToast('Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Đang chuyển về trang đăng nhập...', 'error');
+        const currentUrl = window.location.pathname + window.location.search;
+        setTimeout(() => {
+          window.location.replace('/login.html?redirect=' + encodeURIComponent(currentUrl));
+        }, 800);
+      }
+      throw new Error(`Yêu cầu bị từ chối (${res.status} Forbidden/Unauthorized). Vui lòng đăng nhập lại.`);
     }
 
     let data;
@@ -185,7 +211,9 @@ async function apiRequest(endpoint, options = {}) {
     return data ? data.data : null;
   } catch (err) {
     console.error('API Error:', endpoint, err);
-    showApiError(endpoint, err.message);
+    if (!endpoint.includes('/auth/login')) {
+      showApiError(endpoint, err.message);
+    }
     throw err;
   }
 }
@@ -1138,6 +1166,7 @@ function renderUserBadge() {
 
 // 1. OVERVIEW PAGE (index.html)
 async function initOverviewPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 
@@ -1237,6 +1266,7 @@ async function initOverviewPage() {
 
 // 2. INSTANCES LIST PAGE (instances.html)
 function initInstancesPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
     sessionStorage.removeItem('xregion_launch_completed');
@@ -1250,6 +1280,7 @@ function initInstancesPage() {
 
 // 3. INSTANCE DETAIL PAGE (instance-detail.html)
 async function initDetailPage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 
@@ -1366,6 +1397,7 @@ async function executeDetailAction(id, action) {
 
 // 4. LAUNCH INSTANCE PAGE (launch.html)
 function initLaunchPage() {
+  if (!requireAuthGuard()) return;
   if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
     sessionStorage.removeItem('xregion_launch_completed');
     window.location.replace('/instances.html');
@@ -1625,6 +1657,7 @@ async function handleLaunchPageSubmit(e) {
 let currentEditingInstance = null;
 
 async function initEditInstancePage() {
+  if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
 

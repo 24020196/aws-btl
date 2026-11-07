@@ -51,6 +51,16 @@
 
   <script src="/js/app.js"></script>
   <script>
+    // Nếu người dùng đã có token hợp lệ, tự động chuyển vào Dashboard
+    (function checkAlreadyLoggedIn() {
+      const existingToken = localStorage.getItem('xregion_jwt');
+      if (existingToken) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUrl = urlParams.get('redirect') || '/instances.html';
+        window.location.replace(targetUrl);
+      }
+    })();
+
     async function handleLoginPageSubmit(e) {
       e.preventDefault();
       const errBox = document.getElementById('loginErrorBox');
@@ -76,9 +86,12 @@
           localStorage.setItem('xregion_jwt', data.data.token);
           localStorage.setItem('xregion_user', data.data.fullName || username);
           showToast('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const targetUrl = urlParams.get('redirect') || '/instances.html';
           setTimeout(() => {
-            window.location.href = '/instances.html';
-          }, 600);
+            window.location.replace(targetUrl);
+          }, 500);
         } else {
           throw new Error(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
         }
