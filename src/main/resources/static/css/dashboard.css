@@ -1,6 +1,12 @@
 /* Danh sách file CSS, nạp theo đúng thứ tự này (thứ tự ảnh hưởng tới cách CSS ghi đè nhau).
    Muốn thêm CSS cho trang của mình: sửa file của trang đó, không thêm vào file này. */
-@import url("base.css");
+@import url("base/tokens.css");
+@import url("base/header.css");
+@import url("base/layout.css");
+@import url("base/status-badges.css");
+@import url("base/pipeline.css");
+@import url("base/feedback.css");
+@import url("base/sub-nav.css");
 @import url("auth.css");
 @import url("overview.css");
 @import url("launch.css");

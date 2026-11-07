@@ -1,0 +1,43 @@
+/* Dùng chung mọi trang — Thanh menu trang (sub-nav). Sửa file này phải báo cả nhóm. */
+
+/* ============================================================
+   PAGE HEADER & SUB-NAV LINK BAR
+   ============================================================ */
+.sub-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0d1524;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 28px;
+  overflow-x: auto;
+}
+
+.sub-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sub-nav-item:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sub-nav-item.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+.sub-nav-item svg {
+  width: 16px;
+  height: 16px;
+}

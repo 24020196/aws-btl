@@ -1,0 +1,196 @@
+/* Chỉ dùng cho login.html (trước đây viết thẳng trong thẻ <style> của trang). */
+
+/* Cyber Tech Grid Background Layer */
+
+/* Neon Gradient Horizon Glow */
+
+/* Top Bar */
+
+/* Main 2-Column Container */
+.xr-main-wrapper {
+  max-width: 880px;
+  width: calc(100% - 48px);
+  margin: 40px auto;
+  display: grid;
+  grid-template-columns: 370px 1fr;
+  gap: 36px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 860px) {
+  .xr-main-wrapper {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+
+  .xr-promo-box {
+    display: none;
+  }
+}
+
+/* Left Sign-in Card: Cyber Glassmorphism */
+.xr-card {
+  background: var(--xr-card-bg);
+  border: 1px solid var(--xr-card-border);
+  border-radius: 18px;
+  padding: 32px 30px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.xr-card-desc {
+  font-size: 13px;
+  color: var(--xr-muted);
+  margin: 0 0 24px 0;
+  line-height: 1.45;
+}
+
+.xr-field-group {
+  margin-bottom: 16px;
+}
+
+.xr-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+}
+
+.xr-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #f8fafc;
+  background-color: var(--xr-input-bg);
+  border: 1.5px solid var(--xr-input-border);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.xr-input:focus {
+  border-color: var(--xr-cyan);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2), 0 0 16px rgba(56, 189, 248, 0.15);
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+.xr-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 18px;
+  font-size: 13px;
+}
+
+.xr-link {
+  color: var(--xr-cyan);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.xr-link:hover {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+/* Action Buttons */
+
+.xr-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0 16px;
+  color: var(--xr-muted);
+  font-size: 12.5px;
+}
+
+/* Error & Hint Box */
+
+.xr-trouble-box {
+  display: none;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px dashed var(--xr-cyan);
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+/* Right Promotional Card: Cyber Glass */
+.xr-promo-box {
+  border-radius: 18px;
+  padding: 44px 38px;
+  min-height: 380px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(168, 85, 247, 0.12);
+  backdrop-filter: blur(20px);
+}
+
+.xr-promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.xr-promo-headline {
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0 0 16px 0;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.xr-promo-subtext {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #cbd5e1;
+  margin: 0 0 28px 0;
+}
+
+.xr-promo-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--xr-cyan);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: gap 0.2s;
+}
+
+.xr-promo-cta:hover {
+  gap: 12px;
+  color: #7dd3fc;
+}
+
+/* Footer */

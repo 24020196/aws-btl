@@ -1,0 +1,182 @@
+/* Chỉ dùng cho instance-edit.html (trước đây viết thẳng trong thẻ <style> của trang). */
+
+.ec2-setting-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.ec2-page-head {
+  margin-bottom: 20px;
+}
+
+.ec2-page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ec2-page-sub {
+  font-size: 13.5px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.ec2-setting-card {
+  background: var(--bg-card, #111827);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 24px 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.ec2-field-block {
+  margin-bottom: 22px;
+}
+
+.ec2-field-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.ec2-field-static {
+  font-size: 14px;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ec2-field-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.ec2-select-wrap {
+  position: relative;
+  max-width: 420px;
+}
+
+.ec2-select-wrap.is-stop-locked[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: #1e293b;
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  z-index: 50;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.ec2-check-disabled {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13.5px;
+  user-select: none;
+}
+
+.ec2-check-disabled input {
+  margin-top: 3px;
+  accent-color: #64748b;
+}
+
+.ec2-cmp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  color: #38bdf8;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.ec2-cmp-toggle:hover {
+  text-decoration: underline;
+}
+
+.ec2-cmp-divider {
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  margin-top: 8px;
+  padding-top: 12px;
+}
+
+.ec2-cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.ec2-cmp-table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: #94a3b8;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.ec2-cmp-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+
+.ec2-cmp-table td:first-child {
+  color: #cbd5e1;
+  width: 36%;
+}
+
+.ec2-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-ec2-save {
+  background: #f59e0b;
+  color: #0f172a;
+  font-weight: 700;
+  border: 0;
+  padding: 9px 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.btn-ec2-save:hover:not(:disabled) {
+  background: #fbbf24;
+}
+
+.btn-ec2-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ec2-sec-panel {
+  display: none;
+}
+
+.ec2-sec-panel.active {
+  display: block;
+}

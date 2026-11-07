@@ -248,7 +248,9 @@ public class MigrationService {
 
             // STEP 5: Boot VM in Target Region
             Thread.sleep(2500);
-            String newIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
+            // Elastic IP thuộc dải public của vùng đích: Sydney 3.27.x.x, N. Virginia 54.85.x.x
+            String eipPrefix = dstRegion.contains("southeast") ? "3.27." : "54.85.";
+            String newIp = eipPrefix + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
             // Private IP mới nằm trong subnet của vùng đích (cùng quy tắc với InstanceService khi tạo máy)
             String newPrivateIp = (dstRegion.contains("southeast") ? "10.0.1." : "10.1.1.") + (100 + new Random().nextInt(150));
             instance.setElasticIp(newIp);
