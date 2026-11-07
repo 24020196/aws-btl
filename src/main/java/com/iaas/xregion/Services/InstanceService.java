@@ -29,6 +29,7 @@ public class InstanceService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
+    private final Map<String, Integer> instanceEbsSizeMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -89,6 +90,8 @@ public class InstanceService {
         String keyId = "key-" + keyName;
         String volumeId = "vol-" + (id.length() > 8 ? id.substring(0, 8) : id);
         String securityGroupId = "7295eaec-b17d-4dd0-be49-97389e6b361a";
+        int initialEbsGb = (request.getEbsSizeGb() > 0) ? request.getEbsSizeGb() : 10;
+        instanceEbsSizeMap.put(id, initialEbsGb);
 
         InstanceEntity entity = InstanceEntity.builder()
                 .username(currentUser)
@@ -147,9 +150,33 @@ public class InstanceService {
         }
 
         String oldName = entity.getInstanceName();
-        String oldFlavor = entity.getFlavor();
+        String oldFlavor = entity.getFlavor() != null ? entity.getFlavor() : "m1.medium";
         String oldKey = entity.getKeyId();
+        String oldSg = entity.getSecurityGroupId();
+        String oldEip = entity.getElasticIp();
 
+        boolean isStopped = "STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus());
+
+        // Quy tắc AWS EC2 Nhóm 2 (Cold-modify): Thay đổi Instance Type (Flavor) bắt buộc máy ảo phải ở trạng thái STOPPED
+        String requestedFlavor = request.getFlavor() != null ? request.getFlavor().trim() : oldFlavor;
+        if (!requestedFlavor.equalsIgnoreCase(oldFlavor)) {
+            if (!isStopped) {
+                throw new AppException("Theo quy tắc AWS EC2, bạn bắt buộc phải Dừng máy ảo (Stop) trước khi thay đổi gói cấu hình phần cứng (Instance Type / Flavor từ " + oldFlavor + " sang " + requestedFlavor + ")!");
+            }
+            entity.setFlavor(requestedFlavor);
+        }
+
+        // Quy tắc AWS EC2 Nhóm 3 & 1 (EBS Elastic Volumes): Chỉ cho phép tăng dung lượng ổ cứng, không hỗ trợ giảm (Downsize)
+        int currentEbsSize = instanceEbsSizeMap.getOrDefault(id, 10);
+        if (request.getEbsSizeGb() != null) {
+            if (request.getEbsSizeGb() < currentEbsSize) {
+                throw new AppException("AWS EBS chỉ cho phép mở rộng (tăng) kích thước ổ cứng, không hỗ trợ giảm dung lượng trực tiếp (Hiện tại: " + currentEbsSize + " GB, Yêu cầu: " + request.getEbsSizeGb() + " GB).");
+            }
+            instanceEbsSizeMap.put(id, request.getEbsSizeGb());
+        }
+
+        // Quy tắc AWS EC2 Nhóm 1 (Hot-modify): Sửa trực tiếp khi máy đang chạy
         entity.setInstanceName(request.getName().trim());
         if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
             String newKey = request.getKeyPairName().trim();
@@ -157,6 +184,22 @@ public class InstanceService {
         }
         if (request.getDomainName() != null && !request.getDomainName().trim().isEmpty()) {
             entity.setDns(request.getDomainName().trim());
+        }
+        if (request.getSecurityGroupId() != null && !request.getSecurityGroupId().trim().isEmpty()) {
+            entity.setSecurityGroupId(request.getSecurityGroupId().trim());
+        }
+        if (request.getElasticIpAction() != null) {
+            String eipAct = request.getElasticIpAction().trim().toUpperCase();
+            if ("ALLOCATE_NEW".equals(eipAct)) {
+                if (request.getCustomElasticIp() != null && !request.getCustomElasticIp().trim().isEmpty()) {
+                    entity.setElasticIp(request.getCustomElasticIp().trim());
+                } else {
+                    String newEip = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
+                    entity.setElasticIp(newEip);
+                }
+            } else if ("DISASSOCIATE".equals(eipAct)) {
+                entity.setElasticIp("Chưa gán");
+            }
         }
 
         try {
@@ -167,8 +210,10 @@ public class InstanceService {
         }
 
         auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
-                String.format("Updated instance [%s -> %s], flavor [%s -> %s], key [%s -> %s]",
-                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(), oldKey, entity.getKeyId()));
+                String.format("Updated instance [%s -> %s], flavor [%s -> %s], sg [%s -> %s], eip [%s -> %s], ebs [%dGB]",
+                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(),
+                        oldSg, entity.getSecurityGroupId(), oldEip, entity.getElasticIp(),
+                        instanceEbsSizeMap.getOrDefault(id, 10)));
 
         try {
             eventBridgeGatewayClient.sendInstanceLifecycleEvent(
@@ -200,10 +245,20 @@ public class InstanceService {
 
         switch (action) {
             case "START":
+                entity.setCurrentStatus("RUNNING");
+                instancesTable.putItem(entity);
+                break;
             case "STOP":
+                entity.setCurrentStatus("STOPPED");
+                instancesTable.putItem(entity);
+                break;
             case "REBOOT":
+                entity.setCurrentStatus("RUNNING");
+                instancesTable.putItem(entity);
+                break;
             case "TERMINATE":
             case "DELETE":
+                instancesTable.deleteItem(Key.builder().partitionValue(id).build());
                 break;
             default:
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
@@ -262,9 +317,10 @@ public class InstanceService {
                 .createdAt(timestampMs)
                 .updatedAt(timestampMs)
                 .keyId(entity.getKeyId())
-                .keyName(entity.getKeyId())
+                .keyName(entity.getKeyId() != null ? entity.getKeyId().replaceFirst("^key-", "") : "xregion-key")
                 .volumeId(entity.getVolumeId())
-                .securityGroupId(entity.getSecurityGroupId())
+                .ebsSizeGb(instanceEbsSizeMap.getOrDefault(entity.getInstanceId(), 10))
+                .securityGroupId(entity.getSecurityGroupId() != null ? entity.getSecurityGroupId() : "7295eaec-b17d-4dd0-be49-97389e6b361a")
                 .build();
     }
 }
