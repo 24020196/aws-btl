@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.ApiTokenItem;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
@@ -48,13 +49,15 @@ public class AuthService {
 
             auditLogService.logAction("LOGIN", "USER", userDetails.getUsername(), "Successful JWT login");
 
+            long expMs = tokenProvider.getExpirationMs();
             return JwtResponse.builder()
                     .token(token)
                     .type("Bearer")
                     .username(userDetails.getUsername())
                     .fullName(userDetails.getFullName())
                     .role(userDetails.getRole())
-                    .expiresIn(tokenProvider.getExpirationMs() / 1000)
+                    .expiresIn(expMs / 1000)
+                    .expiresAt(TimeSyncUtil.nowEpochMillis() + expMs)
                     .build();
         } catch (Exception e) {
             throw new AppException("Authentication failed: " + e.getMessage());
@@ -97,13 +100,15 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = tokenProvider.generateToken(authentication);
 
+        long expMs = tokenProvider.getExpirationMs();
         return JwtResponse.builder()
                 .token(token)
                 .type("Bearer")
                 .username(username)
                 .fullName(fullName)
                 .role(role)
-                .expiresIn(tokenProvider.getExpirationMs() / 1000)
+                .expiresIn(expMs / 1000)
+                .expiresAt(TimeSyncUtil.nowEpochMillis() + expMs)
                 .build();
     }
 

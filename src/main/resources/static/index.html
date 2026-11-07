@@ -5,6 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Overview - XRegion-EC2 Cloud Console</title>
+  <script>
+    (function() {
+      const token = localStorage.getItem('xregion_jwt');
+      const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
+      if (!token || (expAt > 0 && Date.now() >= expAt)) {
+        window.location.replace('/login.html');
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="/css/dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
