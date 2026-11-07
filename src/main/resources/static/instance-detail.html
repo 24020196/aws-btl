@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chi Tiết Máy Ảo - XRegion-EC2</title>
-  <script>
-    if (!localStorage.getItem('xregion_jwt')) {
-      window.location.replace('/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
-    }
-  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230284c7'/%3E%3Cpath d='M8 12h14l-4-4M24 20H10l4 4' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/css/dashboard.css">
 </head>
-
 <body>
 
   <!-- Top Global Header -->
@@ -37,55 +31,31 @@
   <!-- Sub Navigation Bar -->
   <nav class="sub-nav">
     <a href="/index.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Trang Chủ Overview
     </a>
     <a href="/instances.html" class="sub-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-        <rect x="9" y="9" width="6" height="6" />
-        <line x1="9" y1="1" x2="9" y2="4" />
-        <line x1="15" y1="1" x2="15" y2="4" />
-        <line x1="9" y1="20" x2="9" y2="23" />
-        <line x1="15" y1="20" x2="15" y2="23" />
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
       Danh Sách Máy Ảo (Instances)
     </a>
     <a href="/launch.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="16" />
-        <line x1="8" y1="12" x2="16" y2="12" />
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Khởi Tạo Máy Ảo (+ Launch VM)
     </a>
     <a href="/account-tokens.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
       Tài Khoản & API Token
     </a>
   </nav>
 
   <!-- Main Content Area -->
   <main class="main-content">
-    <!-- Breadcrumb in AWS style -->
     <div class="breadcrumb">
       <a href="/index.html">XRegion-EC2</a>
       <span>/</span>
-      <span>&gt;</span>
       <a href="/instances.html">Instances</a>
       <span>/</span>
       <span id="breadcrumbInstanceId" style="color: var(--accent-cyan); font-family: monospace;">Loading...</span>
-      <span>&gt;</span>
-      <span id="breadcrumbInstanceId"
-        style="color: var(--accent-cyan); font-family: monospace; font-weight: 700;">Loading...</span>
     </div>
 
     <!-- On-screen API Error Banner -->
@@ -97,490 +67,279 @@
         <div>
           <div class="det-title-row">
             <h1 class="detail-title" id="detInstanceName">Đang tải...</h1>
-            <span class="badge" id="detStatusBadge" style="font-size: 13px; padding: 4px 10px;">UNKNOWN</span>
-            <!-- Top Action Bar & Instance Title -->
-            <div class="aws-header-bar">
-              <div class="aws-header-title">
-                <h1 class="aws-instance-h1" id="detInstanceName">Đang tải...</h1>
-                <span class="badge" id="detStatusBadge" style="font-size: 13px; padding: 4px 12px;">UNKNOWN</span>
-              </div>
+            <span class="ec2-state" id="detStatusBadge">–</span>
+          </div>
+          <div class="det-subline">
+            <span>ID: <strong id="detInstanceId" class="mono-accent">--</strong></span>
+            <span>•</span>
+            <span>Vùng: <strong id="detRegionName">--</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="det-actions-wrap">
+        <div class="det-actions" id="detailActionButtons"></div>
+        <div class="det-action-hint" id="detActionHint" aria-live="polite"></div>
+      </div>
+    </div>
 
-              <!-- Action Toolbar (Start/Stop, Reboot, Fast Migrate, Modify, Terminate) -->
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;" id="detailActionButtons">
-                <!-- Dynamically populated by JS -->
-              </div>
-            </div>
+    <!-- Instance summary (EC2 style) -->
+    <section class="card det-summary" aria-label="Tóm tắt máy ảo">
+      <div class="summary-grid" id="detSummary">
+        <div class="summary-item"><div class="summary-label">Instance ID</div><div class="summary-value mono"><span id="sumId">–</span><button class="copy-btn" data-copy="sumId" title="Sao chép" aria-label="Sao chép Instance ID">⧉</button></div></div>
+        <div class="summary-item"><div class="summary-label">Trạng thái</div><div class="summary-value" id="sumState">–</div></div>
+        <div class="summary-item"><div class="summary-label">Status checks</div><div class="summary-value" id="sumChecks">–</div></div>
+        <div class="summary-item"><div class="summary-label">Flavor</div><div class="summary-value" id="sumFlavor">–</div></div>
+        <div class="summary-item"><div class="summary-label">Elastic IP (Public)</div><div class="summary-value mono"><span id="sumPublicIp">–</span><button class="copy-btn" data-copy="sumPublicIp" title="Sao chép" aria-label="Sao chép Elastic IP">⧉</button></div></div>
+        <div class="summary-item"><div class="summary-label">Private IP</div><div class="summary-value mono"><span id="sumPrivateIp">–</span><button class="copy-btn" data-copy="sumPrivateIp" title="Sao chép" aria-label="Sao chép Private IP">⧉</button></div></div>
+        <div class="summary-item"><div class="summary-label">Route 53 DNS</div><div class="summary-value mono"><span id="sumDns">–</span><button class="copy-btn" data-copy="sumDns" title="Sao chép" aria-label="Sao chép tên miền">⧉</button></div></div>
+        <div class="summary-item"><div class="summary-label">SSH Key Pair</div><div class="summary-value mono" id="sumKey">–</div></div>
+        <div class="summary-item"><div class="summary-label">Vùng hiện tại</div><div class="summary-value" id="sumRegion">–</div></div>
+        <div class="summary-item"><div class="summary-label">Availability Zone</div><div class="summary-value mono" id="sumAz">–</div></div>
+        <div class="summary-item"><div class="summary-label">VPC</div><div class="summary-value mono" id="sumVpc">–</div></div>
+        <div class="summary-item"><div class="summary-label">Khóa chuyển vùng</div><div class="summary-value" id="sumLock">–</div></div>
+      </div>
+    </section>
 
-            <!-- AWS EC2 Instance Summary Card -->
-            <div class="aws-summary-card">
-              <div class="aws-summary-header">
-                <div class="aws-summary-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)"
-                    stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                  </svg>
-                  <span>Instance summary for <strong id="summaryCardId"
-                      style="color: var(--accent-cyan); font-family: monospace;">--</strong></span>
-                </div>
-                <div class="aws-summary-updated">
-                  <span>🕒 Đồng bộ lúc: <strong id="detUpdatedAt" style="color: #cbd5e1;">--</strong></span>
-                </div>
-              </div>
+    <!-- Tabs -->
+    <div class="det-tabs" role="tablist" aria-label="Thông tin máy ảo">
+      <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true">Chi tiết</button>
+      <button class="det-tab" role="tab" data-tab="security" id="tabBtn-security" aria-controls="tab-security" aria-selected="false">Bảo mật &amp; Mạng</button>
+      <button class="det-tab" role="tab" data-tab="storage" id="tabBtn-storage" aria-controls="tab-storage" aria-selected="false">Lưu trữ</button>
+      <button class="det-tab" role="tab" data-tab="monitoring" id="tabBtn-monitoring" aria-controls="tab-monitoring" aria-selected="false">Giám sát</button>
+      <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false">Chuyển vùng <span class="tab-dot" id="migTabDot" hidden></span></button>
+    </div>
 
-              <div class="aws-summary-grid">
-                <!-- Column 1 -->
-                <div class="aws-kv-item">
-                  <div class="aws-kv-label">Instance ID</div>
-                  <div class="aws-kv-value">
-                    <span class="aws-code-val" id="detInstanceId" style="color: var(--accent-cyan);">--</span>
-                    <button class="aws-copy-btn" title="Sao chép Instance ID"
-                      onclick="copyFieldText('detInstanceId', 'Instance ID')">📋 Copy</button>
-                  </div>
-                  <div
-                    style="font-size: 13px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 14px; font-family: monospace;">
-                    <span>ID: <strong id="detInstanceId" style="color: var(--accent-cyan);">--</strong></span>
-                    <span>•</span>
-                    <span>Region: <strong id="detRegionName" style="color: #fff;">--</strong></span>
-                  </div>
+    <!-- TAB 1: Hardware & identity -->
+    <section class="det-panel active" id="tab-details" role="tabpanel" aria-labelledby="tabBtn-details">
+      <div class="detail-grid">
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header"><div class="card-title">Phần cứng &amp; Hệ điều hành</div></div>
+          <table class="kv-table">
+            <tr><td class="kv-label">Flavor</td><td class="kv-value"><span class="badge badge-flavor" id="detFlavor">--</span> <span class="muted" id="detSeries"></span></td></tr>
+            <tr><td class="kv-label">vCPU / RAM</td><td class="kv-value" id="detSpecs">--</td></tr>
+            <tr><td class="kv-label">Hệ điều hành</td><td class="kv-value" id="detImageName">--</td></tr>
+            <tr><td class="kv-label">Glance Image ID</td><td class="kv-value"><code id="detImageId">--</code></td></tr>
+            <tr><td class="kv-label">Nền tảng</td><td class="kv-value">Linux/UNIX · x86_64</td></tr>
+            <tr><td class="kv-label">Ảo hóa</td><td class="kv-value">KVM (OpenStack Nova) trên EC2 Bare Metal</td></tr>
+          </table>
+        </div>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Instance State</div>
-                    <div class="aws-kv-value" id="detSummaryStatus">
-                      <span class="badge badge-active">RUNNING</span>
-                    </div>
-                  </div>
-                </div>
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-header"><div class="card-title">Định danh &amp; Truy cập</div></div>
+          <table class="kv-table">
+            <tr><td class="kv-label">Tên máy ảo</td><td class="kv-value" id="detName">--</td></tr>
+            <tr><td class="kv-label">Instance ID</td><td class="kv-value"><code id="detId">--</code></td></tr>
+            <tr><td class="kv-label">Chủ sở hữu</td><td class="kv-value" id="detOwner">--</td></tr>
+            <tr><td class="kv-label">Trạng thái hiện tại</td><td class="kv-value" id="detState">--</td></tr>
+            <tr><td class="kv-label">SSH Key Pair</td><td class="kv-value"><span class="badge badge-key" id="detKeyName">--</span></td></tr>
+            <tr><td class="kv-label">User đăng nhập</td><td class="kv-value"><code id="detSshUser">--</code></td></tr>
+            <tr><td class="kv-label">Kết nối</td><td class="kv-value"><button class="link-btn" onclick="openConnectModal()">Xem lệnh SSH</button> · <a href="#" id="detConsoleLink" target="_blank" rel="noopener" class="link-accent">Web Terminal (VNC)</a></td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
 
-                <!-- Actions Toolbar -->
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="detailActionButtons">
-                  <!-- Injected by JS: Start/Stop, Reboot, Fast Migrate, Console, Terminate -->
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Instance Type (Flavor)</div>
-                    <div class="aws-kv-value">
-                      <span class="badge" id="detFlavor"
-                        style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-family: monospace;">--</span>
-                    </div>
-                  </div>
+    <!-- TAB 2: Security groups & network -->
+    <section class="det-panel" id="tab-security" role="tabpanel" aria-labelledby="tabBtn-security">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Security Groups</div>
+            <div class="card-sub">Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.</div>
+          </div>
+          <div class="det-actions">
+            <button class="btn btn-secondary btn-sm" onclick="openChangeSgModal()">Đổi Security Group</button>
+            <button class="btn btn-secondary btn-sm" onclick="openCreateSgModal()">+ Tạo Security Group</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')">+ Thêm rule</button>
+          </div>
+        </div>
+        <div class="sg-chips" id="sgChips"><span class="muted">Đang tải...</span></div>
 
-                  <!-- Column 2 -->
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Public IPv4 Address</div>
-                    <div class="aws-kv-value">
-                      <span class="aws-code-val" id="detPublicIp" style="color: #38bdf8;">--</span>
-                      <button class="aws-copy-btn" title="Sao chép Public IP"
-                        onclick="copyFieldText('detPublicIp', 'Public IP')">📋 Copy</button>
-                    </div>
-                  </div>
+        <div class="rules-head">
+          <h3 class="rules-title">Inbound rules <span class="muted" id="inboundCount"></span></h3>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table rules-table">
+            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Nguồn</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <tbody id="inboundRulesBody"></tbody>
+          </table>
+        </div>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Private IPv4 Address</div>
-                    <div class="aws-kv-value">
-                      <span class="aws-code-val" id="detPrivateIp">--</span>
-                      <button class="aws-copy-btn" title="Sao chép Private IP"
-                        onclick="copyFieldText('detPrivateIp', 'Private IP')">📋 Copy</button>
-                    </div>
-                  </div>
+        <div class="rules-head">
+          <h3 class="rules-title">Outbound rules <span class="muted" id="outboundCount"></span></h3>
+          <button class="btn btn-secondary btn-sm" onclick="openAddRuleModal('outbound')">+ Thêm outbound rule</button>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table rules-table">
+            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Đích</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <tbody id="outboundRulesBody"></tbody>
+          </table>
+        </div>
+      </div>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Vùng Đám Mây (Region)</div>
-                    <div class="aws-kv-value">
-                      <span id="detRegionName" style="color: #f8fafc; font-weight: 700;">--</span>
-                      <span class="aws-code-val" id="detRegionCode"
-                        style="color: var(--text-muted); font-size: 11px;">--</span>
-                    </div>
-                  </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Network interface (ENI)</div>
+            <div class="card-sub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Interface ID</th><th>Gắn vào</th><th>Primary IP (Bare Metal)</th><th>Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
+            <tbody id="eniBody"></tbody>
+          </table>
+        </div>
+      </div>
 
-                  <!-- Column 3 -->
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Route 53 DNS Record</div>
-                    <div class="aws-kv-value">
-                      <span class="aws-code-val" id="detDnsDomain" style="color: #34d399;">--</span>
-                      <button class="aws-copy-btn" title="Sao chép DNS Domain"
-                        onclick="copyFieldText('detDnsDomain', 'DNS Record')">📋 Copy</button>
-                    </div>
-                  </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Mạng &amp; Route 53</div>
+          <button class="btn btn-primary btn-sm" onclick="openDnsModal()">Cập nhật Route 53 DNS</button>
+        </div>
+        <div class="net-grid">
+          <table class="kv-table">
+            <tr><td class="kv-label">VPC</td><td class="kv-value"><code id="netVpcId">--</code> <span class="muted" id="netVpcCidr"></span></td></tr>
+            <tr><td class="kv-label">Subnet</td><td class="kv-value"><code id="netSubnetId">--</code> <span class="muted" id="netSubnetCidr"></span></td></tr>
+            <tr><td class="kv-label">Private IP</td><td class="kv-value"><code id="netPrivateIp">--</code></td></tr>
+            <tr><td class="kv-label">Elastic IP (Public)</td><td class="kv-value"><code id="netPublicIp" class="mono-accent">--</code></td></tr>
+            <tr><td class="kv-label">Availability Zone</td><td class="kv-value"><code id="netAz">--</code></td></tr>
+          </table>
+          <table class="kv-table">
+            <tr><td class="kv-label">Tên miền</td><td class="kv-value"><code id="netDomain">--</code></td></tr>
+            <tr><td class="kv-label">Bản ghi A đang trỏ tới</td><td class="kv-value"><code id="netDnsTarget">--</code></td></tr>
+            <tr><td class="kv-label">TTL</td><td class="kv-value" id="netDnsTtl">--</td></tr>
+            <tr><td class="kv-label">Đồng bộ với Elastic IP</td><td class="kv-value" id="netDnsSync">--</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Security Group Tường Lửa</div>
-                    <div class="aws-kv-value">
-                      <span class="badge" id="detSecurityGroup"
-                        style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-family: monospace;">sg-default</span>
-                    </div>
-                  </div>
+    <!-- TAB: Storage -->
+    <section class="det-panel" id="tab-storage" role="tabpanel" aria-labelledby="tabBtn-storage">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Thiết bị gốc (Root device)</div></div>
+        <div class="net-grid">
+          <table class="kv-table">
+            <tr><td class="kv-label">Tên thiết bị gốc</td><td class="kv-value"><code>/dev/vda</code></td></tr>
+            <tr><td class="kv-label">Loại thiết bị</td><td class="kv-value">EBS (Cinder Volume)</td></tr>
+            <tr><td class="kv-label">Root EBS Volume</td><td class="kv-value"><code id="detEbsVolumeId">--</code></td></tr>
+          </table>
+          <table class="kv-table">
+            <tr><td class="kv-label">Loại ổ đĩa</td><td class="kv-value"><span class="badge badge-key">gp3 SSD</span></td></tr>
+            <tr><td class="kv-label">Dung lượng</td><td class="kv-value" id="detRootDiskSize">--</td></tr>
+            <tr><td class="kv-label">Hiệu năng</td><td class="kv-value">3.000 IOPS · 125 MB/s</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Block devices đang gắn <span class="muted" id="volCount"></span></div>
+            <div class="card-sub">Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Volume ID</th><th>Tên</th><th>Thiết bị</th><th>Dung lượng</th><th>Loại</th><th>IOPS / Throughput</th><th>Trạng thái</th></tr></thead>
+            <tbody id="volumesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">SSH Key Pair Xác Thực</div>
-                    <div class="aws-kv-value">
-                      <span class="badge" id="detKeyName"
-                        style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-family: monospace;">--</span>
-                    </div>
-                  </div>
+    <!-- TAB: Monitoring -->
+    <section class="det-panel" id="tab-monitoring" role="tabpanel" aria-labelledby="tabBtn-monitoring">
+      <div class="card-header mon-head">
+        <div>
+          <div class="card-title" id="monTitle">Chỉ số 1 giờ qua</div>
+          <div class="card-sub">Chu kỳ <span id="monPeriod">5 phút</span>, giống CloudWatch. Cập nhật lúc <span id="monUpdated">–</span>.</div>
+        </div>
+        <div class="mon-controls">
+          <div class="seg" role="group" aria-label="Khoảng thời gian">
+            <button type="button" class="seg-btn active" data-hours="1" aria-pressed="true">1h</button>
+            <button type="button" class="seg-btn" data-hours="3" aria-pressed="false">3h</button>
+            <button type="button" class="seg-btn" data-hours="12" aria-pressed="false">12h</button>
+          </div>
+          <label class="check-row mon-auto"><input type="checkbox" id="monAuto" checked> Tự làm mới mỗi phút</label>
+          <button class="btn btn-secondary btn-sm" onclick="loadMetrics()">Làm mới</button>
+        </div>
+      </div>
+      <div class="alarm-bar" id="cpuAlarm">
+        <span class="alarm-state" id="cpuAlarmState">–</span>
+        <span><strong>xregion-cpu-high</strong> · CPUUtilization &gt; <span id="cpuAlarmThreshold">80</span>% trong 1 chu kỳ</span>
+        <span class="muted" id="cpuAlarmNote"></span>
+      </div>
+      <div class="mon-grid">
+        <div class="card mon-card"><div class="mon-title">CPU utilization <span class="mon-now" id="monCpuNow">–</span></div><div class="mon-chart" id="chartCpu"></div></div>
+        <div class="card mon-card"><div class="mon-title">Memory utilization <span class="mon-now" id="monRamNow">–</span></div><div class="mon-chart" id="chartRam"></div></div>
+        <div class="card mon-card"><div class="mon-title">Network in / out <span class="mon-now" id="monNetNow">–</span></div><div class="mon-chart" id="chartNet"></div></div>
+        <div class="card mon-card"><div class="mon-title">Disk I/O <span class="mon-now" id="monDiskNow">–</span></div><div class="mon-chart" id="chartDisk"></div></div>
+      </div>
+    </section>
 
-                  <!-- Column 4 -->
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Độ Trễ Phân Giải DNS (TTL)</div>
-                    <div class="aws-kv-value">
-                      <span class="aws-code-val">TTL = 60s (Auto-Failover)</span>
-                    </div>
-                  </div>
+    <!-- TAB 3: Cross-region migration -->
+    <section class="det-panel" id="tab-migration" role="tabpanel" aria-labelledby="tabBtn-migration">
+      <div class="mig-status">
+        <div class="mig-status-item">
+          <div class="summary-label">migration_lock</div>
+          <div class="summary-value" id="migLock">–</div>
+          <div class="mig-hint" id="migLockHint"></div>
+        </div>
+        <div class="mig-status-item">
+          <div class="summary-label">Cooldown</div>
+          <div class="cooldown-value" id="migCooldown">–</div>
+          <div class="cooldown-bar"><span id="migCooldownBar"></span></div>
+          <div class="mig-hint" id="migCooldownHint"></div>
+        </div>
+        <div class="mig-status-item">
+          <div class="summary-label">Hướng chuyển tiếp theo</div>
+          <div class="summary-value mig-route" id="migRoute">–</div>
+          <div class="mig-hint" id="migRouteHint"></div>
+        </div>
+        <div class="mig-status-item mig-cta">
+          <button class="btn btn-primary" id="btnMigrateTab" onclick="openMigrateModal()">⚡ Fast Migrate X-Region</button>
+          <div class="mig-hint" id="migBlockReason"></div>
+        </div>
+      </div>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Khả Năng Chuyển Vùng X-Region</div>
-                    <div class="aws-kv-value">
-                      <span class="badge badge-active" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Sẵn
-                        Sàng Di Trú</span>
-                    </div>
-                  </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Tiến trình chuyển vùng (6 bước)</div>
+            <div class="card-sub" id="pipeSub">Chưa có lần chuyển vùng nào đang chạy.</div>
+          </div>
+          <div class="pipe-percent" id="pipePercent">0%</div>
+        </div>
+        <div class="det-progress"><span id="detPipeBar"></span></div>
+        <ol class="det-pipeline" id="detPipeline">
+          <li class="det-step" data-step="1"><span class="det-step-dot">1</span><span class="det-step-name">Dừng máy nguồn</span><span class="det-step-hint">fsfreeze, stop NovaVM</span></li>
+          <li class="det-step" data-step="2"><span class="det-step-dot">2</span><span class="det-step-name">Snapshot EBS</span><span class="det-step-hint">Incremental gp3</span></li>
+          <li class="det-step" data-step="3"><span class="det-step-dot">3</span><span class="det-step-name">Sao chép liên vùng</span><span class="det-step-hint">CopySnapshot</span></li>
+          <li class="det-step" data-step="4"><span class="det-step-dot">4</span><span class="det-step-name">Tạo volume đích</span><span class="det-step-hint">CreateVolume + attach</span></li>
+          <li class="det-step" data-step="5"><span class="det-step-dot">5</span><span class="det-step-name">Khởi động NovaVM</span><span class="det-step-hint">Boot + health check</span></li>
+          <li class="det-step" data-step="6"><span class="det-step-dot">6</span><span class="det-step-name">Chuyển DNS</span><span class="det-step-hint">Route 53 A record</span></li>
+        </ol>
+        <div class="terminal-head">
+          <span>Log thời gian thực</span>
+          <span class="muted" id="logStatus">Đang chờ</span>
+        </div>
+        <div class="terminal-window" id="detTerminal" role="log" aria-live="polite"><div class="muted">Log của từng bước sẽ hiện ở đây khi bạn bấm Fast Migrate.</div></div>
+      </div>
 
-                  <div class="aws-kv-item">
-                    <div class="aws-kv-label">Thời Gian Cooldown</div>
-                    <div class="aws-kv-value">
-                      <span class="aws-code-val" id="detCooldownDisplay">0 giây (Sẵn sàng)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Detail 4 Grid Cards -->
-              <div class="detail-grid">
-                <!-- Card 1: Hardware & OS -->
-                <div class="card" style="margin-bottom: 0;">
-                  <div class="card-header">
-                    <div class="card-title">Cấu Hình Phần Cứng & Hệ Điều Hành</div>
-                    <!-- AWS Console Tab Strip -->
-                    <div class="aws-tab-nav">
-                      <button class="aws-tab-btn active" id="tabBtn-details" onclick="switchDetailTab('details')">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          stroke-width="2">
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="12" y1="16" x2="12" y2="12" />
-                          <line x1="12" y1="8" x2="12.01" y2="8" />
-                        </svg>
-                        Tổng Quan (Details)
-                      </button>
-                      <button class="aws-tab-btn" id="tabBtn-networking" onclick="switchDetailTab('networking')">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          stroke-width="2">
-                          <circle cx="12" cy="12" r="10" />
-                          <line x1="2" y1="12" x2="22" y2="12" />
-                          <path
-                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                        </svg>
-                        Mạng & Bảo Mật (Route 53 & Security Group)
-                      </button>
-                      <button class="aws-tab-btn" id="tabBtn-migration" onclick="switchDetailTab('migration')">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          stroke-width="2">
-                          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                        </svg>
-                        Chuyển Vùng (X-Region Migration)
-                      </button>
-                    </div>
-
-                    <!-- TAB 1: DETAILS -->
-                    <div class="aws-tab-pane active" id="tabPane-details">
-                      <div class="aws-detail-card">
-                        <div class="aws-detail-section-title">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)"
-                            stroke-width="2">
-                            <rect x="4" y="4" width="16" height="16" rx="2" />
-                            <rect x="9" y="9" width="6" height="6" />
-                          </svg>
-                          <span>Thông Số Phần Cứng & Gói Cấu Hình Flavor</span>
-                        </div>
-                        <table class="kv-table">
-                          <tr>
-                            <td class="kv-label">Flavor Cấu Hình:</td>
-                            <td class="kv-value"><span class="badge" id="detFlavor"
-                                style="background: #1e293b; color: var(--accent-cyan);">--</span></td>
-                          </tr>
-                          <tr>
-                            <td class="kv-label">SSH Key Pair Xác Thực:</td>
-                            <td class="kv-value"><span class="badge" id="detKeyName"
-                                style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-family: monospace;">xregion-key</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td class="kv-label">Hệ Điều Hành (OS):</td>
-                            <td class="kv-value" id="detImageName">--</td>
-                          </tr>
-                          <tr>
-                            <td class="kv-label">Mã Glance Image ID:</td>
-                            <td class="kv-value"><code>img-u22</code></td>
-                          </tr>
-                          <tr>
-                            <td class="kv-label">Kiến Trúc Nhân:</td>
-                            <td class="kv-value">64-bit x86 (KVM Hypervisor on Bare Metal)</td>
-                          </tr>
-                          <tr>
-                            <td class="kv-label">Khóa Chống Xung Đột:</td>
-                            <td class="kv-value" id="detLockStatus">Không bị khóa (Unlocked)</td>
-                          </tr>
-                        </table>
-                        <div class="aws-info-grid-2">
-                          <div class="aws-kv-item">
-                            <div class="aws-kv-label">Tên Gói Cấu Hình Flavor</div>
-                            <div class="aws-kv-value"><strong id="tabFlavorName"
-                                style="color: var(--accent-cyan);">--</strong></div>
-                          </div>
-                          <div class="aws-kv-item">
-                            <div class="aws-kv-label">Số Lượng Nhân Vi Xử Lý (vCPU)</div>
-                            <div class="aws-kv-value"><span id="tabFlavorVcpu">--</span> vCPU</div>
-                          </div>
-                          <div class="aws-kv-item">
-                            <div class="aws-kv-label">Dung Lượng Bộ Nhớ RAM</div>
-                            <div class="aws-kv-value"><span id="tabFlavorRam">--</span></div>
-                          </div>
-                          <div class="aws-kv-item">
-                            <div class="aws-kv-label">Dung Lượng Ổ Đĩa Gốc Mặc Định (Root Disk)</div>
-                            <div class="aws-kv-value"><span id="tabFlavorDisk">--</span> GB Root Volume</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Card 2: Network & DNS -->
-                      <div class="card" style="margin-bottom: 0;">
-                        <div class="card-header">
-                          <div class="card-title">Mạng & Định Tuyến Tự Động (Route 53)</div>
-                          <div class="aws-detail-card">
-                            <div class="aws-detail-section-title">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)"
-                                stroke-width="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
-                              <span>Định Danh & Quyền Sở Hữu Tài Khoản</span>
-                            </div>
-                            <table class="kv-table">
-                              <tr>
-                                <td class="kv-label">Vùng Đám Mây:</td>
-                                <td class="kv-value" id="detRegionCode">--</td>
-                              </tr>
-                              <tr>
-                                <td class="kv-label">Địa Chỉ IP Nội Bộ:</td>
-                                <td class="kv-value"><code id="detPrivateIp">--</code></td>
-                              </tr>
-                              <tr>
-                                <td class="kv-label">Địa Chỉ Elastic IP (Public):</td>
-                                <td class="kv-value"><code id="detPublicIp" style="color: var(--accent-cyan);">--</code>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td class="kv-label">Bản Ghi Route 53 DNS:</td>
-                                <td class="kv-value"><strong id="detDnsDomain" style="color: #38bdf8;">--</strong> (TTL
-                                  = 60s)</td>
-                              </tr>
-                              <tr>
-                                <td class="kv-label">Security Group Tường Lửa:</td>
-                                <td class="kv-value"><span class="badge" id="detSecurityGroup"
-                                    style="background: #1e293b; color: #38bdf8; font-family: monospace;">sg-default</span>
-                                </td>
-                              </tr>
-                            </table>
-                            <div class="aws-info-grid-2">
-                              <div class="aws-kv-item">
-                                <div class="aws-kv-label">Tên Máy Ảo (Instance Name)</div>
-                                <div class="aws-kv-value"><strong id="tabInstanceName" style="color: #fff;">--</strong>
-                                </div>
-                              </div>
-                              <div class="aws-kv-item">
-                                <div class="aws-kv-label">Mã Định Danh (Instance ID)</div>
-                                <div class="aws-kv-value"><code id="tabInstanceId"
-                                    style="color: var(--accent-cyan);">--</code></div>
-                              </div>
-                              <div class="aws-kv-item">
-                                <div class="aws-kv-label">Vùng Đang Triển Khai</div>
-                                <div class="aws-kv-value"><span id="tabRegionName">--</span></div>
-                              </div>
-                              <div class="aws-kv-item">
-                                <div class="aws-kv-label">Tài Khoản Chủ Quản (Owner)</div>
-                                <div class="aws-kv-value"><span class="badge" id="tabUsername"
-                                    style="background:#1e293b; color:#cbd5e1;">--</span></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Card 3: Storage EBS gp3 -->
-                        <div class="card" style="margin-bottom: 0;">
-                          <div class="card-header">
-                            <div class="card-title">Ổ Đĩa Khối Đính Kèm (Block Storage)</div>
-                            <!-- TAB 2: NETWORKING & SECURITY -->
-                            <div class="aws-tab-pane" id="tabPane-networking">
-                              <div class="aws-detail-card">
-                                <div class="aws-detail-section-title">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                    stroke="var(--accent-cyan)" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="2" y1="12" x2="22" y2="12" />
-                                    <path
-                                      d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                  </svg>
-                                  <span>Định Tuyến Tự Động Amazon Route 53 & Địa Chỉ IP</span>
-                                </div>
-                                <table class="kv-table">
-                                  <tr>
-                                    <td class="kv-label">Mã Ổ Đĩa Root EBS:</td>
-                                    <td class="kv-value"><code id="detEbsVolumeId">vol-ebs-root-default</code></td>
-                                  </tr>
-                                  <tr>
-                                    <td class="kv-label">Loại Ổ Đĩa (Volume Type):</td>
-                                    <td class="kv-value"><span class="badge"
-                                        style="background: #1e293b; color: #34d399;">gp3 SSD</span></td>
-                                  </tr>
-                                  <tr>
-                                    <td class="kv-label">Dung Lượng Root Disk:</td>
-                                    <td class="kv-value"><strong id="detRootDiskSize">10 GB</strong> (gp3 Root Volume)
-                                    </td>
-                                  </tr>
-                                </table>
-                                <div class="aws-info-grid-2">
-                                  <div class="aws-kv-item">
-                                    <div class="aws-kv-label">Tên Miền Route 53 DNS (Domain Record)</div>
-                                    <div class="aws-kv-value">
-                                      <strong id="tabNetDns" style="color: #38bdf8; font-family: monospace;">--</strong>
-                                      <button class="aws-copy-btn" onclick="copyFieldText('tabNetDns', 'DNS Domain')">📋
-                                        Copy</button>
-                                    </div>
-                                  </div>
-                                  <div class="aws-kv-item">
-                                    <div class="aws-kv-label">Thời Gian Tồn Tại Bản Ghi (TTL)</div>
-                                    <div class="aws-kv-value">60 giây (Hỗ trợ chuyển đổi lưu lượng tức thì khi di trú)
-                                    </div>
-                                  </div>
-                                  <div class="aws-kv-item">
-                                    <div class="aws-kv-label">Địa Chỉ Elastic IP (Public IPv4)</div>
-                                    <div class="aws-kv-value">
-                                      <code id="tabNetPublicIp" style="color: #34d399;">--</code>
-                                      <button class="aws-copy-btn"
-                                        onclick="copyFieldText('tabNetPublicIp', 'Public IP')">📋 Copy</button>
-                                    </div>
-                                  </div>
-                                  <div class="aws-kv-item">
-                                    <div class="aws-kv-label">Địa Chỉ Mạng Nội Bộ (Private IPv4)</div>
-                                    <div class="aws-kv-value">
-                                      <code id="tabNetPrivateIp">--</code>
-                                      <button class="aws-copy-btn"
-                                        onclick="copyFieldText('tabNetPrivateIp', 'Private IP')">📋 Copy</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <!-- Card 4: Migration & Auto-Rollback Status -->
-                              <div class="card" style="margin-bottom: 0;">
-                                <div class="card-header">
-                                  <div class="card-title">Lịch Sử Di Trú & Tính Sẵn Sàng (X-Region)</div>
-                                  <div class="aws-detail-card">
-                                    <div class="aws-detail-section-title">
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="var(--accent-cyan)" stroke-width="2">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                                      </svg>
-                                      <span>Tường Lửa Security Group & SSH Key Pair</span>
-                                    </div>
-                                    <table class="kv-table">
-                                      <tr>
-                                        <td class="kv-label">Trạng Thái Di Trú:</td>
-                                        <td class="kv-value"><span class="badge badge-active">Sẵn Sàng Chuyển
-                                            Vùng</span></td>
-                                      </tr>
-                                      <tr>
-                                        <td class="kv-label">Cơ Chế Sao Chép:</td>
-                                        <td class="kv-value">Incremental Snapshot (Pha 1 Base + Pha 2 Delta)</td>
-                                      </tr>
-                                      <tr>
-                                        <td class="kv-label">Cơ Chế Phục Hồi:</td>
-                                        <td class="kv-value" style="color: #34d399;">Auto-Rollback kích hoạt khi lỗi
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <td class="kv-label">Thời Điểm Cập Nhật:</td>
-                                        <td class="kv-value" id="detUpdatedAt">--</td>
-                                      </tr>
-                                      <tr>
-                                        <td class="kv-label">Console Web VNC:</td>
-                                        <td class="kv-value"><a href="#" id="detConsoleLink" target="_blank"
-                                            style="color: var(--accent-cyan);">Mở Web Terminal Console →</a></td>
-                                      </tr>
-                                    </table>
-                                    <div class="aws-info-grid-2">
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Security Group Tường Lửa</div>
-                                        <div class="aws-kv-value">
-                                          <span class="badge" id="tabNetSecurityGroup"
-                                            style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-family: monospace;">sg-default</span>
-                                        </div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Chính Sách Tường Lửa</div>
-                                        <div class="aws-kv-value">Cho phép kết nối SSH (Port 22) và Web HTTP/HTTPS</div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Khóa SSH Key Pair Xác Thực</div>
-                                        <div class="aws-kv-value">
-                                          <span class="badge" id="tabNetKeyName"
-                                            style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-family: monospace;">--</span>
-                                        </div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Phương Thức Xác Thực Đăng Nhập</div>
-                                        <div class="aws-kv-value">Khóa RSA công khai (Public Key Authentication)</div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <!-- TAB 3: X-REGION MIGRATION -->
-                                <div class="aws-tab-pane" id="tabPane-migration">
-                                  <div class="aws-detail-card">
-                                    <div class="aws-detail-section-title">
-                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="var(--accent-cyan)" stroke-width="2">
-                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                      </svg>
-                                      <span>Trạng Thái Di Trú Liên Vùng X-Region (Sydney ⇄ Melbourne)</span>
-                                    </div>
-                                    <div class="aws-info-grid-2">
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Vùng Đám Mây Hiện Tại</div>
-                                        <div class="aws-kv-value"><strong id="tabMigCurrentRegion"
-                                            style="color: #fff;">--</strong></div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Vùng Đích Chuyển Giao (Target Region)</div>
-                                        <div class="aws-kv-value"><strong id="tabMigTargetRegion"
-                                            style="color: var(--accent-cyan);">--</strong></div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Trạng Thái Sẵn Sàng</div>
-                                        <div class="aws-kv-value"><span class="badge badge-active">Sẵn sàng thực thi di
-                                            trú tức thì</span></div>
-                                      </div>
-                                      <div class="aws-kv-item">
-                                        <div class="aws-kv-label">Thời Gian Cập Nhật Gần Nhất</div>
-                                        <div class="aws-kv-value"><span id="tabMigUpdatedAt">--</span></div>
-                                      </div>
-                                    </div>
-
-                                    <div
-                                      style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-                                      <div>
-                                        <div style="font-weight: 700; color: #fff; font-size: 14px;">⚡ Fast Migrate
-                                          X-Region</div>
-                                        <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Chuyển
-                                          đổi tức thời máy ảo sang vùng đối tác với bảo toàn dữ liệu và tự động cập nhật
-                                          bản ghi Route 53.</div>
-                                      </div>
-                                      <button class="btn btn-primary" id="tabMigrateActionBtn"
-                                        style="padding: 10px 20px; font-weight: 700;">
-                                        ⚡ Kích Hoạt Fast Migration Ngay
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Lịch sử chuyển vùng</div><div class="card-sub">Bấm vào một dòng để xem lại log 6 bước của lần đó.</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="loadMigrationHistory()">Làm mới</button>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>migration_id</th><th>Vùng nguồn → Vùng đích</th><th>Bắt đầu</th><th>Hoàn tất</th><th>Thời lượng</th><th title="Thời gian dịch vụ gián đoạn: từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới">Downtime (RTO)</th><th>Trạng thái</th><th><span class="sr-only">Log</span></th></tr></thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- MODAL: confirm migration -->
@@ -643,15 +402,12 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="ruleCidr" id="ruleCidrLabel">Nguồn (CIDR)</label>
-        <input type="text" class="form-input mono" id="ruleCidr" value="0.0.0.0/0" required
-          pattern="(\d{1,3}\.){3}\d{1,3}/\d{1,2}|sg-[a-zA-Z0-9\-]+" title="CIDR, ví dụ 0.0.0.0/0 hoặc 10.0.0.0/16">
+        <input type="text" class="form-input mono" id="ruleCidr" value="0.0.0.0/0" required pattern="(\d{1,3}\.){3}\d{1,3}/\d{1,2}|sg-[a-zA-Z0-9\-]+" title="CIDR, ví dụ 0.0.0.0/0 hoặc 10.0.0.0/16">
         <div class="quick-cidr">
           <button type="button" class="chip-btn" onclick="setRuleCidr('0.0.0.0/0')">Mọi nơi 0.0.0.0/0</button>
-          <button type="button" class="chip-btn" id="vpcCidrChip" onclick="setRuleCidr(this.dataset.cidr)">Trong
-            VPC</button>
+          <button type="button" class="chip-btn" id="vpcCidrChip" onclick="setRuleCidr(this.dataset.cidr)">Trong VPC</button>
         </div>
-        <div class="form-warn" id="ruleWarn" hidden>Cổng này đang mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.
-        </div>
+        <div class="form-warn" id="ruleWarn" hidden>Cổng này đang mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.</div>
       </div>
       <div class="form-group">
         <label class="form-label" for="ruleDesc">Mô tả (không bắt buộc)</label>
@@ -670,17 +426,14 @@
       <h2 class="modal-title" id="createSgTitle">Tạo Security Group</h2>
       <div class="form-group">
         <label class="form-label" for="sgName">Tên</label>
-        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}"
-          title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" placeholder="web-backend">
+        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}" title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" placeholder="web-backend">
       </div>
       <div class="form-group">
         <label class="form-label" for="sgDesc">Mô tả</label>
-        <input type="text" class="form-input" id="sgDesc" maxlength="160"
-          placeholder="Ví dụ: Cho phép API nội bộ cổng 8080">
+        <input type="text" class="form-input" id="sgDesc" maxlength="160" placeholder="Ví dụ: Cho phép API nội bộ cổng 8080">
       </div>
       <label class="check-row"><input type="checkbox" id="sgAttach" checked> Gắn vào máy ảo này sau khi tạo</label>
-      <p class="muted" style="margin-top: 8px;">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi
-        tạo.</p>
+      <p class="muted" style="margin-top: 8px;">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi tạo.</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('createSgModal')">Hủy</button>
         <button type="submit" class="btn btn-primary">Tạo Security Group</button>
@@ -699,16 +452,14 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="dnsTarget">Trỏ tới IP</label>
-          <input type="text" class="form-input mono" id="dnsTarget" required pattern="(\d{1,3}\.){3}\d{1,3}"
-            title="Địa chỉ IPv4">
+          <input type="text" class="form-input mono" id="dnsTarget" required pattern="(\d{1,3}\.){3}\d{1,3}" title="Địa chỉ IPv4">
         </div>
         <div class="form-group">
           <label class="form-label" for="dnsTtl">TTL (giây)</label>
           <input type="number" class="form-input" id="dnsTtl" value="60" min="30" max="86400" required>
         </div>
       </div>
-      <p class="muted">Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi
-        này.</p>
+      <p class="muted">Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi này.</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')">Hủy</button>
         <button type="submit" class="btn btn-primary">Cập nhật DNS</button>
@@ -726,8 +477,7 @@
       <div class="mig-log-route" id="migLogRoute"></div>
       <div class="mig-log-stats" id="migLogStats"></div>
       <ol class="mig-log-steps" id="migLogSteps"></ol>
-      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn"
-          data-copy="migLogTerminal" aria-label="Sao chép log">⧉ Sao chép</button></div>
+      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn" data-copy="migLogTerminal" aria-label="Sao chép log">⧉ Sao chép</button></div>
       <div class="terminal-window mig-log-terminal" id="migLogTerminal" role="log"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('migLogModal')">Đóng</button>
@@ -744,11 +494,9 @@
         <li>Trên Linux/macOS, giới hạn quyền đọc file khóa: <code id="connChmod">--</code></li>
         <li>Kết nối bằng Elastic IP:</li>
       </ol>
-      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp"
-          aria-label="Sao chép lệnh SSH">⧉</button></div>
+      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH">⧉</button></div>
       <p class="modal-text" style="margin-top: 12px;">Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:</p>
-      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns"
-          aria-label="Sao chép lệnh SSH theo tên miền">⧉</button></div>
+      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns" aria-label="Sao chép lệnh SSH theo tên miền">⧉</button></div>
       <p class="muted" style="margin-top: 12px;" id="connNote"></p>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('connectModal')">Đóng</button>
@@ -760,8 +508,7 @@
   <div class="modal-overlay" id="changeSgModal" role="dialog" aria-modal="true" aria-labelledby="changeSgTitle">
     <form class="modal-card" style="max-width: 560px;" onsubmit="submitChangeSg(event)">
       <h2 class="modal-title" id="changeSgTitle">Đổi Security Group</h2>
-      <p class="modal-text">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.
-      </p>
+      <p class="modal-text">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.</p>
       <div class="sg-pick" id="changeSgList"></div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('changeSgModal')">Hủy</button>
@@ -775,35 +522,9 @@
   <script src="/js/app.js"></script>
   <script src="/js/instance-detail.js"></script>
   <script>
-    // Tab switching utility
-    function switchDetailTab(tabName) {
-      document.querySelectorAll('.aws-tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.aws-tab-pane').forEach(pane => pane.classList.remove('active'));
-
-      const activeBtn = document.getElementById('tabBtn-' + tabName);
-      const activePane = document.getElementById('tabPane-' + tabName);
-      if (activeBtn) activeBtn.classList.add('active');
-      if (activePane) activePane.classList.add('active');
-    }
-
-    // Copy to clipboard helper
-    function copyFieldText(elementId, labelName) {
-      const el = document.getElementById(elementId);
-      if (!el) return;
-      const text = el.textContent.trim();
-      if (!text || text === '--') return;
-
-      navigator.clipboard.writeText(text).then(() => {
-        showToast(`Đã sao chép ${labelName}: ${text}`, 'success');
-      }).catch(() => {
-        showToast(`Không thể sao chép ${labelName}`, 'error');
-      });
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
       initInstanceDetail();
     });
   </script>
 </body>
-
 </html>

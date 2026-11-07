@@ -437,20 +437,23 @@ async function runDetailAction(id, action) {
 
 // ---------------- Security groups & network ----------------
 async function loadSecurityAndNetwork() {
-  // After the security_group column is added to InstanceEntity/InstanceResponse, the instance
-  // itself says which group it uses. Until then, ask the network API which groups are attached.
-  const fromField = typeof det.inst.securityGroup === 'string' && det.inst.securityGroup.trim() !== '';
-  const groupsUrl = fromField ? '/network/security-groups' : `/network/security-groups?instanceId=${encodeURIComponent(det.id)}`;
-  const [groups, net] = await Promise.all([
-    apiRequest(groupsUrl).catch(() => null),
+  // Danh sách nhóm gắn vào máy lấy từ API mạng (mặc định sg-default + sg-web-public, đổi được nhiều nhóm).
+  // Nếu lúc Launch người dùng chọn một nhóm khác (cột security_group), nhóm đó được hiển thị kèm theo.
+  const [attached, all, net] = await Promise.all([
+    apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null),
+    apiRequest('/network/security-groups').catch(() => null),
     apiRequest('/network').catch(() => null)
   ]);
-  if (fromField) {
-    const ids = det.inst.securityGroup.split(',').map(s => s.trim()).filter(Boolean);
-    det.groups = (groups || []).filter(g => ids.includes(g.groupId));
-  } else {
-    det.groups = groups || [];
-  }
+  det.groups = attached || [];
+  const chosen = typeof det.inst.securityGroup === 'string'
+    ? det.inst.securityGroup.split(',').map(x => x.trim()).filter(Boolean) : [];
+  const isDefaultSet = det.groups.map(g => g.groupId).sort().join(',') === 'sg-default,sg-web-public';
+  if (isDefaultSet) chosen.forEach(id => {
+    if (!det.groups.some(g => g.groupId === id)) {
+      const g = (all || []).find(x => x.groupId === id);
+      if (g) det.groups.push(g);
+    }
+  });
   if (net) {
     det.vpc = (net.vpcs || []).find(v => v.region === det.inst.region) || null;
     det.dns = (net.dnsRecords || []).find(d => String(d.domainName).toLowerCase() === String(det.inst.dnsDomain).toLowerCase()) || null;
@@ -1008,7 +1011,7 @@ async function openChangeSgModal() {
     showToast('Không tải được danh sách Security Group: ' + esc(err.message), 'error');
     return;
   }
-  const single = 'securityGroup' in (det.inst || {});
+  const single = false;
   const current = det.groups.map(g => g.groupId);
   const type = single ? 'radio' : 'checkbox';
   setHtml('changeSgList', (all || []).map(g => `
@@ -1028,12 +1031,7 @@ async function submitChangeSg(e) {
     return;
   }
   try {
-    if ('securityGroup' in det.inst) {
-      await apiRequest(`/instances/${encodeURIComponent(det.id)}`, { method: 'PUT', body: JSON.stringify({ securityGroup: ids[0] }) });
-      await loadInstance();
-    } else {
-      await apiRequest(`/network/security-groups/instances/${encodeURIComponent(det.id)}`, { method: 'PUT', body: JSON.stringify({ groupIds: ids }) });
-    }
+    await apiRequest(`/network/security-groups/instances/${encodeURIComponent(det.id)}`, { method: 'PUT', body: JSON.stringify({ groupIds: ids }) });
     closeModal('changeSgModal');
     showToast('Đã cập nhật Security Group: ' + esc(ids.join(', ')), 'success');
     await loadSecurityAndNetwork();
