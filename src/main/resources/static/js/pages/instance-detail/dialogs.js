@@ -3,6 +3,17 @@
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
 // Hộp thoại dùng trên trang: đóng modal bằng Esc, lệnh SSH (Kết nối), hộp xác nhận, menu Trạng thái máy ảo và Hành động.
 
+registerI18n({
+  detConnTitle: ['Kết nối tới máy ảo', 'Connect to instance'],
+  detConnStep1a: ['Mở terminal ở thư mục chứa file khóa', 'Open a terminal in the folder with the key file'],
+  detConnStep1b: ['đã tải lúc tạo Key Pair.', 'downloaded when the key pair was created.'],
+  detConnStep2: ['Trên Linux/macOS, giới hạn quyền đọc file khóa:', 'On Linux/macOS, restrict the key file permissions:'],
+  detConnStep3: ['Kết nối bằng Elastic IP:', 'Connect with the Elastic IP:'],
+  detConnCopyAria: ['Sao chép lệnh SSH', 'Copy SSH command'],
+  detConnDns: ['Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:', 'Or use the Route 53 domain, which keeps working after a migration:'],
+  detConnCopyDnsAria: ['Sao chép lệnh SSH theo tên miền', 'Copy SSH command (domain)']
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -18,15 +29,16 @@ function openConnectModal() {
   setText('connKeyFile', key);
   setText('connChmod', `chmod 400 "${key}"`);
   setText('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
-  setText('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : 'Máy chưa có tên miền Route 53');
-  setText('connNote', `User mặc định của ${inst.imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`
+  setText('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
+  setText('connNote', t(`User mặc định của ${inst.imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
+    `The default user of ${inst.imageName || 'this image'} is "${user}". A security group must allow inbound TCP 22 from your IP.`)
     + (det.groups.some(g => (g.inboundRules || []).some(r => (r.protocol === 'tcp' && r.fromPort <= 22 && r.toPort >= 22) || r.protocol === 'all'))
-      ? '' : ' Hiện chưa có rule nào mở cổng 22.'));
+      ? '' : t(' Hiện chưa có rule nào mở cổng 22.', ' No rule opens port 22 yet.')));
   openModal('connectModal');
 }
 
 // ---------------- Confirm dialog (thay cho confirm() của trình duyệt) ----------------
-function confirmDialog({ title, message, confirmText = 'Xác nhận', cancelText = 'Hủy', danger = false, requireText = '' }) {
+function confirmDialog({ title, message, confirmText = t('Xác nhận', 'Confirm'), cancelText = t('Hủy', 'Cancel'), danger = false, requireText = '' }) {
   return new Promise(resolve => {
     let overlay = document.getElementById('confirmModal');
     if (!overlay) {
@@ -47,7 +59,7 @@ function confirmDialog({ title, message, confirmText = 'Xác nhận', cancelText
         </div>
         <p class="modal-text" id="confirmMsg">${message}</p>
         ${requireText ? `
-          <label class="confirm-require" for="confirmInput">Gõ <code>${esc(requireText)}</code> để xác nhận</label>
+          <label class="confirm-require" for="confirmInput">${t('Gõ', 'Type')} <code>${esc(requireText)}</code> ${t('để xác nhận', 'to confirm')}</label>
           <input id="confirmInput" class="form-input" autocomplete="off" spellcheck="false">` : ''}
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" data-act="cancel">${esc(cancelText)}</button>

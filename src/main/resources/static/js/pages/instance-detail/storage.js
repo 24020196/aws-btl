@@ -3,13 +3,30 @@
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
 // Tab Lưu trữ: ổ gốc, các ổ đang gắn và snapshot sinh ra khi chuyển vùng.
 
+registerI18n({
+  detRootTitle: ['Thiết bị gốc (Root device)', 'Root device'],
+  detRootName: ['Tên thiết bị gốc', 'Root device name'],
+  detRootType: ['Loại thiết bị', 'Root device type'],
+  detDiskType: ['Loại ổ đĩa', 'Volume type'],
+  detDiskSize: ['Dung lượng', 'Size'],
+  detDiskPerf: ['Hiệu năng', 'Performance'],
+  detBlockTitle: ['Block devices đang gắn', 'Block devices'],
+  detBlockSub: ['Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.', 'During migration the root volume is snapshotted and copied to the destination region. Extra data volumes must be copied separately with Cross-region copy.'],
+  detDevice: ['Thiết bị', 'Device'],
+  detSnapSub: ['EBS snapshot tạo ở bước 2 của mỗi lần chuyển vùng, bản sao ở vùng đích tạo ở bước 3 (CopySnapshot).', 'EBS snapshots created in step 2 of each migration; the copy in the destination region is created in step 3 (CopySnapshot).'],
+  detSnapSource: ['Snapshot nguồn', 'Source snapshot'],
+  detSnapDesc: ['Mô tả', 'Description'],
+  detSnapState: ['Trạng thái', 'State'],
+  detSnapStarted: ['Thời điểm tạo', 'Started']
+});
+
 // ---------------- Storage ----------------
 async function loadVolumes() {
   let list;
   try {
     list = await apiRequest('/volumes');
   } catch (err) {
-    setHtml('volumesBody', '<tr><td colspan="7" class="empty-cell">Không tải được danh sách ổ đĩa.</td></tr>');
+    setHtml('volumesBody', `<tr><td colspan="7" class="empty-cell">${t('Không tải được danh sách ổ đĩa.', 'Could not load volumes.')}</td></tr>`);
     return;
   }
   const mine = (list || []).filter(v => v.attachedInstanceId === det.id);

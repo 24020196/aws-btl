@@ -3,6 +3,34 @@
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
 // Trạng thái trang, hàm tiện ích, chuyển tab, tải và hiển thị máy ảo, thanh nút thao tác.
 
+registerI18n({
+  detSummaryFor: ['Tóm tắt máy ảo', 'Instance summary for'],
+  detSumState: ['Trạng thái máy ảo', 'Instance state'],
+  detSumType: ['Loại máy ảo', 'Instance type'],
+  detSumChecks: ['Kiểm tra trạng thái', 'Status checks'],
+  detSumPlatform: ['Nền tảng', 'Platform'],
+  detSumOwner: ['Chủ sở hữu', 'Owner'],
+  detHwTitle: ['Phần cứng & Hệ điều hành', 'Hardware & OS'],
+  detOs: ['Hệ điều hành', 'Operating system'],
+  detPlatform: ['Nền tảng', 'Platform'],
+  detVirt: ['Ảo hóa', 'Virtualization'],
+  detVirtValue: ['KVM (OpenStack Nova) trên EC2 Bare Metal', 'KVM (OpenStack Nova) on EC2 Bare Metal'],
+  detIdTitle: ['Định danh & Truy cập', 'Identity & access'],
+  detName: ['Tên máy ảo', 'Instance name'],
+  detOwner: ['Chủ sở hữu', 'Owner'],
+  detCurrentState: ['Trạng thái hiện tại', 'Current state'],
+  detLoginUser: ['User đăng nhập', 'Login user'],
+  detConnect: ['Kết nối', 'Connect'],
+  detViewSsh: ['Xem lệnh SSH', 'View SSH command'],
+  detCancel: ['Hủy', 'Cancel'],
+  detClose: ['Đóng', 'Close'],
+  detLoading: ['Đang tải...', 'Loading...'],
+  detColType: ['Loại', 'Type'],
+  detColDesc: ['Mô tả', 'Description'],
+  detColState: ['Trạng thái', 'State'],
+  detColName: ['Tên', 'Name']
+});
+
 const DET_TRANSITIONAL = ['PENDING', 'STOPPING', 'SHUTTING_DOWN', 'TERMINATING', 'REBOOTING'];
 
 // The API may return either the old UI names (ACTIVE/SHUTOFF) or EC2 names (RUNNING/STOPPED)
@@ -103,7 +131,7 @@ function fmtDuration(sec) {
   if (sec === null || sec === undefined) return '–';
   const m = Math.floor(sec / 60);
   const s = sec % 60;
-  return m ? `${m} phút ${s} giây` : `${s} giây`;
+  return m ? t(`${m} phút ${s} giây`, `${m} min ${s} s`) : t(`${s} giây`, `${s} s`);
 }
 
 function fmtCountdown(sec) {
@@ -126,7 +154,7 @@ function copyText(id) {
   const el = document.getElementById(id);
   const text = el ? el.textContent.trim() : '';
   if (!text || text === '–' || text === '--') return;
-  const done = () => showToast('Đã sao chép: ' + esc(text), 'success');
+  const done = () => showToast(t('Đã sao chép: ', 'Copied: ') + esc(text), 'success');
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
   } else {
@@ -141,7 +169,7 @@ function fallbackCopy(text, done) {
   ta.style.opacity = '0';
   document.body.appendChild(ta);
   ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) { showToast('Trình duyệt chặn sao chép', 'error'); }
+  try { document.execCommand('copy'); done(); } catch (e) { showToast(t('Trình duyệt chặn sao chép', 'The browser blocked copying'), 'error'); }
   ta.remove();
 }
 
@@ -162,6 +190,17 @@ function switchDetailTab(tab) {
   scheduleMetricsRefresh(tab);
   if (tab === 'storage' && det.inst) { loadVolumes(); loadSnapshots(); }
 }
+
+// Đổi ngôn ngữ: i18n.js đã vẽ lại phần đầu trang, tab Security/Networking và lịch sử;
+// ở đây vẽ lại phần còn lại đang hiện trên màn hình.
+onLangChange(() => {
+  if (!det.inst) return;
+  const tab = (location.hash || '').replace('#', '');
+  if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
+  if (tab === 'monitoring') loadMetrics();
+  renderMonSub();
+  if (det.lastProgress) renderPipeline(det.lastProgress);
+});
 
 // ---------------- Init ----------------
 async function initInstanceDetail() {
@@ -196,7 +235,7 @@ async function initInstanceDetail() {
 async function loadInstance() {
   try {
     const inst = await apiRequest(`/instances/${encodeURIComponent(det.id)}`);
-    if (!inst) throw new Error(`Không tìm thấy máy ảo ${det.id}`);
+    if (!inst) throw new Error(`Instance not found: ${det.id}`);
     det.inst = inst;
     renderInstance();
     watchTransitionalStatus();
@@ -216,26 +255,26 @@ function renderLoadFailure(err) {
   if (!main) return;
   [...main.children].forEach(el => { if (!el.classList.contains('breadcrumb') && el.id !== 'apiErrorBanner') el.hidden = true; });
   setText('breadcrumbInstanceId', det.id || '–');
-  document.title = (notFound ? 'Không tìm thấy máy ảo' : 'Lỗi tải máy ảo') + ' | XRegion-EC2';
+  document.title = (notFound ? t('Không tìm thấy máy ảo', 'Instance not found') : t('Lỗi tải máy ảo', 'Error loading instance')) + ' | XRegion-EC2';
   const box = document.createElement('section');
   box.className = 'card det-empty';
   box.setAttribute('role', 'alert');
   box.innerHTML = notFound
     ? `<div class="det-empty-icon" aria-hidden="true">${ICON('ui-search', 'ico-xl')}</div>
-       <h1 class="det-empty-title">${det.id ? `Không tìm thấy máy ảo <code>${esc(det.id)}</code>` : 'Chưa chọn máy ảo'}</h1>
+       <h1 class="det-empty-title">${det.id ? `${t('Không tìm thấy máy ảo', 'Instance not found:')} <code>${esc(det.id)}</code>` : t('Chưa chọn máy ảo', 'No instance selected')}</h1>
        <p class="det-empty-text">${det.id
-         ? 'Máy ảo này không tồn tại, đã bị xóa (Terminated) hoặc thuộc tài khoản khác.'
-         : 'Địa chỉ trang thiếu ID máy ảo. Hãy chọn một máy trong danh sách.'}</p>
+         ? t('Máy ảo này không tồn tại, đã bị xóa (Terminated) hoặc thuộc tài khoản khác.', 'This instance does not exist, was terminated, or belongs to another account.')
+         : t('Địa chỉ trang thiếu ID máy ảo. Hãy chọn một máy trong danh sách.', 'The page address has no instance ID. Pick an instance from the list.')}</p>
        <div class="det-empty-actions">
-         <a href="/instances.html" class="btn btn-primary ico-label">${ICON('ui-chevron-left', 'ico-sm')} Về danh sách máy ảo</a>
-         <a href="/launch.html" class="btn btn-secondary ico-label">${ICON('ui-plus', 'ico-sm')} Khởi tạo máy ảo mới</a>
+         <a href="/instances.html" class="btn btn-primary ico-label">${ICON('ui-chevron-left', 'ico-sm')} ${t('Về danh sách máy ảo', 'Back to instances')}</a>
+         <a href="/launch.html" class="btn btn-secondary ico-label">${ICON('ui-plus', 'ico-sm')} ${tk('navLaunch')}</a>
        </div>`
     : `<div class="det-empty-icon is-error" aria-hidden="true">${ICON('ui-error', 'ico-xl')}</div>
-       <h1 class="det-empty-title">Không tải được thông tin máy ảo</h1>
-       <p class="det-empty-text">Máy chủ không phản hồi hoặc đang gặp lỗi. Chi tiết: <code>${esc(msg || 'không rõ')}</code></p>
+       <h1 class="det-empty-title">${t('Không tải được thông tin máy ảo', 'Could not load the instance')}</h1>
+       <p class="det-empty-text">${t('Máy chủ không phản hồi hoặc đang gặp lỗi. Chi tiết:', 'The server did not respond or returned an error. Details:')} <code>${esc(msg || '–')}</code></p>
        <div class="det-empty-actions">
-         <button type="button" class="btn btn-primary ico-label" onclick="location.reload()">${ICON('ui-refresh', 'ico-sm')} Thử lại</button>
-         <a href="/instances.html" class="btn btn-secondary ico-label">${ICON('ui-chevron-left', 'ico-sm')} Về danh sách máy ảo</a>
+         <button type="button" class="btn btn-primary ico-label" onclick="location.reload()">${ICON('ui-refresh', 'ico-sm')} ${t('Thử lại', 'Retry')}</button>
+         <a href="/instances.html" class="btn btn-secondary ico-label">${ICON('ui-chevron-left', 'ico-sm')} ${t('Về danh sách máy ảo', 'Back to instances')}</a>
        </div>`;
   main.appendChild(box);
 }
@@ -271,7 +310,7 @@ function renderInstance() {
   // Summary strip
   setText('sumId', inst.id);
   setHtml('sumState', stateTag(inst.status));
-  setText('sumPublicIp', inst.publicIp || 'Chưa gán');
+  setText('sumPublicIp', inst.publicIp && inst.publicIp !== 'Chưa gán' ? inst.publicIp : '–');
   setText('sumPrivateIp', inst.privateIp || '–');
   setText('sumFlavor', inst.flavor + (spec ? ` · ${spec.vcpu} vCPU` : ''));
   setHtml('sumRegion', regionTag(inst.region));
@@ -281,7 +320,11 @@ function renderInstance() {
   setText('sumAmi', inst.imageName || inst.imageId || '–');
   setText('sumOwner', inst.username || inst.owner || '–');
 
-  setText('detSeries', spec && spec.series ? spec.series : '');
+  // FLAVOR_SPECS (ui.js) chỉ có nhãn tiếng Việt: đổi sang tiếng Anh tại đây, không sửa file dùng chung
+  const series = spec && spec.series ? spec.series : '';
+  setText('detSeries', getLang() === 'en'
+    ? series.replace('Tiêu chuẩn', 'General purpose').replace('Hiệu năng cao', 'Compute optimized')
+    : series);
   setText('detName', inst.name || '–');
   setText('detId', inst.id);
   setText('detOwner', inst.username || inst.owner || '–');
@@ -307,7 +350,7 @@ function statusChecks(status) {
   if (isRunningStatus(s)) return `<span class="check-ok">${ICON('ui-check-circle', 'ico-sm')} 2/2 checks passed</span>`;
   if (s === 'MIGRATING' || isTransitional(s)) return `<span class="check-wait">${ICON('ui-spinner', 'ico-sm ico-spin')} Initializing</span>`;
   if (s === 'ERROR') return `<span class="check-bad">${ICON('ui-error', 'ico-sm')} 1/2 checks failed</span>`;
-  return '<span class="muted">Không áp dụng</span>';
+  return `<span class="muted">${t('Không áp dụng', 'Not applicable')}</span>`;
 }
 
 async function refreshAll() {
@@ -320,7 +363,7 @@ async function refreshAll() {
       const tab = (location.hash || '').replace('#', '');
       if (tab === 'monitoring') loadMetrics();
       if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
-      showToast('Đã làm mới thông tin máy ảo', 'success');
+      showToast(t('Đã làm mới thông tin máy ảo', 'Instance refreshed'), 'success');
     }
   } finally {
     if (btn) btn.disabled = false;
@@ -331,11 +374,11 @@ function migrationBlockReason() {
   const inst = det.inst || {};
   const h = det.history || {};
   const status = String(inst.status || h.currentStatus || '').toUpperCase();
-  if (isGone(status)) return 'Máy ảo đang bị xóa hoặc đã xóa.';
-  if (det.running || (h.migrationLock && !h.lockStale) || (status === 'MIGRATING' && !h.lockStale)) return 'Đang có một lần chuyển vùng chạy, migration_lock đang khóa.';
-  if (isTransitional(status)) return `Máy đang ở trạng thái ${status}. Đợi máy về Running hoặc Stopped.`;
+  if (isGone(status)) return t('Máy ảo đang bị xóa hoặc đã xóa.', 'The instance is terminating or terminated.');
+  if (det.running || (h.migrationLock && !h.lockStale) || (status === 'MIGRATING' && !h.lockStale)) return t('Đang có một lần chuyển vùng chạy, migration_lock đang khóa.', 'A migration is running, migration_lock is held.');
+  if (isTransitional(status)) return t(`Máy đang ở trạng thái ${status}. Đợi máy về Running hoặc Stopped.`, `The instance is ${status}. Wait until it is Running or Stopped.`);
   const left = Math.max(0, Math.ceil((det.cooldownDeadline - Date.now()) / 1000));
-  if (left > 0) return `Đang trong thời gian cooldown, còn ${fmtCountdown(left)}.`;
+  if (left > 0) return t(`Đang trong thời gian cooldown, còn ${fmtCountdown(left)}.`, `In cooldown, ${fmtCountdown(left)} left.`);
   return '';
 }
 
@@ -349,8 +392,8 @@ function renderActions() {
   // tickCooldown() calls this every second: only rebuild buttons when something changed
   const key = [inst.status, busy, reason.replace(/\d{2}:\d{2}/, '')].join('|');
   if (key === det.actionsKey) {
-    setText('migBlockReason', reason || 'Sẵn sàng chuyển vùng.');
-    setText('detActionHint', reason ? 'Fast Migrate tạm khóa: ' + reason : '');
+    setText('migBlockReason', reason || t('Sẵn sàng chuyển vùng.', 'Ready to migrate.'));
+    setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');
     return;
   }
   det.actionsKey = key;
@@ -370,7 +413,7 @@ function renderActions() {
       return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(msg)}" title="${esc(msg)}">${label}</span>`;
     }
     if (requiresStop && (powered || busy)) {
-      const stopMsg = t('Cần dừng máy ảo (Stop instance) trước khi ' + labelVi, `Stop the instance before using "${labelEn}"`);
+      const stopMsg = t('Cần dừng máy ảo trước khi dùng "' + labelVi + '"', `Stop the instance before using "${labelEn}"`);
       return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(stopMsg)}" title="${esc(stopMsg)}">${label}</span>`;
     }
     return `<a role="menuitem" href="${url}" class="ec2-actions-item">${label}</a>`;
@@ -378,36 +421,36 @@ function renderActions() {
 
   setHtml('detailActionButtons', `
     <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">${ICON('ui-refresh')}</button>
-    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal')} ${t('Kết nối (Connect)', 'Connect')}</button>
+    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal')} ${tk('actConnect')}</button>
     <div class="state-menu" id="stateMenu">
       <button type="button" class="btn btn-secondary" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
-        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power')} ${t('Trạng thái máy ảo', 'Instance state')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
+        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="state-menu-list" id="stateMenuList" role="menu" aria-labelledby="stateMenuBtn" hidden>
-        ${item('START', ICON('ui-play') + ' ' + t('Khởi động máy ảo (Start)', 'Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
-        ${item('STOP', ICON('ui-stop') + ' ' + t('Dừng máy ảo (Stop)', 'Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
-        ${item('REBOOT', ICON('ui-reboot') + ' ' + t('Khởi động lại (Reboot)', 'Reboot instance'), !running || busy, '', !running ? t('Chỉ reboot được máy đang chạy', 'Instance must be running to reboot') : busyHint)}
+        ${item('START', ICON('ui-play') + ' ' + t('Khởi động máy ảo', 'Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
+        ${item('STOP', ICON('ui-stop') + ' ' + t('Dừng máy ảo', 'Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
+        ${item('REBOOT', ICON('ui-reboot') + ' ' + t('Khởi động lại máy ảo', 'Reboot instance'), !running || busy, '', !running ? t('Chỉ reboot được máy đang chạy', 'Instance must be running to reboot') : busyHint)}
         <div class="state-menu-sep" role="separator"></div>
-        ${item('TERMINATE', ICON('ui-trash') + ' ' + t('Xóa vĩnh viễn (Terminate)', 'Terminate (delete) instance'), busy, 'danger', busyHint)}
+        ${item('TERMINATE', ICON('ui-trash') + ' ' + t('Xóa máy ảo', 'Terminate instance'), busy, 'danger', busyHint)}
       </div>
     </div>
     <div class="ec2-actions-menu" id="ec2ActionsMenu">
       <button type="button" class="btn btn-secondary" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
-        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Hành động', 'Actions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
+        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${tk('actActions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
         <div class="ec2-actions-group">
           <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Quản lý vòng đời & Nhãn', 'Protection and lifecycle management')}</div>
-            ${editLink('tags', 'Đổi tên máy ảo & nhãn (Tags)', 'Change instance name & tags', false)}
+            ${editLink('tags', 'Đổi tên máy ảo và tag', 'Change instance name & tags', false)}
             ${editLink('cooldown', 'Đổi thời gian chờ Cooldown', 'Change migration cooldown', false)}
             <div class="ec2-actions-sep"></div>
             <div class="ec2-actions-subhead">${t('Cấu hình phần cứng', 'Instance configuration')}</div>
-            ${editLink('instance-type', 'Đổi loại máy ảo (Instance type)', 'Change instance type', true)}
-            ${editLink('cpu-options', 'Tùy chọn vi xử lý (CPU options)', 'Change CPU options', true, 'Cần dừng máy ảo (Stop instance) để cấu hình CPU options', 'Instance must be stopped to modify CPU options')}
+            ${editLink('instance-type', 'Đổi loại máy ảo', 'Change instance type', true)}
+            ${editLink('cpu-options', 'Tùy chọn CPU', 'Change CPU options', true, 'Cần dừng máy ảo trước khi đổi tùy chọn CPU', 'Instance must be stopped to modify CPU options')}
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Mạng (Networking)', 'Networking')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
+          <button type="button" class="ec2-actions-trigger"><span>${tk('tabNetworking')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Địa chỉ IP & Tên miền', 'IP & DNS configuration')}</div>
             ${editLink('elastic-ip', 'Quản lý địa chỉ Elastic IP', 'Manage Elastic IP address', false)}
@@ -416,15 +459,15 @@ function renderActions() {
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Bảo mật (Security)', 'Security')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
+          <button type="button" class="ec2-actions-trigger"><span>${tk('tabSecurity')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
-            ${editLink('security-groups', 'Đổi nhóm bảo mật (Security groups)', 'Change security groups', false)}
-            ${editLink('key-pair', 'Đổi khóa truy cập SSH Key Pair', 'Change SSH key pair', false)}
+            ${editLink('security-groups', 'Đổi Security group', 'Change security groups', false)}
+            ${editLink('key-pair', 'Đổi Key pair SSH', 'Change SSH key pair', false)}
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Lưu trữ (Storage)', 'Storage')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
+          <button type="button" class="ec2-actions-trigger"><span>${tk('tabStorage')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Ổ đĩa EBS Elastic Volumes', 'EBS Elastic Volumes')}</div>
             ${editLink('storage', 'Mở rộng ổ cứng gốc EBS (gp3)', 'Modify EBS root volume (gp3)', false)}
@@ -435,34 +478,36 @@ function renderActions() {
     <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate')} Fast Migrate X-Region</button>
   `);
 
-  setText('detActionHint', reason ? 'Fast Migrate tạm khóa: ' + reason : '');
+  setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');
 
   const tabBtn = document.getElementById('btnMigrateTab');
   if (tabBtn) {
     tabBtn.disabled = !!reason;
     tabBtn.innerHTML = `${ICON('ui-migrate')} Fast Migrate ${t('sang', 'to')} ${esc(regionLabel(otherRegion(inst.region)))}`;
   }
-  setText('migBlockReason', reason || 'Sẵn sàng chuyển vùng.');
+  setText('migBlockReason', reason || t('Sẵn sàng chuyển vùng.', 'Ready to migrate.'));
   document.getElementById('migBlockReason').classList.toggle('warn', !!reason);
 }
 
 async function runDetailAction(id, action) {
   const name = (det.inst && det.inst.name) || id;
   if (action === 'TERMINATE' && !(await confirmDialog({
-    title: 'Terminate máy ảo?',
-    message: `Máy ảo <strong>${esc(name)}</strong> (<code>${esc(id)}</code>) sẽ bị xóa vĩnh viễn. Ổ EBS gốc bị xóa, Elastic IP được trả lại và bản ghi Route 53 ngừng trỏ tới máy. Không thể hoàn tác.`,
-    confirmText: 'Terminate',
+    title: t('Xóa (terminate) máy ảo?', 'Terminate instance?'),
+    message: t(`Máy ảo <strong>${esc(name)}</strong> (<code>${esc(id)}</code>) sẽ bị xóa vĩnh viễn. Ổ EBS gốc bị xóa, Elastic IP được trả lại và bản ghi Route 53 ngừng trỏ tới máy. Không thể hoàn tác.`,
+      `<strong>${esc(name)}</strong> (<code>${esc(id)}</code>) will be permanently deleted. The root EBS volume is deleted, the Elastic IP is released and the Route 53 record stops pointing to it. This cannot be undone.`),
+    confirmText: tk('actTerminate'),
     danger: true,
     requireText: name
   }))) return;
   if (action === 'STOP' && !(await confirmDialog({
-    title: 'Dừng máy ảo?',
-    message: `Dịch vụ trên <strong>${esc(name)}</strong> sẽ gián đoạn tới khi bật lại. Dữ liệu trên ổ EBS được giữ nguyên.`,
-    confirmText: 'Stop'
+    title: t('Dừng máy ảo?', 'Stop instance?'),
+    message: t(`Dịch vụ trên <strong>${esc(name)}</strong> sẽ gián đoạn tới khi bật lại. Dữ liệu trên ổ EBS được giữ nguyên.`,
+      `Services on <strong>${esc(name)}</strong> are unavailable until it is started again. Data on the EBS volume is kept.`),
+    confirmText: tk('actStop')
   }))) return;
   try {
     await apiRequest(`/instances/${encodeURIComponent(id)}/actions`, { method: 'POST', body: JSON.stringify({ action }) });
-    showToast(`Đã gửi lệnh ${action} tới ${esc(id)}`, 'success');
+    showToast(t(`Đã gửi lệnh ${action} tới ${esc(id)}`, `${action} request sent to ${esc(id)}`), 'success');
     if (action === 'TERMINATE') {
       setTimeout(() => { window.location.href = '/instances.html'; }, 800);
       return;
@@ -471,6 +516,6 @@ async function runDetailAction(id, action) {
     loadMigrationHistory();
     if (action === 'REBOOT') setTimeout(loadInstance, 3500);
   } catch (err) {
-    showToast(`Không thực hiện được ${action}: ${esc(err.message)}`, 'error');
+    showToast(t(`Không thực hiện được ${action}: `, `Could not ${action.toLowerCase()}: `) + esc(err.message), 'error');
   }
 }

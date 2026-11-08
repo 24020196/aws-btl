@@ -45,7 +45,7 @@
     <div class="page-header det-page-header">
       <div class="det-heading">
         <h1 class="page-title det-title">
-          <span>Instance summary for</span>
+          <span data-i18n="detSummaryFor">Instance summary for</span>
           <span class="mono" id="detInstanceId">…</span>
           <span class="page-count" id="detInstanceName"></span>
         </h1>
@@ -67,17 +67,17 @@
         <div class="summary-item"><div class="summary-label">Instance ID</div><div class="summary-value mono"><span id="sumId">–</span><button class="copy-btn" data-copy="sumId" title="Copy" aria-label="Copy Instance ID"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div></div>
         <div class="summary-item"><div class="summary-label">Public IPv4 (Elastic IP)</div><div class="summary-value mono"><span id="sumPublicIp">–</span><button class="copy-btn" data-copy="sumPublicIp" title="Copy" aria-label="Copy Public IPv4 (Elastic IP)"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div></div>
         <div class="summary-item"><div class="summary-label">Private IPv4</div><div class="summary-value mono"><span id="sumPrivateIp">–</span><button class="copy-btn" data-copy="sumPrivateIp" title="Copy" aria-label="Copy Private IPv4"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div></div>
-        <div class="summary-item"><div class="summary-label">Instance state</div><div class="summary-value" id="sumState">–</div></div>
+        <div class="summary-item"><div class="summary-label" data-i18n="detSumState">Instance state</div><div class="summary-value" id="sumState">–</div></div>
         <div class="summary-item"><div class="summary-label">Public DNS (Route 53)</div><div class="summary-value mono"><span id="sumDns">–</span><button class="copy-btn" data-copy="sumDns" title="Copy" aria-label="Copy Public DNS (Route 53)"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div></div>
-        <div class="summary-item"><div class="summary-label">Instance type</div><div class="summary-value mono" id="sumFlavor">–</div></div>
-        <div class="summary-item"><div class="summary-label">Status checks</div><div class="summary-value" id="sumChecks">–</div></div>
+        <div class="summary-item"><div class="summary-label" data-i18n="detSumType">Instance type</div><div class="summary-value mono" id="sumFlavor">–</div></div>
+        <div class="summary-item"><div class="summary-label" data-i18n="detSumChecks">Status checks</div><div class="summary-value" id="sumChecks">–</div></div>
         <div class="summary-item"><div class="summary-label">AMI</div><div class="summary-value" id="sumAmi">–</div></div>
         <div class="summary-item"><div class="summary-label">Key pair</div><div class="summary-value mono" id="sumKey">–</div></div>
         <div class="summary-item"><div class="summary-label">Region</div><div class="summary-value" id="sumRegion">–</div></div>
         <div class="summary-item"><div class="summary-label">Availability Zone</div><div class="summary-value mono" id="sumAz">–</div></div>
         <div class="summary-item"><div class="summary-label">VPC ID</div><div class="summary-value mono" id="sumVpc">–</div></div>
-        <div class="summary-item"><div class="summary-label">Platform</div><div class="summary-value" id="sumPlatform">Linux/UNIX</div></div>
-        <div class="summary-item"><div class="summary-label">Owner</div><div class="summary-value" id="sumOwner">–</div></div>
+        <div class="summary-item"><div class="summary-label" data-i18n="detSumPlatform">Platform</div><div class="summary-value" id="sumPlatform">Linux/UNIX</div></div>
+        <div class="summary-item"><div class="summary-label" data-i18n="detSumOwner">Owner</div><div class="summary-value" id="sumOwner">–</div></div>
         <div class="summary-item"><div class="summary-label">migration_lock</div><div class="summary-value" id="sumLock">–</div></div>
       </div>
     </section>
@@ -96,27 +96,27 @@
     <section class="det-panel active" id="tab-details" role="tabpanel" aria-labelledby="tabBtn-details">
       <div class="detail-grid">
         <div class="card" style="margin-bottom: 0;">
-          <div class="card-header"><div class="card-title">Phần cứng &amp; Hệ điều hành</div></div>
+          <div class="card-header"><div class="card-title" data-i18n="detHwTitle">Phần cứng &amp; Hệ điều hành</div></div>
           <table class="kv-table">
             <tr><td class="kv-label">Flavor</td><td class="kv-value"><span class="badge badge-flavor" id="detFlavor">--</span> <span class="muted" id="detSeries"></span></td></tr>
             <tr><td class="kv-label">vCPU / RAM</td><td class="kv-value" id="detSpecs">--</td></tr>
-            <tr><td class="kv-label">Hệ điều hành</td><td class="kv-value" id="detImageName">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detOs">Hệ điều hành</td><td class="kv-value" id="detImageName">--</td></tr>
             <tr><td class="kv-label">Glance Image ID</td><td class="kv-value"><code id="detImageId">--</code></td></tr>
-            <tr><td class="kv-label">Nền tảng</td><td class="kv-value">Linux/UNIX · x86_64</td></tr>
-            <tr><td class="kv-label">Ảo hóa</td><td class="kv-value">KVM (OpenStack Nova) trên EC2 Bare Metal</td></tr>
+            <tr><td class="kv-label" data-i18n="detPlatform">Nền tảng</td><td class="kv-value">Linux/UNIX · x86_64</td></tr>
+            <tr><td class="kv-label" data-i18n="detVirt">Ảo hóa</td><td class="kv-value" data-i18n="detVirtValue">KVM (OpenStack Nova) trên EC2 Bare Metal</td></tr>
           </table>
         </div>
 
         <div class="card" style="margin-bottom: 0;">
-          <div class="card-header"><div class="card-title">Định danh &amp; Truy cập</div></div>
+          <div class="card-header"><div class="card-title" data-i18n="detIdTitle">Định danh &amp; Truy cập</div></div>
           <table class="kv-table">
-            <tr><td class="kv-label">Tên máy ảo</td><td class="kv-value" id="detName">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detName">Tên máy ảo</td><td class="kv-value" id="detName">--</td></tr>
             <tr><td class="kv-label">Instance ID</td><td class="kv-value"><code id="detId">--</code></td></tr>
-            <tr><td class="kv-label">Chủ sở hữu</td><td class="kv-value" id="detOwner">--</td></tr>
-            <tr><td class="kv-label">Trạng thái hiện tại</td><td class="kv-value" id="detState">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detOwner">Chủ sở hữu</td><td class="kv-value" id="detOwner">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detCurrentState">Trạng thái hiện tại</td><td class="kv-value" id="detState">--</td></tr>
             <tr><td class="kv-label">SSH Key Pair</td><td class="kv-value"><span class="badge badge-key" id="detKeyName">--</span></td></tr>
-            <tr><td class="kv-label">User đăng nhập</td><td class="kv-value"><code id="detSshUser">--</code></td></tr>
-            <tr><td class="kv-label">Kết nối</td><td class="kv-value"><button class="link-btn" onclick="openConnectModal()">Xem lệnh SSH</button> · <a href="#" id="detConsoleLink" target="_blank" rel="noopener" class="link-accent">Web Terminal (VNC)</a></td></tr>
+            <tr><td class="kv-label" data-i18n="detLoginUser">User đăng nhập</td><td class="kv-value"><code id="detSshUser">--</code></td></tr>
+            <tr><td class="kv-label" data-i18n="detConnect">Kết nối</td><td class="kv-value"><button class="link-btn" onclick="openConnectModal()" data-i18n="detViewSsh">Xem lệnh SSH</button> · <a href="#" id="detConsoleLink" target="_blank" rel="noopener" class="link-accent">Web Terminal (VNC)</a></td></tr>
           </table>
         </div>
       </div>
@@ -128,34 +128,34 @@
         <div class="card-header">
           <div>
             <div class="card-title">Security Groups</div>
-            <div class="card-sub">Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.</div>
+            <div class="card-sub" data-i18n="detSgSub">Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.</div>
           </div>
           <div class="det-actions">
-            <button class="btn btn-secondary btn-sm" onclick="openChangeSgModal()">Đổi Security Group</button>
-            <button class="btn btn-secondary btn-sm" onclick="openCreateSgModal()">+ Tạo Security Group</button>
-            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')">+ Thêm rule</button>
+            <button class="btn btn-secondary btn-sm" onclick="openChangeSgModal()" data-i18n="detSgChange">Đổi Security Group</button>
+            <button class="btn btn-secondary btn-sm" onclick="openCreateSgModal()" data-i18n="detSgCreate">+ Tạo Security Group</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')" data-i18n="detRuleAdd">+ Thêm rule</button>
           </div>
         </div>
-        <div class="sg-chips" id="sgChips"><span class="muted">Đang tải...</span></div>
+        <div class="sg-chips" id="sgChips"><span class="muted" data-i18n="detLoading">Đang tải...</span></div>
 
         <div class="rules-head">
           <h3 class="rules-title">Inbound rules <span class="muted" id="inboundCount"></span></h3>
-          <input type="search" class="rules-filter" id="ruleFilter" placeholder="Lọc rule (cổng, nguồn, mô tả…)" aria-label="Lọc rule inbound và outbound" oninput="renderSecurityGroups()">
+          <input type="search" class="rules-filter" id="ruleFilter" placeholder="Lọc rule (cổng, nguồn, mô tả…)" aria-label="Lọc rule inbound và outbound" data-i18n-placeholder="detRuleFilter" data-i18n-aria="detRuleFilterAria" oninput="renderSecurityGroups()">
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Nguồn</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
+            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColSource">Nguồn</th><th>Security group</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
             <tbody id="inboundRulesBody"></tbody>
           </table>
         </div>
 
         <div class="rules-head">
           <h3 class="rules-title">Outbound rules <span class="muted" id="outboundCount"></span></h3>
-          <button class="btn btn-secondary btn-sm" onclick="openAddRuleModal('outbound')">+ Thêm outbound rule</button>
+          <button class="btn btn-secondary btn-sm" onclick="openAddRuleModal('outbound')" data-i18n="detRuleAddOut">+ Thêm outbound rule</button>
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Đích</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
+            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColDest">Đích</th><th>Security group</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
             <tbody id="outboundRulesBody"></tbody>
           </table>
         </div>
@@ -167,8 +167,8 @@
     <section class="det-panel" id="tab-networking" role="tabpanel" aria-labelledby="tabBtn-networking">
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Mạng &amp; Route 53</div>
-          <button class="btn btn-primary btn-sm" onclick="openDnsModal()">Cập nhật Route 53 DNS</button>
+          <div class="card-title" data-i18n="detNetTitle">Mạng &amp; Route 53</div>
+          <button class="btn btn-primary btn-sm" onclick="openDnsModal()" data-i18n="detDnsUpdate">Cập nhật Route 53 DNS</button>
         </div>
         <div class="net-grid">
           <table class="kv-table">
@@ -179,23 +179,23 @@
             <tr><td class="kv-label">Availability Zone</td><td class="kv-value"><code id="netAz">--</code></td></tr>
           </table>
           <table class="kv-table">
-            <tr><td class="kv-label">Tên miền</td><td class="kv-value"><code id="netDomain">--</code></td></tr>
-            <tr><td class="kv-label">Bản ghi A đang trỏ tới</td><td class="kv-value"><code id="netDnsTarget">--</code></td></tr>
+            <tr><td class="kv-label" data-i18n="detDomain">Tên miền</td><td class="kv-value"><code id="netDomain">--</code></td></tr>
+            <tr><td class="kv-label" data-i18n="detDnsTarget">Bản ghi A đang trỏ tới</td><td class="kv-value"><code id="netDnsTarget">--</code></td></tr>
             <tr><td class="kv-label">TTL</td><td class="kv-value" id="netDnsTtl">--</td></tr>
-            <tr><td class="kv-label">Đồng bộ với Elastic IP</td><td class="kv-value" id="netDnsSync">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detDnsSync">Đồng bộ với Elastic IP</td><td class="kv-value" id="netDnsSync">--</td></tr>
           </table>
         </div>
       </div>
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Network interface (ENI)</div>
-            <div class="card-sub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
+            <div class="card-title" data-i18n="detEniTitle">Network interface (ENI)</div>
+            <div class="card-sub" data-i18n="detEniSub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
           </div>
         </div>
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>Interface ID</th><th>Gắn vào</th><th>Primary IP (Bare Metal)</th><th>Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
+            <thead><tr><th>Interface ID</th><th data-i18n="detEniAttached">Gắn vào</th><th>Primary IP (Bare Metal)</th><th data-i18n="detEniSecondary">Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
             <tbody id="eniBody"></tbody>
           </table>
         </div>
@@ -206,30 +206,30 @@
     <!-- TAB: Storage -->
     <section class="det-panel" id="tab-storage" role="tabpanel" aria-labelledby="tabBtn-storage">
       <div class="card">
-        <div class="card-header"><div class="card-title">Thiết bị gốc (Root device)</div></div>
+        <div class="card-header"><div class="card-title" data-i18n="detRootTitle">Thiết bị gốc (Root device)</div></div>
         <div class="net-grid">
           <table class="kv-table">
-            <tr><td class="kv-label">Tên thiết bị gốc</td><td class="kv-value"><code>/dev/vda</code></td></tr>
-            <tr><td class="kv-label">Loại thiết bị</td><td class="kv-value">EBS (Cinder Volume)</td></tr>
+            <tr><td class="kv-label" data-i18n="detRootName">Tên thiết bị gốc</td><td class="kv-value"><code>/dev/vda</code></td></tr>
+            <tr><td class="kv-label" data-i18n="detRootType">Loại thiết bị</td><td class="kv-value">EBS (Cinder Volume)</td></tr>
             <tr><td class="kv-label">Root EBS Volume</td><td class="kv-value"><code id="detEbsVolumeId">--</code></td></tr>
           </table>
           <table class="kv-table">
-            <tr><td class="kv-label">Loại ổ đĩa</td><td class="kv-value"><span class="badge badge-key">gp3 SSD</span></td></tr>
-            <tr><td class="kv-label">Dung lượng</td><td class="kv-value" id="detRootDiskSize">--</td></tr>
-            <tr><td class="kv-label">Hiệu năng</td><td class="kv-value">3.000 IOPS · 125 MB/s</td></tr>
+            <tr><td class="kv-label" data-i18n="detDiskType">Loại ổ đĩa</td><td class="kv-value"><span class="badge badge-key">gp3 SSD</span></td></tr>
+            <tr><td class="kv-label" data-i18n="detDiskSize">Dung lượng</td><td class="kv-value" id="detRootDiskSize">--</td></tr>
+            <tr><td class="kv-label" data-i18n="detDiskPerf">Hiệu năng</td><td class="kv-value">3.000 IOPS · 125 MB/s</td></tr>
           </table>
         </div>
       </div>
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Block devices đang gắn <span class="muted" id="volCount"></span></div>
-            <div class="card-sub">Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.</div>
+            <div class="card-title"><span data-i18n="detBlockTitle">Block devices đang gắn</span> <span class="muted" id="volCount"></span></div>
+            <div class="card-sub" data-i18n="detBlockSub">Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.</div>
           </div>
         </div>
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>Volume ID</th><th>Tên</th><th>Thiết bị</th><th>Dung lượng</th><th>Loại</th><th>IOPS / Throughput</th><th>Trạng thái</th></tr></thead>
+            <thead><tr><th>Volume ID</th><th data-i18n="detColName">Tên</th><th data-i18n="detDevice">Thiết bị</th><th data-i18n="detDiskSize">Dung lượng</th><th data-i18n="detColType">Loại</th><th>IOPS / Throughput</th><th data-i18n="detColState">Trạng thái</th></tr></thead>
             <tbody id="volumesBody"></tbody>
           </table>
         </div>
@@ -255,21 +255,21 @@
       <div class="card-header mon-head">
         <div>
           <div class="card-title" id="monTitle">Chỉ số 1 giờ qua</div>
-          <div class="card-sub">Basic monitoring, chu kỳ <span id="monPeriod">5 phút</span> như CloudWatch. Cập nhật lúc <span id="monUpdated">–</span>. <span class="sim-badge" title="Chỉ số được sinh mô phỏng ở backend (MonitoringService), chưa đọc từ CloudWatch thật">Dữ liệu mô phỏng</span></div>
+          <div class="card-sub"><span id="monSub">Basic monitoring</span> <span class="sim-badge" title="Chỉ số được sinh mô phỏng ở backend (MonitoringService), chưa đọc từ CloudWatch thật" data-i18n-title="detMonSimTitle" data-i18n="detMonSim">Dữ liệu mô phỏng</span></div>
         </div>
         <div class="mon-controls">
-          <div class="seg" role="group" aria-label="Khoảng thời gian">
+          <div class="seg" role="group" aria-label="Khoảng thời gian" data-i18n-aria="detMonRange">
             <button type="button" class="seg-btn active" data-hours="1" aria-pressed="true">1h</button>
             <button type="button" class="seg-btn" data-hours="3" aria-pressed="false">3h</button>
             <button type="button" class="seg-btn" data-hours="12" aria-pressed="false">12h</button>
           </div>
-          <label class="check-row mon-auto"><input type="checkbox" id="monAuto" checked> Tự làm mới mỗi phút</label>
-          <button class="btn btn-secondary btn-sm" onclick="loadMetrics()">Làm mới</button>
+          <label class="check-row mon-auto"><input type="checkbox" id="monAuto" checked> <span data-i18n="detMonAuto">Tự làm mới mỗi phút</span></label>
+          <button class="btn btn-secondary btn-sm" onclick="loadMetrics()" data-i18n="actRefresh">Làm mới</button>
         </div>
       </div>
       <div class="alarm-bar" id="cpuAlarm">
         <span class="alarm-state" id="cpuAlarmState">–</span>
-        <span><strong>xregion-cpu-high</strong> · CPUUtilization &gt; <span id="cpuAlarmThreshold">80</span>% trong 1 chu kỳ</span>
+        <span><strong>xregion-cpu-high</strong> · CPUUtilization &gt; <span id="cpuAlarmThreshold">80</span><span data-i18n="detMonAlarmPeriod">% trong 1 chu kỳ</span></span>
         <span class="muted" id="cpuAlarmNote"></span>
       </div>
       <div class="mon-grid">
@@ -295,7 +295,7 @@
           <div class="mig-hint" id="migCooldownHint"></div>
         </div>
         <div class="mig-status-item">
-          <div class="summary-label">Hướng chuyển tiếp theo</div>
+          <div class="summary-label" data-i18n="detMigNext">Hướng chuyển tiếp theo</div>
           <div class="summary-value mig-route" id="migRoute">–</div>
           <div class="mig-hint" id="migRouteHint"></div>
         </div>
@@ -305,38 +305,38 @@
         </div>
       </div>
 
-      <div class="card pipe-card" id="migPipelineCard" tabindex="-1" aria-label="Tiến trình chuyển vùng">
+      <div class="card pipe-card" id="migPipelineCard" tabindex="-1" aria-label="Tiến trình chuyển vùng" data-i18n-aria="detPipeAria">
         <div class="card-header">
           <div>
-            <div class="card-title">Tiến trình chuyển vùng (6 bước)</div>
-            <div class="card-sub" id="pipeSub">Chưa có lần chuyển vùng nào đang chạy.</div>
+            <div class="card-title" data-i18n="detPipeTitle">Tiến trình chuyển vùng (6 bước)</div>
+            <div class="card-sub" id="pipeSub" data-i18n="detPipeIdle">Chưa có lần chuyển vùng nào đang chạy.</div>
           </div>
           <div class="pipe-percent" id="pipePercent">0%</div>
         </div>
         <div class="det-progress"><span id="detPipeBar"></span></div>
         <ol class="det-pipeline" id="detPipeline">
-          <li class="det-step" data-step="1"><span class="det-step-dot">1</span><span class="det-step-name">Dừng máy nguồn</span><span class="det-step-hint">fsfreeze, stop NovaVM</span></li>
-          <li class="det-step" data-step="2"><span class="det-step-dot">2</span><span class="det-step-name">Snapshot EBS</span><span class="det-step-hint">Incremental gp3</span></li>
-          <li class="det-step" data-step="3"><span class="det-step-dot">3</span><span class="det-step-name">Sao chép liên vùng</span><span class="det-step-hint">CopySnapshot</span></li>
-          <li class="det-step" data-step="4"><span class="det-step-dot">4</span><span class="det-step-name">Tạo volume đích</span><span class="det-step-hint">CreateVolume + attach</span></li>
-          <li class="det-step" data-step="5"><span class="det-step-dot">5</span><span class="det-step-name">Khởi động NovaVM</span><span class="det-step-hint">Boot + health check</span></li>
-          <li class="det-step" data-step="6"><span class="det-step-dot">6</span><span class="det-step-name">Chuyển DNS</span><span class="det-step-hint">Route 53 A record</span></li>
+          <li class="det-step" data-step="1"><span class="det-step-dot">1</span><span class="det-step-name" data-i18n="detStep1">Dừng máy nguồn</span><span class="det-step-hint">fsfreeze, stop NovaVM</span></li>
+          <li class="det-step" data-step="2"><span class="det-step-dot">2</span><span class="det-step-name" data-i18n="detStep2">Snapshot EBS</span><span class="det-step-hint">Incremental gp3</span></li>
+          <li class="det-step" data-step="3"><span class="det-step-dot">3</span><span class="det-step-name" data-i18n="detStep3">Sao chép liên vùng</span><span class="det-step-hint">CopySnapshot</span></li>
+          <li class="det-step" data-step="4"><span class="det-step-dot">4</span><span class="det-step-name" data-i18n="detStep4">Tạo volume đích</span><span class="det-step-hint">CreateVolume + attach</span></li>
+          <li class="det-step" data-step="5"><span class="det-step-dot">5</span><span class="det-step-name" data-i18n="detStep5">Khởi động NovaVM</span><span class="det-step-hint">Boot + health check</span></li>
+          <li class="det-step" data-step="6"><span class="det-step-dot">6</span><span class="det-step-name" data-i18n="detStep6">Chuyển DNS</span><span class="det-step-hint">Route 53 A record</span></li>
         </ol>
         <div class="terminal-head">
-          <span>Log thời gian thực</span>
-          <span class="muted" id="logStatus">Đang chờ</span>
+          <span data-i18n="detLogLive">Log thời gian thực</span>
+          <span class="muted" id="logStatus" data-i18n="detLogWaiting">Đang chờ</span>
         </div>
-        <div class="terminal-window" id="detTerminal" role="log" aria-live="polite"><div class="muted">Log của từng bước sẽ hiện ở đây khi bạn bấm Fast Migrate.</div></div>
+        <div class="terminal-window" id="detTerminal" role="log" aria-live="polite"><div class="muted" data-i18n="detLogHint">Log của từng bước sẽ hiện ở đây khi bạn bấm Fast Migrate.</div></div>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div><div class="card-title">Lịch sử chuyển vùng</div><div class="card-sub">Bấm vào một dòng để xem lại log 6 bước của lần đó.</div></div>
-          <button class="btn btn-secondary btn-sm" onclick="loadMigrationHistory()">Làm mới</button>
+          <div><div class="card-title" data-i18n="detHistTitle">Lịch sử chuyển vùng</div><div class="card-sub" data-i18n="detHistSub">Bấm vào một dòng để xem lại log 6 bước của lần đó.</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="loadMigrationHistory()" data-i18n="actRefresh">Làm mới</button>
         </div>
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>migration_id</th><th>Vùng nguồn → Vùng đích</th><th>Bắt đầu</th><th>Hoàn tất</th><th>Thời lượng</th><th title="Thời gian dịch vụ gián đoạn: từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới">Downtime (RTO)</th><th>Trạng thái</th><th><span class="sr-only">Log</span></th></tr></thead>
+            <thead><tr><th>migration_id</th><th data-i18n="detHistRoute">Vùng nguồn → Vùng đích</th><th data-i18n="detHistStart">Bắt đầu</th><th data-i18n="detHistEnd">Hoàn tất</th><th data-i18n="detHistDuration">Thời lượng</th><th title="Thời gian dịch vụ gián đoạn: từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới" data-i18n-title="detHistRtoTitle">Downtime (RTO)</th><th data-i18n="detColState">Trạng thái</th><th><span class="sr-only">Log</span></th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
         </div>
@@ -348,17 +348,17 @@
   <!-- MODAL: confirm migration -->
   <div class="modal-overlay" id="migrateModal" role="dialog" aria-modal="true" aria-labelledby="migrateModalTitle">
     <div class="modal-card" style="max-width: 640px;">
-      <h2 class="modal-title" id="migrateModalTitle">Chuyển vùng máy ảo?</h2>
+      <h2 class="modal-title" id="migrateModalTitle" data-i18n="detMigModalTitle">Chuyển vùng máy ảo?</h2>
       <p class="modal-text" id="migrateModalText"></p>
       <div class="mig-facts" id="migrateModalFacts"></div>
       <ul class="modal-list">
-        <li>Máy nguồn dừng trong lúc tạo snapshot cuối, dịch vụ tạm gián đoạn.</li>
-        <li>Elastic IP mới được cấp ở vùng đích, bản ghi Route 53 tự trỏ sang.</li>
-        <li>Nếu một bước lỗi, hệ thống nhả khóa và giữ máy ở vùng nguồn.</li>
+        <li data-i18n="detMigNote1">Máy nguồn dừng trong lúc tạo snapshot cuối, dịch vụ tạm gián đoạn.</li>
+        <li data-i18n="detMigNote2">Elastic IP mới được cấp ở vùng đích, bản ghi Route 53 tự trỏ sang.</li>
+        <li data-i18n="detMigNote3">Nếu một bước lỗi, hệ thống nhả khóa và giữ máy ở vùng nguồn.</li>
       </ul>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('migrateModal')">Hủy</button>
-        <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> Bắt đầu chuyển vùng</button>
+        <button class="btn btn-secondary" onclick="closeModal('migrateModal')" data-i18n="detCancel">Hủy</button>
+        <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> <span data-i18n="detMigStart">Bắt đầu chuyển vùng</span></button>
       </div>
     </div>
   </div>
@@ -366,13 +366,13 @@
   <!-- MODAL: add rule -->
   <div class="modal-overlay" id="addRuleModal" role="dialog" aria-modal="true" aria-labelledby="addRuleTitle">
     <form class="modal-card" style="max-width: 560px;" onsubmit="submitAddRule(event)">
-      <h2 class="modal-title" id="addRuleTitle">Thêm rule</h2>
+      <h2 class="modal-title" id="addRuleTitle" data-i18n="detRuleModalTitle">Thêm rule</h2>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="ruleDirection">Chiều</label>
+          <label class="form-label" for="ruleDirection" data-i18n="detRuleDir">Chiều</label>
           <select class="form-select" id="ruleDirection">
-            <option value="inbound">Inbound (vào máy)</option>
-            <option value="outbound">Outbound (ra ngoài)</option>
+            <option value="inbound" data-i18n="detRuleIn">Inbound (vào máy)</option>
+            <option value="outbound" data-i18n="detRuleOut">Outbound (ra ngoài)</option>
           </select>
         </div>
         <div class="form-group">
@@ -382,7 +382,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="ruleType">Loại</label>
+          <label class="form-label" for="ruleType" data-i18n="detColType">Loại</label>
           <select class="form-select" id="ruleType" onchange="applyRulePreset()">
             <option value="ssh">SSH (TCP 22)</option>
             <option value="http">HTTP (TCP 80)</option>
@@ -396,30 +396,30 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label" for="ruleFromPort">Cổng (hoặc dải cổng)</label>
+          <label class="form-label" for="ruleFromPort" data-i18n="detRulePorts">Cổng (hoặc dải cổng)</label>
           <div class="port-range">
             <input type="number" class="form-input" id="ruleFromPort" min="0" max="65535" required>
             <span class="muted">–</span>
-            <input type="number" class="form-input" id="ruleToPort" min="0" max="65535" placeholder="đến">
+            <input type="number" class="form-input" id="ruleToPort" min="0" max="65535" placeholder="đến" data-i18n-placeholder="detRuleTo">
           </div>
         </div>
       </div>
       <div class="form-group">
         <label class="form-label" for="ruleCidr" id="ruleCidrLabel">Nguồn (CIDR)</label>
-        <input type="text" class="form-input mono" id="ruleCidr" value="0.0.0.0/0" required pattern="(\d{1,3}\.){3}\d{1,3}/\d{1,2}|sg-[a-zA-Z0-9\-]+" title="CIDR, ví dụ 0.0.0.0/0 hoặc 10.0.0.0/16">
+        <input type="text" class="form-input mono" id="ruleCidr" value="0.0.0.0/0" required pattern="(\d{1,3}\.){3}\d{1,3}/\d{1,2}|sg-[a-zA-Z0-9\-]+" title="CIDR, ví dụ 0.0.0.0/0 hoặc 10.0.0.0/16" data-i18n-title="detRuleCidrTitle">
         <div class="quick-cidr">
-          <button type="button" class="chip-btn" onclick="setRuleCidr('0.0.0.0/0')">Mọi nơi 0.0.0.0/0</button>
+          <button type="button" class="chip-btn" onclick="setRuleCidr('0.0.0.0/0')" data-i18n="detRuleAnywhere">Mọi nơi 0.0.0.0/0</button>
           <button type="button" class="chip-btn" id="vpcCidrChip" onclick="setRuleCidr(this.dataset.cidr)">Trong VPC</button>
         </div>
-        <div class="form-warn" id="ruleWarn" hidden>Cổng này đang mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.</div>
+        <div class="form-warn" id="ruleWarn" hidden data-i18n="detRuleWarn">Cổng này đang mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.</div>
       </div>
       <div class="form-group">
-        <label class="form-label" for="ruleDesc">Mô tả (không bắt buộc)</label>
-        <input type="text" class="form-input" id="ruleDesc" maxlength="120" placeholder="Ví dụ: API nội bộ">
+        <label class="form-label" for="ruleDesc" data-i18n="detRuleDesc">Mô tả (không bắt buộc)</label>
+        <input type="text" class="form-input" id="ruleDesc" maxlength="120" placeholder="Ví dụ: API nội bộ" data-i18n-placeholder="detRuleDescPh">
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('addRuleModal')">Hủy</button>
-        <button type="submit" class="btn btn-primary">Thêm rule</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addRuleModal')" data-i18n="detCancel">Hủy</button>
+        <button type="submit" class="btn btn-primary" data-i18n="detRuleSubmit">Thêm rule</button>
       </div>
     </form>
   </div>
@@ -427,20 +427,20 @@
   <!-- MODAL: create security group -->
   <div class="modal-overlay" id="createSgModal" role="dialog" aria-modal="true" aria-labelledby="createSgTitle">
     <form class="modal-card" style="max-width: 480px;" onsubmit="submitCreateSg(event)">
-      <h2 class="modal-title" id="createSgTitle">Tạo Security Group</h2>
+      <h2 class="modal-title" id="createSgTitle" data-i18n="detSgCreateTitle">Tạo Security Group</h2>
       <div class="form-group">
-        <label class="form-label" for="sgName">Tên</label>
-        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}" title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" placeholder="web-backend">
+        <label class="form-label" for="sgName" data-i18n="detColName">Tên</label>
+        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}" title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" data-i18n-title="detSgNameTitle" placeholder="web-backend">
       </div>
       <div class="form-group">
-        <label class="form-label" for="sgDesc">Mô tả</label>
-        <input type="text" class="form-input" id="sgDesc" maxlength="160" placeholder="Ví dụ: Cho phép API nội bộ cổng 8080">
+        <label class="form-label" for="sgDesc" data-i18n="detColDesc">Mô tả</label>
+        <input type="text" class="form-input" id="sgDesc" maxlength="160" placeholder="Ví dụ: Cho phép API nội bộ cổng 8080" data-i18n-placeholder="detSgDescPh">
       </div>
-      <label class="check-row"><input type="checkbox" id="sgAttach" checked> Gắn vào máy ảo này sau khi tạo</label>
-      <p class="muted" style="margin-top: 8px;">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi tạo.</p>
+      <label class="check-row"><input type="checkbox" id="sgAttach" checked> <span data-i18n="detSgAttach">Gắn vào máy ảo này sau khi tạo</span></label>
+      <p class="muted" style="margin-top: 8px;" data-i18n="detSgCreateNote">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi tạo.</p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('createSgModal')">Hủy</button>
-        <button type="submit" class="btn btn-primary">Tạo Security Group</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createSgModal')" data-i18n="detCancel">Hủy</button>
+        <button type="submit" class="btn btn-primary" data-i18n="detSgCreateSubmit">Tạo Security Group</button>
       </div>
     </form>
   </div>
@@ -448,25 +448,25 @@
   <!-- MODAL: update Route 53 -->
   <div class="modal-overlay" id="dnsModal" role="dialog" aria-modal="true" aria-labelledby="dnsModalTitle">
     <form class="modal-card" style="max-width: 480px;" onsubmit="submitDnsUpdate(event)">
-      <h2 class="modal-title" id="dnsModalTitle">Cập nhật bản ghi Route 53</h2>
+      <h2 class="modal-title" id="dnsModalTitle" data-i18n="detDnsTitle">Cập nhật bản ghi Route 53</h2>
       <div class="form-group">
-        <label class="form-label" for="dnsDomain">Tên miền</label>
+        <label class="form-label" for="dnsDomain" data-i18n="detDomain">Tên miền</label>
         <input type="text" class="form-input mono" id="dnsDomain" readonly>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label" for="dnsTarget">Trỏ tới IP</label>
-          <input type="text" class="form-input mono" id="dnsTarget" required pattern="(\d{1,3}\.){3}\d{1,3}" title="Địa chỉ IPv4">
+          <label class="form-label" for="dnsTarget" data-i18n="detDnsTargetIp">Trỏ tới IP</label>
+          <input type="text" class="form-input mono" id="dnsTarget" required pattern="(\d{1,3}\.){3}\d{1,3}" title="Địa chỉ IPv4" data-i18n-title="detDnsIpTitle">
         </div>
         <div class="form-group">
-          <label class="form-label" for="dnsTtl">TTL (giây)</label>
+          <label class="form-label" for="dnsTtl" data-i18n="detDnsTtl">TTL (giây)</label>
           <input type="number" class="form-input" id="dnsTtl" value="60" min="30" max="86400" required>
         </div>
       </div>
-      <p class="muted">Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi này.</p>
+      <p class="muted" data-i18n="detDnsNote">Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi này.</p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')">Hủy</button>
-        <button type="submit" class="btn btn-primary">Cập nhật DNS</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('dnsModal')" data-i18n="detCancel">Hủy</button>
+        <button type="submit" class="btn btn-primary" data-i18n="detDnsSubmit">Cập nhật DNS</button>
       </div>
     </form>
   </div>
@@ -475,16 +475,16 @@
   <div class="modal-overlay" id="migLogModal" role="dialog" aria-modal="true" aria-labelledby="migLogTitle">
     <div class="modal-card" style="max-width: 760px;">
       <div class="mig-log-head">
-        <h2 class="modal-title" id="migLogTitle">Chi tiết lần chuyển vùng</h2>
+        <h2 class="modal-title" id="migLogTitle">–</h2>
         <span id="migLogStatus"></span>
       </div>
       <div class="mig-log-route" id="migLogRoute"></div>
       <div class="mig-log-stats" id="migLogStats"></div>
       <ol class="mig-log-steps" id="migLogSteps"></ol>
-      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn" data-copy="migLogTerminal" aria-label="Sao chép log"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg> Sao chép</button></div>
+      <div class="terminal-head"><span data-i18n="detLogSaved">Log đã lưu trong XRegion-Migrations</span><button class="copy-btn" data-copy="migLogTerminal" aria-label="Sao chép log" data-i18n-aria="detCopyLog"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg> <span data-i18n="detCopy">Sao chép</span></button></div>
       <div class="terminal-window mig-log-terminal" id="migLogTerminal" role="log"></div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('migLogModal')">Đóng</button>
+        <button class="btn btn-secondary" onclick="closeModal('migLogModal')" data-i18n="detClose">Đóng</button>
       </div>
     </div>
   </div>
@@ -492,18 +492,18 @@
   <!-- MODAL: connect via SSH -->
   <div class="modal-overlay" id="connectModal" role="dialog" aria-modal="true" aria-labelledby="connectTitle">
     <div class="modal-card" style="max-width: 600px;">
-      <h2 class="modal-title" id="connectTitle">Kết nối tới máy ảo</h2>
+      <h2 class="modal-title" id="connectTitle" data-i18n="detConnTitle">Kết nối tới máy ảo</h2>
       <ol class="connect-steps">
-        <li>Mở terminal ở thư mục chứa file khóa <code id="connKeyFile">--</code> đã tải lúc tạo Key Pair.</li>
-        <li>Trên Linux/macOS, giới hạn quyền đọc file khóa: <code id="connChmod">--</code></li>
-        <li>Kết nối bằng Elastic IP:</li>
+        <li><span data-i18n="detConnStep1a">Mở terminal ở thư mục chứa file khóa</span> <code id="connKeyFile">--</code> <span data-i18n="detConnStep1b">đã tải lúc tạo Key Pair.</span></li>
+        <li><span data-i18n="detConnStep2">Trên Linux/macOS, giới hạn quyền đọc file khóa:</span> <code id="connChmod">--</code></li>
+        <li data-i18n="detConnStep3">Kết nối bằng Elastic IP:</li>
       </ol>
-      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
-      <p class="modal-text" style="margin-top: 12px;">Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:</p>
-      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns" aria-label="Sao chép lệnh SSH theo tên miền"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH" data-i18n-aria="detConnCopyAria"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+      <p class="modal-text" style="margin-top: 12px;" data-i18n="detConnDns">Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:</p>
+      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns" aria-label="Sao chép lệnh SSH theo tên miền" data-i18n-aria="detConnCopyDnsAria"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
       <p class="muted" style="margin-top: 12px;" id="connNote"></p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('connectModal')">Đóng</button>
+        <button class="btn btn-secondary" onclick="closeModal('connectModal')" data-i18n="detClose">Đóng</button>
       </div>
     </div>
   </div>
@@ -511,12 +511,12 @@
   <!-- MODAL: change security groups -->
   <div class="modal-overlay" id="changeSgModal" role="dialog" aria-modal="true" aria-labelledby="changeSgTitle">
     <form class="modal-card" style="max-width: 560px;" onsubmit="submitChangeSg(event)">
-      <h2 class="modal-title" id="changeSgTitle">Đổi Security Group</h2>
-      <p class="modal-text">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.</p>
+      <h2 class="modal-title" id="changeSgTitle" data-i18n="detSgChange">Đổi Security Group</h2>
+      <p class="modal-text" data-i18n="detSgChangeNote">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.</p>
       <div class="sg-pick" id="changeSgList"></div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('changeSgModal')">Hủy</button>
-        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('changeSgModal')" data-i18n="detCancel">Hủy</button>
+        <button type="submit" class="btn btn-primary" data-i18n="detSave">Lưu thay đổi</button>
       </div>
     </form>
   </div>
