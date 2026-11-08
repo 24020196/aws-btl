@@ -130,7 +130,8 @@ async function submitCreateKeyModal(e) {
     });
 
     if (res && res.privateKey) {
-      downloadPemFile(name, res.privateKey);
+      const actualKeyId = res.keyId || res.keyName || name;
+      downloadPemFile(actualKeyId, res.privateKey);
       closeModal('createKeyModal');
       showToast(t(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem thành công!`, `Created Key Pair [${name}] and downloaded ${name}.pem successfully!`), 'success');
       await loadKeyPairsDropdown(name);

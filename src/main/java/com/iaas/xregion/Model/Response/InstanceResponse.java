@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -13,6 +15,8 @@ public class InstanceResponse {
     private String username;
     private String userId;
     private String id;
+    private String activeNovaId;
+    private List<String> novaIds;
     private String name;
     private String region;
     private String regionName;

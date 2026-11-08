@@ -26,6 +26,7 @@ aws:
 dynamodb:
   instancesTableArn: ${DYNAMODB_INSTANCES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}
   migrationsTableArn: ${DYNAMODB_MIGRATIONS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}
+  novaTableArn: ${DYNAMODB_NOVA_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}
   usersTableArn: ${DYNAMODB_USERS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}
   imagesTableArn: ${DYNAMODB_IMAGES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Images}
   flavorsTableArn: ${DYNAMODB_FLAVORS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}

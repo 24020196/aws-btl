@@ -77,33 +77,42 @@ public class EventBridgeGatewayClient {
     }
 
     /**
-ung    * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qua Step Function LaunchInstance
+     * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qua Step Function LaunchInstance
      */
-    public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceName, int sizeGb, String volumeType,
-                                                            String flavorName, String imageId, String keyName, String username) {
+    public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceId, String instanceName, int sizeGb, String volumeType,
+                                                            String flavorName, String imageId, String keyId, String username) {
         Map<String, Object> detail = new HashMap<>();
         detail.put("event_id", "evt-launch-" + UUID.randomUUID().toString().substring(0, 8));
+        detail.put("instance_id", instanceId);
         detail.put("instance_name", instanceName);
+        detail.put("key_id", keyId);
         detail.put("size_gb", sizeGb);
+        detail.put("ebs_size_gb", sizeGb);
         detail.put("volume_type", volumeType != null ? volumeType : "gp3");
+        detail.put("flavor", flavorName);
         detail.put("flavor_name", flavorName);
         detail.put("image_id", imageId);
         detail.put("image_name", imageId);
-        detail.put("key_name", keyName);
         detail.put("username", username);
+        detail.put("user", username);
         detail.put("timestamp", System.currentTimeMillis());
 
         return sendEvent("xregion.backend.instance", "instance.launch", detail);
     }
 
+    public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceName, int sizeGb, String volumeType,
+                                                            String flavorName, String imageId, String keyId, String username) {
+        return sendInstanceLaunchEvent("i-" + UUID.randomUUID().toString().substring(0, 8), instanceName, sizeGb, volumeType, flavorName, imageId, keyId, username);
+    }
+
     /**
      * Gửi sự kiện tạo SSH Key Pair (kèm Public Key do backend tạo) để đồng bộ vào OpenStack / AWS EC2
      */
-    public EventBridgeEventResponse sendKeySyncEvent(String keyName, String keyType, String publicKey,
+    public EventBridgeEventResponse sendKeySyncEvent(String keyId, String keyType, String publicKey,
                                                     String fingerprint, List<String> targetRegions, String createdBy) {
         Map<String, Object> detail = new HashMap<>();
         detail.put("event_id", "evt-key-" + UUID.randomUUID().toString().substring(0, 8));
-        detail.put("key_name", keyName);
+        detail.put("key_id", keyId);
         detail.put("key_type", keyType);
         detail.put("public_key", publicKey);
         detail.put("fingerprint", fingerprint);
@@ -112,6 +121,11 @@ ung    * Gửi sự kiện yêu cầu khởi tạo máy ảo boot from volume qu
         detail.put("timestamp", System.currentTimeMillis());
 
         return sendEvent("xregion.backend.key", "key.import", detail);
+    }
+
+    public EventBridgeEventResponse sendKeySyncEvent(String keyId, String keyName, String keyType, String publicKey,
+                                                    String fingerprint, List<String> targetRegions, String createdBy) {
+        return sendKeySyncEvent(keyId, keyType, publicKey, fingerprint, targetRegions, createdBy);
     }
 
     /**

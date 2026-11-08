@@ -24,6 +24,7 @@ dynamodb:
   endpoint: http://localhost:8000
   instancesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Instances
   migrationsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Migrations
+  novaTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Nova
   usersTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Users
   imagesTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Images
   flavorsTableArn: arn:aws:dynamodb:ap-southeast-2:123456789012:table/XRegion-Flavors

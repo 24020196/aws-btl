@@ -6,13 +6,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+
+import java.util.List;
 
 /**
  * Maps to live AWS DynamoDB table: XRegion-Instances
  * Primary Key: instance_id (S)
- * GSI: username-index (username)
+ * Streamlined entity: All Nova compute details are decoupled into XRegion-Nova
  */
 @DynamoDbBean
 @Setter
@@ -22,24 +24,28 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 public class InstanceEntity {
 
     private String instanceId;
-    private String instanceName;
+    private String activeNovaId;
+    private List<String> novaIds;
     private String userId;
-    private String keyId;
-    private String volumeId;
-    private String securityGroupId;
-    private String username;
-    private String currentRegion;
     private String currentStatus;
-    private String elasticIp;
-    private String privateIp;
-    private String flavor;
     private Boolean migrationLock;
     private Long lockAcquiredAt;
     private Integer cooldownSeconds;
     private Long lastMigrationTimestamp;
-    private String keyName;
     private String dns;
+
+    // Transient fields (decoupled to XRegion-Nova)
+    private String instanceName;
+    private String username;
+    private String currentRegion;
+    private String flavor;
+    private String privateIp;
+    private String elasticIp;
+    private String volumeId;
+    private String keyId;
+    private String keyName;
     private String securityGroup;
+    private String securityGroupId;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -47,9 +53,18 @@ public class InstanceEntity {
         return instanceId;
     }
 
-    @DynamoDbAttribute("instance_name")
-    public String getInstanceName() {
-        return instanceName;
+    @DynamoDbAttribute("active_nova_id")
+    public String getActiveNovaId() {
+        return activeNovaId;
+    }
+
+    public void setActiveNovaId(String activeNovaId) {
+        this.activeNovaId = activeNovaId;
+    }
+
+    @DynamoDbAttribute("nova_ids")
+    public List<String> getNovaIds() {
+        return novaIds;
     }
 
     @DynamoDbAttribute("user_id")
@@ -57,50 +72,9 @@ public class InstanceEntity {
         return userId;
     }
 
-    @DynamoDbAttribute("key_id")
-    public String getKeyId() {
-        return keyId;
-    }
-
-    @DynamoDbAttribute("volume_id")
-    public String getVolumeId() {
-        return volumeId;
-    }
-
-    @DynamoDbAttribute("security_group_id")
-    public String getSecurityGroupId() {
-        return securityGroupId;
-    }
-
-    @DynamoDbSecondaryPartitionKey(indexNames = "username-index")
-    @DynamoDbAttribute("username")
-    public String getUsername() {
-        return username;
-    }
-
-    @DynamoDbAttribute("current_region")
-    public String getCurrentRegion() {
-        return currentRegion;
-    }
-
     @DynamoDbAttribute("current_status")
     public String getCurrentStatus() {
         return currentStatus;
-    }
-
-    @DynamoDbAttribute("elastic_ip")
-    public String getElasticIp() {
-        return elasticIp;
-    }
-
-    @DynamoDbAttribute("private_ip")
-    public String getPrivateIp() {
-        return privateIp;
-    }
-
-    @DynamoDbAttribute("flavor")
-    public String getFlavor() {
-        return flavor;
     }
 
     @DynamoDbAttribute("migration_lock")
@@ -123,18 +97,68 @@ public class InstanceEntity {
         return lastMigrationTimestamp;
     }
 
-    @DynamoDbAttribute("key_name")
-    public String getKeyName() {
-        return keyName;
-    }
-
     @DynamoDbAttribute("dns")
     public String getDns() {
         return dns;
     }
 
-    @DynamoDbAttribute("security_group")
+    // ==========================================
+    // Decoupled / Transient Getters (Ignored in DynamoDB)
+    // ==========================================
+
+    @DynamoDbIgnore
+    public String getInstanceName() {
+        return instanceName != null ? instanceName : instanceId;
+    }
+
+    @DynamoDbIgnore
+    public String getUsername() {
+        if (username != null) return username;
+        return (userId != null && userId.startsWith("usr-")) ? userId.substring(4) : userId;
+    }
+
+    @DynamoDbIgnore
+    public String getCurrentRegion() {
+        return currentRegion != null ? currentRegion : "ap-southeast-2";
+    }
+
+    @DynamoDbIgnore
+    public String getFlavor() {
+        return flavor;
+    }
+
+    @DynamoDbIgnore
+    public String getPrivateIp() {
+        return privateIp;
+    }
+
+    @DynamoDbIgnore
+    public String getElasticIp() {
+        return elasticIp;
+    }
+
+    @DynamoDbIgnore
+    public String getVolumeId() {
+        return volumeId;
+    }
+
+    @DynamoDbIgnore
+    public String getKeyId() {
+        return keyId;
+    }
+
+    @DynamoDbIgnore
+    public String getKeyName() {
+        return keyName;
+    }
+
+    @DynamoDbIgnore
     public String getSecurityGroup() {
         return securityGroup;
+    }
+
+    @DynamoDbIgnore
+    public String getSecurityGroupId() {
+        return securityGroupId;
     }
 }

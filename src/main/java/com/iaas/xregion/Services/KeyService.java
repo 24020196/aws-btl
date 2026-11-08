@@ -97,7 +97,8 @@ public class KeyService {
                         b.getCreatedAt() != null ? b.getCreatedAt() : 0L,
                         a.getCreatedAt() != null ? a.getCreatedAt() : 0L))
                 .map(k -> KeyPairResponse.builder()
-                        .keyName(k.getKeyName())
+                        .keyId(k.getKeyId())
+                        .keyName(k.getKeyId())
                         .keyFingerprint(k.getKeyFingerprint())
                         .keyType(k.getKeyType())
                         .publicKey(k.getPublicKey())
@@ -107,28 +108,33 @@ public class KeyService {
                 .collect(Collectors.toList());
     }
 
-    public KeyPairResponse getKeyPair(String keyName) {
+    public KeyPairResponse getKeyPair(String keyIdentifier) {
         String currentUser = getCurrentUsername();
         return loadUserKeyItems(currentUser).stream()
-                .filter(k -> keyName.equalsIgnoreCase(k.getKeyName()))
+                .filter(k -> keyIdentifier.equalsIgnoreCase(k.getKeyId()))
                 .findFirst()
                 .map(k -> KeyPairResponse.builder()
-                        .keyName(k.getKeyName())
+                        .keyId(k.getKeyId())
+                        .keyName(k.getKeyId())
                         .keyFingerprint(k.getKeyFingerprint())
                         .keyType(k.getKeyType())
                         .publicKey(k.getPublicKey())
                         .description(k.getDescription())
                         .createdAt(k.getCreatedAt() != null ? k.getCreatedAt() : 0L)
                         .build())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Key Pair với tên: " + keyName));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy Key Pair với ID: " + keyIdentifier));
     }
 
     public KeyPairResponse createKeyPair(CreateKeyPairRequest request) {
         String currentUser = getCurrentUsername();
         String name = request.getName().trim();
 
+        // Sinh key_id không trùng lặp dùng làm định danh duy nhất trên OpenStack Nova và DynamoDB
+        String keyId = "key-" + name.toLowerCase().replaceAll("[^a-z0-9-]", "-") + "-" + UUID.randomUUID().toString().substring(0, 8);
+
         List<KeyPairItem> userKeys = loadUserKeyItems(currentUser);
-        boolean exists = userKeys.stream().anyMatch(k -> name.equalsIgnoreCase(k.getKeyName()));
+        boolean exists = userKeys.stream().anyMatch(k -> k.getKeyId() != null &&
+                (k.getKeyId().equalsIgnoreCase(name) || k.getKeyId().startsWith("key-" + name.toLowerCase().replaceAll("[^a-z0-9-]", "-") + "-")));
         if (exists) {
             throw new ConflictException("Key Pair với tên '" + name + "' đã tồn tại trong tài khoản của bạn!");
         }
@@ -159,7 +165,7 @@ public class KeyService {
                         + "\n-----END RSA PRIVATE KEY-----";
 
                 byte[] sshRsaBytes = encodeOpenSshPublicKey(pubKey);
-                publicKeyStr = "ssh-rsa " + Base64.getEncoder().encodeToString(sshRsaBytes) + " " + name;
+                publicKeyStr = "ssh-rsa " + Base64.getEncoder().encodeToString(sshRsaBytes) + " " + keyId;
                 fingerprint = generateFingerprint(sshRsaBytes);
             } catch (Exception e) {
                 log.error("Lỗi sinh khóa RSA 2048: {}", e.getMessage(), e);
@@ -172,9 +178,10 @@ public class KeyService {
                 : "Khóa SSH RSA 2048 tạo bởi " + currentUser;
 
         // 1. Gửi sự kiện Import Public Key đồng bộ qua API Gateway vào EventBridge với chữ ký AWS IAM SigV4
+        // CHỈ gửi key_id, tuyệt đối không gửi key_name hay name
         try {
             EventBridgeEventResponse ebResp = eventBridgeGatewayClient.sendKeySyncEvent(
-                    name,
+                    keyId,
                     "RSA 2048",
                     publicKeyStr,
                     fingerprint,
@@ -182,21 +189,21 @@ public class KeyService {
                     currentUser
             );
             if (ebResp == null || ebResp.getFailedEntryCount() > 0) {
-                log.error("API Gateway từ chối hoặc lỗi đồng bộ SSH Key [{}]: {}", name, ebResp);
+                log.error("API Gateway từ chối hoặc lỗi đồng bộ SSH Key [{}]: {}", keyId, ebResp);
                 throw new AppException("Gửi sự kiện import SSH Key qua API Gateway thất bại. Không thể tạo khóa.");
             }
             log.info("API Gateway đã xác nhận gửi thành công sự kiện SSH Key [{}] với EventId={}",
-                    name, (ebResp.getEntries() != null && !ebResp.getEntries().isEmpty()) ? ebResp.getEntries().get(0).get("EventId") : "OK");
+                    keyId, (ebResp.getEntries() != null && !ebResp.getEntries().isEmpty()) ? ebResp.getEntries().get(0).get("EventId") : "OK");
         } catch (AppException ae) {
             throw ae;
         } catch (Exception e) {
-            log.error("Lỗi khi kết nối API Gateway để import SSH Key [{}]: {}", name, e.getMessage(), e);
+            log.error("Lỗi khi kết nối API Gateway để import SSH Key [{}]: {}", keyId, e.getMessage(), e);
             throw new AppException("Không thể kết nối API Gateway để import SSH Key: " + e.getMessage());
         }
 
-        // 2. Chỉ khi API Gateway phản hồi thành công mới lưu Public Key vào DynamoDB
+        // 2. Chỉ khi API Gateway phản hồi thành công mới lưu Public Key vào DynamoDB (chỉ lưu key_id)
         KeyPairItem itemToSave = KeyPairItem.builder()
-                .keyName(name)
+                .keyId(keyId)
                 .keyFingerprint(fingerprint)
                 .keyType("RSA 2048")
                 .publicKey(publicKeyStr)
@@ -207,12 +214,13 @@ public class KeyService {
         userKeys.add(itemToSave);
         saveUserKeyItems(currentUser, userKeys);
 
-        auditLogService.logAction("CREATE_KEYPAIR", "KEY", name,
-                "Đã tạo SSH Key Pair [" + name + "] cho user " + currentUser);
+        auditLogService.logAction("CREATE_KEYPAIR", "KEY", keyId,
+                "Đã tạo SSH Key Pair [" + keyId + "] cho user " + currentUser);
 
-        // 3. Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <name>.pem
+        // 3. Trả về kèm privateKey duy nhất 1 lần để trình duyệt tự tải file <key_id>.pem
         return KeyPairResponse.builder()
-                .keyName(name)
+                .keyId(keyId)
+                .keyName(keyId)
                 .keyFingerprint(fingerprint)
                 .keyType("RSA 2048")
                 .publicKey(publicKeyStr)
@@ -222,15 +230,15 @@ public class KeyService {
                 .build();
     }
 
-    public void deleteKeyPair(String keyName) {
+    public void deleteKeyPair(String keyIdentifier) {
         String currentUser = getCurrentUsername();
         List<KeyPairItem> userKeys = loadUserKeyItems(currentUser);
-        boolean removed = userKeys.removeIf(k -> keyName.equalsIgnoreCase(k.getKeyName()));
+        boolean removed = userKeys.removeIf(k -> keyIdentifier.equalsIgnoreCase(k.getKeyId()));
         if (!removed) {
-            throw new ResourceNotFoundException("Không tìm thấy Key Pair: " + keyName);
+            throw new ResourceNotFoundException("Không tìm thấy Key Pair: " + keyIdentifier);
         }
         saveUserKeyItems(currentUser, userKeys);
-        auditLogService.logAction("DELETE_KEYPAIR", "KEY", keyName, "Đã xóa SSH Key Pair: " + keyName);
+        auditLogService.logAction("DELETE_KEYPAIR", "KEY", keyIdentifier, "Đã xóa SSH Key Pair: " + keyIdentifier);
     }
 
     /**

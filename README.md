@@ -83,30 +83,20 @@ graph TB
         EventBridge --> NovaRule
 
         subgraph Step_Functions ["Step Functions State Machine"]
-            SFN["OpenStack-NovaVM-EBS-Provisioner<br/>(Tạo EBS -> Gắn Volume -> Boot Nova VM)"]
+            SFN["OpenStack-NovaVM-EBS-Provisioner<br/>(Cấp Cinder -> Boot Nova -> Gán EIP -> Gán SG -> Sync DDB)"]
         end
 
         BackendRule --> SFN
 
         subgraph Lambda_Workers ["AWS Lambda Functions Execution"]
-            L0["XRegion-VolumeLifecycleManager<br/>(Cấp phát EBS, Cinder Boot Volume & Nova VM)"]
-            L1["XRegion-NovaLifecycleManager<br/>(Start / Stop / Reboot / Terminate)"]
-            L2["XRegion-KeySyncManager<br/>(Import SSH Key vào Nova / EC2)"]
-            L3["XRegion-SecurityGroupManager<br/>(Đồng bộ Neutron Security Groups)"]
-            L4["XRegion-SyncNovaToDynamoDB<br/>(Cập nhật State vào DDB)"]
-            L5["XRegion-SyncKeyToDynamoDB<br/>(Đồng bộ Key vào DDB)"]
-            L6["XRegion-SyncSGToDynamoDB<br/>(Đồng bộ Security Group vào DDB)"]
+            L1["XRegion-NovaLifecycleManager<br/>(Start / Stop / Reboot)"]
+            L2["XRegion-KeySyncManager<br/>(Import SSH Key vào Nova & DynamoDB)"]
             L7["XRegion-AutoAssignEIP<br/>(Tự động cấp Elastic IP)"]
             L8["XRegion-ResourceCleaner<br/>(Tự động dọn dẹp EIP, Secondary IP, EBS & Cinder)"]
         end
 
         BackendRule --> L1
         BackendRule --> L2
-        BackendRule --> L3
-        NovaRule --> L4
-        NovaRule --> L5
-        NovaRule --> L6
-        NovaRule --> L7
     end
 
     subgraph Data_Layer ["🗄️ CSDL Amazon DynamoDB (AWS ap-southeast-2)"]
@@ -117,29 +107,30 @@ graph TB
         T_Vol[("XRegion-Volumes<br/>PK: volume_id")]
         T_Mig[("XRegion-Migrations<br/>PK: instance_id | SK: migration_id")]
 
+        T_Nova[("XRegion-Nova<br/>PK: nova_id")]
+
         DynClient <-->|CRUD & Conditional Lock| T_Inst
         DynClient <-->|Auth & Keys| T_User
         DynClient <-->|Keys| T_Key
         DynClient <-->|Rules| T_SG
         DynClient <-->|Volumes| T_Vol
         DynClient <-->|Pipeline State| T_Mig
+        DynClient <-->|Truy vấn Nova metadata| T_Nova
 
-        L4 -->|Ghi trạng thái thực| T_Inst
-        L5 -->|Ghi SSH Keys| T_Key
-        L6 -->|Ghi SG Rules| T_SG
-        L7 -->|Ghi Elastic IP| T_Inst
+        SFN -->|Step 6: Ghi Nova record| T_Nova
+        SFN -->|Cập nhật IN_USE| T_Vol
+        L2 -->|Import SSH Key| T_Key
     end
 
     subgraph OpenStack_Node ["☁️ OpenStack Node (EC2 i-056d7f3dd24156234)"]
-        ForwarderDaemon["nova-event-forwarder.service<br/>(Python OpenStack SDK Daemon)"]
         Nova["OpenStack Nova Compute"]
         Neutron["OpenStack Neutron Networking"]
         Cinder["OpenStack Cinder / EBS Volume Attachment"]
 
         L1 -->|Nova API / SSH| Nova
-        SFN -->|Boot from Volume| Nova
-        SFN -->|Attach EBS Volume| Cinder
-        L3 -->|Neutron API| Neutron
+        SFN -->|Step 2: Boot from Volume| Nova
+        SFN -->|Step 1: Attach Volume| Cinder
+        SFN -->|Step 4 & 5: Gán EIP & SG| Neutron
         Nova --> ForwarderDaemon
         Neutron --> ForwarderDaemon
         ForwarderDaemon -->|POST /prod/events| ApiGw
@@ -270,30 +261,58 @@ Hệ thống ứng dụng kiến trúc **Serverless Event-Driven** nhằm đảm
 - **Rule 1: `XRegion-BackendEventRule`**: Lắng nghe mọi yêu cầu phát ra từ Backend Spring Boot:
   - Source: `xregion.backend.instance`, `xregion.backend.key`, `xregion.backend.security`, `xregion.backend.migration`
   - Đích đến: AWS Step Functions và các AWS Lambda Workers tương ứng (`XRegion-NovaLifecycleManager`, `XRegion-KeySyncManager`, `XRegion-SecurityGroupManager`).
-- **Rule 2: `XRegion-NovaStatusRule`**: Lắng nghe sự kiện giám sát từ hạ tầng OpenStack:
-  - Source: `xregion.openstack.nova`, `xregion.openstack.neutron`
-  - Đích đến: Các Lambda Function đồng bộ dữ liệu vào DynamoDB (`XRegion-SyncNovaToDynamoDB`, `XRegion-SyncKeyToDynamoDB`, `XRegion-SyncSGToDynamoDB`, `XRegion-AutoAssignEIP`).
+- **Rule 2: `XRegion-InstanceTerminateRule`** *(ENABLED)*:
+  - Bắt các sự kiện `instance.terminate` và `instance.lifecycle` (khi action = `TERMINATE` hoặc `DELETE`) phát từ Backend hoặc EventBridge.
+  - Tự động kích hoạt AWS Step Function `TerminateInstance` để thực thi chuỗi dọn dẹp hạ tầng 5 bước chuẩn hóa.
+- **Rule 3: `XRegion-NovaStatusRule`** *(DISABLED - Decommissioned)*:
+  - Trước đây nhận sự kiện reverse-sync từ OpenStack daemon. Đã được vô hiệu hóa sau khi toàn bộ quy trình đồng bộ trạng thái, Floating IP và Security Group được chuyển giao hoàn toàn sang Step Function và Backend.
 
-### 4.3 Bộ Máy AWS Step Functions: `OpenStack-NovaVM-EBS-Provisioner`
-Điều phối chuỗi tác vụ phức tạp khi khởi tạo máy ảo theo quy chuẩn **Boot-from-Volume**:
-1. `CreateEBSVolume`: Cấp phát volume `gp3` tại AWS hoặc Cinder volume tương thích.
-2. `WaitForVolumeAvailable`: Polling trạng thái volume đạt mức `available`.
-3. `AttachVolumeToNova`: Đính kèm volume vào máy ảo mục tiêu trên OpenStack.
-4. `BootNovaVM`: Kích hoạt máy ảo từ boot volume đính kèm.
+### 4.3 Bộ Máy AWS Step Functions Điều Phối Hạ Tầng
+
+#### A. Khởi Tạo Máy Ảo (`LaunchInstance` / `OpenStack-NovaVM-EBS-Provisioner`)
+Điều phối chuỗi tác vụ nguyên tử (0 Wait States, Native Retry) khi khởi tạo máy ảo theo quy chuẩn **Boot-from-Volume**:
+1. `CheckPoolAndAllocateVolume`: Kiểm tra pool Cinder / cấp phát boot volume có sẵn.
+2. `CreateServer`: Kích hoạt máy ảo Nova từ volume.
+3. `WaitActive`: Polling chờ Nova VM đạt trạng thái `ACTIVE`.
+4. `AssignFloatingIP`: Tự động gán IP công khai (Elastic IP) cho máy ảo.
+5. `AssignSecurityGroup`: Gán Security Group 1-1 qua OpenStack Nova API.
+6. `SyncDynamoDB`: Lưu trữ metadata máy ảo vào bảng `XRegion-Nova` và đánh dấu volume `IN_USE`.
+
+#### B. Hủy Diệt Máy Ảo (`TerminateInstance`)
+Được tái thiết toàn diện theo kiến trúc module hóa 5 bước độc lập chuẩn mực (0 polling loops, native retry per task):
+1. **`DeleteSecurityGroup`**: Gỡ SG 1-1 khỏi Nova VM và xóa SG trên OpenStack Neutron & DynamoDB `XRegion-SecurityGroups`.
+2. **`DeleteNova`**: Gọi Nova API xóa máy ảo Compute và giải phóng cổng mạng.
+3. **`DeleteVolume`**: Xóa Cinder Volume trên OpenStack và AWS EBS Volume, cập nhật trạng thái `DELETED` trong `XRegion-Volumes`.
+4. **`ReleaseEIP`**: Disassociate Elastic IP khỏi Public ENI, giải phóng Claim Tags và hoàn trả IP về pool.
+5. **`SyncDynamoDB`**: Cập nhật trạng thái `TERMINATED` trong `XRegion-Instances` & `XRegion-Nova`.
 
 ### 4.4 Danh Mục AWS Lambda Functions
 
+#### A. Tác Vụ Vòng Đời & Quản Trị Hệ Thống
 | Tên Lambda Function | Vai Trò & Nghiệp Vụ Xử Lý |
 | :--- | :--- |
-| **`XRegion-VolumeLifecycleManager`** | Điều phối toàn diện vòng đời ổ cứng và máy ảo boot from volume: tạo AWS EBS gp3, gắn EC2 Host, tạo Cinder Volume từ Glance image, boot Nova VM và đồng bộ DynamoDB `XRegion-Volumes` / `XRegion-Instances`. |
-| **`XRegion-NovaLifecycleManager`** | Điều khiển Start/Stop/Reboot/Terminate VM trên OpenStack Nova. |
-| **`XRegion-KeySyncManager`** | Chuyên biệt hóa chế độ Import SSH Public Key vào OpenStack Nova và DynamoDB `XRegion-Keys`. Kiểm tra nghiêm ngặt `public_key` (trả về lỗi `statusCode: 400` nếu thiếu để người dùng thao tác lại). |
-| **`XRegion-SecurityGroupManager`** | Tạo và cấu hình Security Group, nạp Inbound/Outbound Rules trong OpenStack Neutron. |
-| **`XRegion-SyncNovaToDynamoDB`** | Đồng bộ trạng thái VM thực tế (`ACTIVE`, `SHUTOFF`) từ OpenStack daemon sang DynamoDB `XRegion-Instances`. |
-| **`XRegion-SyncKeyToDynamoDB`** | Đồng bộ SSH key từ OpenStack daemon sang DynamoDB `XRegion-Keys`. |
-| **`XRegion-SyncSGToDynamoDB`** | Đồng bộ Security Group từ OpenStack daemon sang DynamoDB `XRegion-SecurityGroups`. |
+| **`XRegion-NovaLifecycleManager`** | Điều khiển Start/Stop/Reboot VM trên OpenStack Nova. |
+| **`XRegion-KeySyncManager`** | Chuyên biệt hóa chế độ Import SSH Public Key vào OpenStack Nova và DynamoDB `XRegion-Keys`. Chỉ sử dụng `key_id`, loại bỏ `key_name`. |
 | **`XRegion-AutoAssignEIP`** | Tự động phát hiện khi máy ảo chuyển sang trạng thái `ACTIVE` để cấp phát và gán Public IP / Elastic IP. |
 | **`XRegion-ResourceCleaner`** | Tự động giải phóng tài nguyên mồ côi (Disassociate EIP, Unassign Secondary IP trên `ens6`, xóa Cinder Volume & AWS EBS Volume) khi máy ảo chuyển sang `DELETED` / `TERMINATED`. |
+
+#### B. Bộ 5 Worker Chuyên Trách Cho Step Function `TerminateInstance`
+| Tên Lambda Function | Runtime & VPC | Vai Trò & Nghiệp Vụ |
+| :--- | :--- | :--- |
+| **`XRegion-TerminateInstance-DeleteSecurityGroup`** | Python 3.12 (VPC OpenStack) | Gỡ và xóa Neutron Security Group 1-1 & xóa bản ghi DynamoDB. |
+| **`XRegion-TerminateInstance-DeleteNova`** | Python 3.12 (VPC OpenStack) | Gọi Nova API `DELETE /servers/{id}` với graceful 404 idempotent handling. |
+| **`XRegion-TerminateInstance-DeleteVolume`** | Python 3.12 (VPC OpenStack) | Xóa OpenStack Cinder Volume & xóa AWS EBS Volume, cập nhật `XRegion-Volumes`. |
+| **`XRegion-TerminateInstance-ReleaseEIP`** | Python 3.12 | Disassociate EIP khỏi ENI và gỡ bỏ Claim tags hoàn trả EIP pool. |
+| **`XRegion-TerminateInstance-SyncDynamoDB`** | Python 3.12 | Cập nhật `current_status = TERMINATED` trong `XRegion-Instances` & `XRegion-Nova`. |
+
+#### C. Các Hàm Đã Decommission
+| Tên Lambda Function | Lý Do Decommission |
+| :--- | :--- |
+| *`XRegion-VolumeLifecycleManager`* | Đã xóa bỏ hoàn toàn. Thay thế bằng 5 worker `XRegion-TerminateInstance-*` độc lập. |
+| *`XRegion-SecurityGroupManager`* | Backend và Step Function Step 5 đã trực tiếp quản lý và gán Security Group. |
+| *`XRegion-SyncNovaToDynamoDB`* | Step Function Step 6 (`SyncDynamoDB`) và Backend đã trực tiếp đồng bộ `XRegion-Nova` & `XRegion-Instances`. |
+| *`XRegion-SyncKeyToDynamoDB`* | `XRegion-KeySyncManager` đã trực tiếp nhập key vào OpenStack và lưu `XRegion-Keys`. |
+| *`XRegion-SyncSGToDynamoDB`* | Loại bỏ worker reverse-sync tránh ghi đè sai tên Security Group. |
 
 ### 4.5 OpenStack Daemon: `nova-event-forwarder.service`
 - Chạy nền dưới dạng `systemd daemon` trên máy chủ EC2 `i-056d7f3dd24156234`.
@@ -315,29 +334,26 @@ sequenceDiagram
     participant DDB as DynamoDB (XRegion-Instances)
     participant APIGW as API Gateway (XRegion-EventGateway)
     participant EB as EventBridge (default bus)
-    participant SFN as Step Functions (NovaVM-EBS-Provisioner)
-    participant Node as OpenStack Node (EC2 i-056d7f3dd24156234)
-    participant Daemon as nova-event-forwarder
-    participant L_Sync as Lambda (SyncNovaToDynamoDB)
-    participant L_EIP as Lambda (AutoAssignEIP)
+    participant SFN as Step Functions (OpenStack-NovaVM-EBS-Provisioner)
+    participant Node as OpenStack Node (Nova/Cinder/Neutron)
+    participant DDB_Nova as DynamoDB (XRegion-Nova)
 
     Admin->>UI: Điền cấu hình (Flavor, SizeGb, Key, SG) & Launch
     UI->>Backend: POST /api/instances
     Backend->>DDB: Lưu bản ghi Instance mới (current_status = PENDING)
     Backend->>APIGW: POST /prod/events (source: xregion.backend.instance, action: instance.launch)
     APIGW->>EB: PutEvents (EventBridge Bus)
-    EB->>SFN: Route qua rule XRegion-BackendEventRule
-    SFN->>Node: 1. Tạo EBS/Cinder gp3 -> 2. Attach -> 3. Boot Nova VM
-    Note over Node: Máy ảo boot thành công, chuyển sang ACTIVE
-    Node->>Daemon: RabbitMQ Notification (compute.instance.create.end)
-    Daemon->>APIGW: Ingest sự kiện VM ACTIVE (source: xregion.openstack.nova)
-    APIGW->>EB: PutEvents
-    EB->>L_Sync: Route qua rule XRegion-NovaStatusRule
-    EB->>L_EIP: Route qua rule XRegion-NovaStatusRule
-    L_Sync->>DDB: Cập nhật current_status = ACTIVE, private_ip
-    L_EIP->>DDB: Cấp phát & gán elastic_ip công khai
+    EB->>SFN: Route qua rule XRegion-InstanceLaunchRule
+    Note over SFN: Thực thi 6 bước Native SFN Workflow
+    SFN->>Node: 1. Cấp volume Cinder từ Pool
+    SFN->>Node: 2. Kích hoạt Boot Nova VM từ Volume
+    SFN->>Node: 3. Chờ trạng thái máy ảo chuyển ACTIVE
+    SFN->>Node: 4. Gán Floating IP (Elastic IP)
+    SFN->>Node: 5. Gán Security Group (Nova API)
+    SFN->>DDB_Nova: 6. Ghi metadata Nova VM & cập nhật Volume IN_USE
     UI->>Backend: Polling GET /api/instances
-    Backend->>UI: Trả về trạng thái ACTIVE & Elastic IP
+    Backend->>DDB_Nova: Truy vấn active Nova VM metadata
+    Backend->>UI: Trả về trạng thái RUNNING, Private IP & Elastic IP
     UI->>Admin: Hiển thị máy ảo sẵn sàng & Mở nút Web Console VNC
 ```
 

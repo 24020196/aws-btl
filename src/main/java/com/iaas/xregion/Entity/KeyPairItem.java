@@ -14,16 +14,29 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 @DynamoDbBean
 public class KeyPairItem {
 
-    private String keyName;
+    private String keyId;
     private String keyFingerprint;
     private String keyType;
     private String publicKey;
     private String description;
     private Long createdAt;
 
-    @DynamoDbAttribute("key_name")
+    @DynamoDbAttribute("key_id")
+    public String getKeyId() {
+        return keyId;
+    }
+
+    public void setKeyId(String keyId) {
+        this.keyId = keyId;
+    }
+
+    @software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnore
     public String getKeyName() {
-        return keyName;
+        return keyId;
+    }
+
+    public void setKeyName(String keyName) {
+        this.keyId = keyName;
     }
 
     @DynamoDbAttribute("key_fingerprint")
