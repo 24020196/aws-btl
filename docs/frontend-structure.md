@@ -17,7 +17,7 @@ Mọi trang vẫn chỉ nạp **một** file `css/dashboard.css`. File này gi�
 | 6 | `base/feedback.css` | Modal, thanh lỗi API, toast | **Dùng chung** |
 | 7 | `base/sub-nav.css` | Thanh menu trang | **Dùng chung** |
 | 8 | `auth.css` | Đăng nhập, đăng ký | Cường |
-| 9 | `overview.css` | Trang chủ: hero, KPI, thẻ vùng | Duy Anh / Lực |
+| 9 | `overview.css` | Trang chủ EC2 Dashboard: Resources, thẻ vùng | Duy Anh / Lực |
 | 10 | `launch.css` | Trang Launch: thẻ chọn OS, vùng, flavor | Duy Anh |
 | 11 | `console-detail.css` | Style kiểu AWS console dùng ở các trang quản lý (kv-table, form sửa máy) | Duy Anh / Cường |
 | 12 | `instance-detail.css` | Trang chi tiết máy ảo | Lực |
@@ -42,7 +42,7 @@ js/core/session.js       biến toàn cục (API_BASE, authToken...), chặn tra
 js/core/auth.js          đăng nhập, đăng ký, đăng xuất
 js/core/i18n.js          song ngữ Việt/Anh (registerI18n, tk, onLangChange, setGlobalLang, applyPageTranslations), badge người dùng
 js/core/sidebar.js       sidebar navigation kiểu AWS Console (tự động render vào <aside id="appSidebar">)
-js/pages/overview.js           trang chủ                (index.html)
+js/pages/overview.js           trang chủ EC2 Dashboard  (index.html)          — Lực
 js/pages/overview-migration.js khung chuyển vùng trang chủ (index.html)      — Lực
 js/pages/instances.js          danh sách máy ảo         (instances.html)     — Duy Anh
 js/pages/launch.js             Launch + Key Pair        (launch.html, instance-edit.html) — Duy Anh / Lâm
@@ -51,8 +51,8 @@ js/pages/instance-detail/      chi tiết máy ảo, chia theo tab (instance-det
     core.js        trạng thái trang, tiện ích, tải/hiển thị máy, thanh nút
     migration.js   tab Chuyển vùng
     dialogs.js     Esc đóng modal, lệnh SSH, hộp xác nhận, menu Trạng thái/Hành động
-    security.js    tab Bảo mật & Mạng
-    storage.js     tab Lưu trữ
+    security.js    tab Security và tab Networking
+    storage.js     tab Lưu trữ (ổ đĩa + Snapshots)
     monitoring.js  tab Giám sát
 js/pages/login.js, register.js     code trang đăng nhập/đăng ký (trước đây viết thẳng trong HTML) — Cường
 js/pages/account-tokens.js         trang Tài khoản & API Token — Cường
