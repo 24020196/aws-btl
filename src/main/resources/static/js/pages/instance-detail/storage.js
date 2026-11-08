@@ -4,7 +4,7 @@
 // Tab Lưu trữ: ổ gốc, các ổ đang gắn và snapshot sinh ra khi chuyển vùng.
 
 registerI18n({
-  detRootTitle: ['Thiết bị gốc (Root device)', 'Root device'],
+  detRootTitle: ['Thiết bị gốc', 'Root device'],
   detRootName: ['Tên thiết bị gốc', 'Root device name'],
   detRootType: ['Loại thiết bị', 'Root device type'],
   detDiskType: ['Loại ổ đĩa', 'Volume type'],
