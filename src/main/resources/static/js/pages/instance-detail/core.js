@@ -423,13 +423,6 @@ function renderActions() {
         ${item('TERMINATE', ICON('ui-trash') + ' ' + t('Xóa máy ảo', 'Terminate instance'), busy, 'danger', busyHint)}
       </div>
     </div>
-    <div class="ec2-actions-menu" id="ec2ActionsMenu">
-      <button type="button" class="btn btn-secondary btn-sm" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
-        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${tk('actActions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
-      <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
-        ${ec2ActionsGroupsHtml(inst)}
-      </div>
-    </div>
     <button class="btn btn-primary btn-sm" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region</button>
   `);
 
