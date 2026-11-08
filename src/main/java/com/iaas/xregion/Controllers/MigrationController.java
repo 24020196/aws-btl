@@ -49,6 +49,12 @@ public class MigrationController {
         return ResponseEntity.ok(ApiResponse.ok(migrationService.getSummary()));
     }
 
+    /** Snapshot EBS sinh ra khi chuyển vùng (bản gốc ở vùng nguồn + bản sao ở vùng đích). Lọc theo máy bằng ?instanceId=. */
+    @GetMapping("/snapshots")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSnapshots(@RequestParam(required = false) String instanceId) {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.getSnapshots(instanceId == null || instanceId.isBlank() ? null : instanceId)));
+    }
+
     @GetMapping("/progress/{instanceId}")
     public ResponseEntity<ApiResponse<MigrationResponse>> getProgress(@PathVariable String instanceId) {
         return ResponseEntity.ok(ApiResponse.ok(migrationService.getProgress(instanceId)));

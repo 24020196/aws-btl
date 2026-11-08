@@ -227,14 +227,22 @@ public class MigrationService {
 
             // STEP 2: Create EBS Snapshot
             Thread.sleep(2000);
-            updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(), "EBS gp3 Snapshot created successfully.");
+            String snapshotId = newSnapshotId();
+            String volumeId = instance.getVolumeId() != null && !instance.getVolumeId().isBlank() ? instance.getVolumeId() : null;
+            updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(),
+                    "EBS gp3 snapshot " + snapshotId + (volumeId != null ? " of " + volumeId : "") + " created in " + migrationRecord.getSourceRegion() + ".");
+            migrationRecord.setSnapshotId(snapshotId);
+            migrationRecord.setVolumeId(volumeId);
             migrationRecord.setCopyProgress(40);
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 3: Cross-Region Transfer
             Thread.sleep(3000);
-            updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(), "Transferred snapshot across regions to " + dstRegion);
+            String destSnapshotId = newSnapshotId();
+            updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(),
+                    "Copied " + snapshotId + " to " + dstRegion + " as " + destSnapshotId + ".");
+            migrationRecord.setDestSnapshotId(destSnapshotId);
             migrationRecord.setCopyProgress(65);
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
@@ -311,6 +319,60 @@ public class MigrationService {
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
         }
+    }
+
+    private static String newSnapshotId() {
+        return "snap-" + UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+    }
+
+    /** Một dòng snapshot cho API (giống cột của bảng Snapshots trên AWS). */
+    private Map<String, Object> snapshotRow(String snapshotId, String region, MigrationEntity m, InstanceEntity inst, String description, String sourceSnapshotId) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        boolean failed = "FAILED".equalsIgnoreCase(m.getStatus());
+        row.put("snapshotId", snapshotId);
+        row.put("region", region);
+        row.put("volumeId", m.getVolumeId());
+        row.put("instanceId", m.getInstanceId());
+        row.put("instanceName", inst != null && inst.getInstanceName() != null ? inst.getInstanceName() : m.getInstanceId());
+        row.put("migrationId", m.getMigrationId());
+        row.put("sourceSnapshotId", sourceSnapshotId);
+        row.put("description", description);
+        row.put("state", failed ? "error" : "completed");
+        row.put("startedAt", m.getStartedAt() != null && m.getStartedAt() > 0 ? TimeSyncUtil.toEpochMillis(m.getStartedAt()) : 0L);
+        return row;
+    }
+
+    private List<Map<String, Object>> snapshotsOf(List<MigrationEntity> migrations, Map<String, InstanceEntity> instances) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        migrations.stream()
+                .sorted(Comparator.comparing((MigrationEntity m) -> m.getStartedAt() != null ? TimeSyncUtil.toEpochSeconds(m.getStartedAt()) : 0L).reversed())
+                .forEach(m -> {
+                    InstanceEntity inst = instances.get(m.getInstanceId());
+                    if (m.getDestSnapshotId() != null) {
+                        rows.add(snapshotRow(m.getDestSnapshotId(), m.getDestRegion(), m, inst,
+                                "Copied for " + m.getMigrationId() + " from " + m.getSourceRegion(), m.getSnapshotId()));
+                    }
+                    if (m.getSnapshotId() != null) {
+                        rows.add(snapshotRow(m.getSnapshotId(), m.getSourceRegion(), m, inst,
+                                "Created for " + m.getMigrationId(), null));
+                    }
+                });
+        return rows;
+    }
+
+    /** Snapshot sinh ra từ các lần chuyển vùng; instanceId = null nghĩa là mọi máy của người dùng hiện tại. */
+    public List<Map<String, Object>> getSnapshots(String instanceId) {
+        String currentUser = getCurrentUsername();
+        Map<String, InstanceEntity> mine = instancesTable.scan().items().stream()
+                .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
+                .filter(i -> instanceId == null || instanceId.equals(i.getInstanceId()))
+                .collect(Collectors.toMap(InstanceEntity::getInstanceId, i -> i, (a, b) -> a, LinkedHashMap::new));
+        if (instanceId != null && mine.isEmpty()) {
+            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+        }
+        List<MigrationEntity> all = new ArrayList<>();
+        mine.keySet().forEach(id -> all.addAll(findMigrations(id)));
+        return snapshotsOf(all, mine);
     }
 
     private void updateStep(MigrationResponse run, int stepNum, int percent, String stepName, String logMsg) {
@@ -494,6 +556,8 @@ public class MigrationService {
                 .collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("snapshotCount", all.stream()
+                .mapToLong(m -> (m.getSnapshotId() != null ? 1 : 0) + (m.getDestSnapshotId() != null ? 1 : 0)).sum());
         result.put("total", all.size());
         result.put("completed", completed);
         result.put("failed", failed);
