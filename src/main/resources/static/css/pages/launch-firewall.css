@@ -13,3 +13,4 @@
 .lfw-table .lfw-del .ico-btn:hover { color: #f87171; }
 .lfw-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 14px !important; }
 .lfw-warn { margin-top: 8px; }
+.lfw-modal { max-width: 560px; }
