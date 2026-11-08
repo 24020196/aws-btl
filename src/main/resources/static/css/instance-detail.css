@@ -350,3 +350,14 @@ a.btn { text-decoration: none; }
 
 .mig-sum-block { font-size: 14px; }
 .mig-sum-latest strong { font-size: 15px; }
+
+/* Khối thông báo khi không tìm thấy / không tải được máy ảo */
+.det-empty { max-width: 640px; margin: 48px auto; padding: 40px 32px; text-align: center; }
+.det-empty-icon { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; font-weight: 800; color: var(--accent-cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.35); }
+.det-empty-icon.is-error { color: #f87171; background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.4); }
+.det-empty-title { font-size: 20px; margin: 0 0 10px; }
+.det-empty-title code { font-family: var(--font-mono, ui-monospace, monospace); color: var(--accent-cyan); }
+.det-empty-text { color: var(--text-secondary, #94a3b8); line-height: 1.6; margin: 0 0 22px; }
+.det-empty-text code { font-family: var(--font-mono, ui-monospace, monospace); font-size: .9em; word-break: break-all; }
+.det-empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

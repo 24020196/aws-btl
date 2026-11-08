@@ -173,7 +173,7 @@ async function initInstanceDetail() {
 
   det.id = new URLSearchParams(window.location.search).get('id');
   if (!det.id) {
-    showApiError('/instances/{id}', 'Không có ID máy ảo trên địa chỉ trang. Quay lại danh sách máy ảo và chọn một máy.');
+    renderLoadFailure(null);
     return;
   }
   setText('breadcrumbInstanceId', det.id);
@@ -201,9 +201,42 @@ async function loadInstance() {
     watchTransitionalStatus();
     return true;
   } catch (err) {
-    setText('detInstanceName', 'Không tải được máy ảo');
+    renderLoadFailure(err);
     return false;
   }
+}
+
+// Như AWS: không tìm thấy máy thì hiện một khối thông báo + đường quay lại, không hiện khung dữ liệu trống.
+function renderLoadFailure(err) {
+  clearApiError();
+  const msg = String((err && err.message) || '');
+  const notFound = !det.id || /not found|không tìm thấy|404/i.test(msg);
+  const main = document.querySelector('main.main-content');
+  if (!main) return;
+  [...main.children].forEach(el => { if (!el.classList.contains('breadcrumb')) el.hidden = true; });
+  setText('breadcrumbInstanceId', det.id || '–');
+  document.title = (notFound ? 'Không tìm thấy máy ảo' : 'Lỗi tải máy ảo') + ' | XRegion-EC2';
+  const box = document.createElement('section');
+  box.className = 'card det-empty';
+  box.setAttribute('role', 'alert');
+  box.innerHTML = notFound
+    ? `<div class="det-empty-icon" aria-hidden="true">?</div>
+       <h1 class="det-empty-title">${det.id ? `Không tìm thấy máy ảo <code>${esc(det.id)}</code>` : 'Chưa chọn máy ảo'}</h1>
+       <p class="det-empty-text">${det.id
+         ? 'Máy ảo này không tồn tại, đã bị xóa (Terminated) hoặc thuộc tài khoản khác.'
+         : 'Địa chỉ trang thiếu ID máy ảo. Hãy chọn một máy trong danh sách.'}</p>
+       <div class="det-empty-actions">
+         <a href="/instances.html" class="btn btn-primary">← Về danh sách máy ảo</a>
+         <a href="/launch.html" class="btn btn-secondary">+ Khởi tạo máy ảo mới</a>
+       </div>`
+    : `<div class="det-empty-icon is-error" aria-hidden="true">!</div>
+       <h1 class="det-empty-title">Không tải được thông tin máy ảo</h1>
+       <p class="det-empty-text">Máy chủ không phản hồi hoặc đang gặp lỗi. Chi tiết: <code>${esc(msg || 'không rõ')}</code></p>
+       <div class="det-empty-actions">
+         <button type="button" class="btn btn-primary" onclick="location.reload()">⟳ Thử lại</button>
+         <a href="/instances.html" class="btn btn-secondary">← Về danh sách máy ảo</a>
+       </div>`;
+  main.appendChild(box);
 }
 
 // While the VM is PENDING / STOPPING / REBOOTING..., re-read it every 2.5 s until it settles.
