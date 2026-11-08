@@ -32,8 +32,9 @@ public class MigrationController {
     }
 
     @PostMapping("/trigger")
-    public ResponseEntity<ApiResponse<MigrationResponse>> triggerMigration(@Valid @RequestBody TriggerMigrationRequest request) {
-        MigrationResponse response = migrationService.triggerMigration(request.getId());
+    public ResponseEntity<ApiResponse<MigrationResponse>> triggerMigration(@Valid @RequestBody TriggerMigrationRequest request,
+                                                                            @RequestParam(defaultValue = "vi") String lang) {
+        MigrationResponse response = migrationService.triggerMigration(request.getId(), lang);
         return ResponseEntity.ok(ApiResponse.ok("Cross-region migration workflow started", response));
     }
 

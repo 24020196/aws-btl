@@ -101,6 +101,15 @@ public class MigrationService {
     }
 
     public MigrationResponse triggerMigration(String targetId) {
+        return triggerMigration(targetId, "vi");
+    }
+
+    /** Chọn câu thông báo theo ngôn ngữ giao diện (?lang=en|vi), mặc định tiếng Việt. */
+    private static String msg(String lang, String vi, String en) {
+        return "en".equalsIgnoreCase(lang) ? en : vi;
+    }
+
+    public MigrationResponse triggerMigration(String targetId, String lang) {
         String instanceId = targetId;
         if (targetId.startsWith("sc-") || targetId.startsWith("mig_")) {
             // Find instance from existing migrations
@@ -114,17 +123,20 @@ public class MigrationService {
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
         if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
-            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+            throw new ResourceNotFoundException(msg(lang, "Không tìm thấy máy ảo " + instanceId + ".", "Instance not found: " + instanceId));
         }
 
         // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp (PENDING, STOPPING, SHUTTING_DOWN...)
         String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
         if ("TERMINATED".equals(status) || "TERMINATING".equals(status)) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đã bị xóa (" + status + "), không thể chuyển vùng.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đã bị xóa (" + status + "), không thể chuyển vùng.",
+                    "Instance [" + instanceId + "] is " + status + " and cannot be migrated."));
         }
         if (TRANSITIONAL_STATES.contains(status)) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đang ở trạng thái " + status
-                    + ". Hãy đợi máy chuyển sang RUNNING hoặc STOPPED rồi mới chuyển vùng.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đang ở trạng thái " + status + ". Hãy đợi máy chuyển sang RUNNING hoặc STOPPED rồi mới chuyển vùng.",
+                    "Instance [" + instanceId + "] is " + status + ". Wait until it is RUNNING or STOPPED before migrating."));
         }
 
         // 1. ATOMIC CONDITIONAL WRITE ON AWS CLOUD DYNAMODB
@@ -132,15 +144,18 @@ public class MigrationService {
             if (isLockStale(instance)) {
                 releaseStaleLock(instance);
             } else {
-                throw new ConflictException("Máy ảo [" + instanceId + "] đang có một lần chuyển vùng chạy (migration_lock đang khóa). "
-                        + "Mở trang chi tiết máy ảo, tab Chuyển vùng, để xem tiến trình.");
+                throw new ConflictException(msg(lang,
+                        "Máy ảo [" + instanceId + "] đang có một lần chuyển vùng chạy (migration_lock đang khóa). Mở trang chi tiết máy ảo, tab Chuyển vùng, để xem tiến trình.",
+                        "A migration is already running for instance [" + instanceId + "] (migration_lock is held). Open the instance's Migration tab to follow it."));
             }
         }
 
         // Kiểm tra thời gian Cooldown nếu máy ảo đã từng thực hiện chuyển vùng trước đó
         long remainingCooldown = getRemainingCooldownSeconds(instance, findMigrations(instanceId));
         if (remainingCooldown > 0) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.",
+                    "Instance [" + instanceId + "] is in its cooldown period. Try again in " + remainingCooldown + " seconds."));
         }
 
         long startEpochSec = TimeSyncUtil.nowEpochSeconds();
@@ -161,7 +176,10 @@ public class MigrationService {
             instancesTable.updateItem(lockReq);
             log.info("Acquired atomic migration lock on AWS DynamoDB for instance {} at epochSec={}", instanceId, startEpochSec);
         } catch (Exception e) {
-            throw new ConflictException("Concurrent lock acquisition failed for instance " + instanceId + ": " + e.getMessage());
+            log.warn("Concurrent lock acquisition failed for instance {}: {}", instanceId, e.getMessage());
+            throw new ConflictException(msg(lang,
+                    "Không giữ được migration_lock cho máy ảo " + instanceId + " (có yêu cầu khác vừa chuyển vùng máy này).",
+                    "Could not acquire migration_lock for instance " + instanceId + " (another request just started a migration)."));
         }
 
         String migrationId = "mig_" + startEpochSec;
