@@ -37,61 +37,7 @@ function openConnectModal() {
   openModal('connectModal');
 }
 
-// ---------------- Confirm dialog (thay cho confirm() của trình duyệt) ----------------
-function confirmDialog({ title, message, confirmText = t('Xác nhận', 'Confirm'), cancelText = t('Hủy', 'Cancel'), danger = false, requireText = '' }) {
-  return new Promise(resolve => {
-    let overlay = document.getElementById('confirmModal');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'confirmModal';
-      overlay.className = 'modal-overlay';
-      overlay.setAttribute('role', 'alertdialog');
-      overlay.setAttribute('aria-modal', 'true');
-      overlay.setAttribute('aria-labelledby', 'confirmTitle');
-      overlay.setAttribute('aria-describedby', 'confirmMsg');
-      document.body.appendChild(overlay);
-    }
-    overlay.innerHTML = `
-      <div class="modal-card confirm-card ${danger ? 'is-danger' : ''}">
-        <div class="confirm-head">
-          <span class="confirm-icon" aria-hidden="true">${ICON(danger ? 'ui-warning' : 'ui-info', 'ico-lg')}</span>
-          <h2 class="modal-title" id="confirmTitle">${esc(title)}</h2>
-        </div>
-        <p class="modal-text" id="confirmMsg">${message}</p>
-        ${requireText ? `
-          <label class="confirm-require" for="confirmInput">${t('Gõ', 'Type')} <code>${esc(requireText)}</code> ${t('để xác nhận', 'to confirm')}</label>
-          <input id="confirmInput" class="form-input" autocomplete="off" spellcheck="false">` : ''}
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" data-act="cancel">${esc(cancelText)}</button>
-          <button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-act="ok" ${requireText ? 'disabled' : ''}>${esc(confirmText)}</button>
-        </div>
-      </div>`;
-    const okBtn = overlay.querySelector('[data-act="ok"]');
-    const input = overlay.querySelector('#confirmInput');
-    const last = document.activeElement;
-    const finish = val => {
-      overlay.classList.remove('active');
-      document.removeEventListener('keydown', onKey, true);
-      overlay.onclick = null;
-      if (last && last.focus) last.focus();
-      resolve(val);
-    };
-    const onKey = e => {
-      if (e.key === 'Escape') { e.stopPropagation(); finish(false); }
-      if (e.key === 'Enter' && !okBtn.disabled && document.activeElement !== overlay.querySelector('[data-act="cancel"]')) { e.preventDefault(); finish(true); }
-    };
-    overlay.onclick = e => {
-      if (e.target === overlay) return finish(false);
-      const act = e.target.closest('[data-act]');
-      if (act) finish(act.dataset.act === 'ok');
-    };
-    if (input) input.addEventListener('input', () => { okBtn.disabled = input.value.trim() !== requireText; });
-    document.addEventListener('keydown', onKey, true);
-    overlay.classList.add('active');
-    setTimeout(() => (input || overlay.querySelector('[data-act="cancel"]')).focus(), 30);
-  });
-}
-
+// confirmDialog() nằm trong js/core/ui.js (dùng chung mọi trang).
 
 // ---------------- Instance state & Actions dropdowns ----------------
 function toggleStateMenu(force) {
