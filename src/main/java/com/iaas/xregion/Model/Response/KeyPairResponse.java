@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class KeyPairResponse {
+    private String keyId;
     private String keyName;
     private String keyFingerprint;
     private String keyType;

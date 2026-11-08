@@ -4,6 +4,7 @@ import com.iaas.xregion.Entity.FlavorEntity;
 import com.iaas.xregion.Entity.ImageEntity;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,9 @@ public class DynamoDbConfig {
 
     @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}")
     private String migrationsTableArn;
+
+    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}")
+    private String novaTableArn;
 
     @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}")
     private String usersTableArn;
@@ -117,6 +121,13 @@ public class DynamoDbConfig {
         String tableName = parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
         log.info("Initialized DynamoDB table bean for instances: {}", tableName);
         return enhancedClient.table(tableName, TableSchema.fromBean(InstanceEntity.class));
+    }
+
+    @Bean
+    public DynamoDbTable<NovaEntity> novaTable(DynamoDbEnhancedClient enhancedClient) {
+        String tableName = parseTableNameFromArn(novaTableArn, "XRegion-Nova");
+        log.info("Initialized DynamoDB table bean for nova: {}", tableName);
+        return enhancedClient.table(tableName, TableSchema.fromBean(NovaEntity.class));
     }
 
     @Bean

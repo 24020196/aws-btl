@@ -93,10 +93,11 @@ async function submitCreateKeyModal(e) {
     });
 
     if (res && res.privateKey) {
-      downloadPemFile(name, res.privateKey);
+      const actualKeyId = res.keyId || res.keyName || name;
+      downloadPemFile(actualKeyId, res.privateKey);
       closeModal('createKeyModal');
-      showToast(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem thành công!`, 'success');
-      await loadKeyPairsDropdown(name);
+      showToast(`Đã tạo Key Pair [${actualKeyId}] và tải xuống ${actualKeyId}.pem thành công!`, 'success');
+      await loadKeyPairsDropdown(actualKeyId);
       if (typeof updateEditInstanceSummary === 'function') {
         updateEditInstanceSummary();
       }

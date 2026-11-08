@@ -6,6 +6,7 @@ import com.iaas.xregion.Entity.FlavorEntity;
 import com.iaas.xregion.Entity.ImageEntity;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.UserEntity;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -50,6 +51,13 @@ public class TestMockConfig {
     @Primary
     @SuppressWarnings("unchecked")
     public DynamoDbTable<InstanceEntity> mockInstancesTable() {
+        return Mockito.mock(DynamoDbTable.class);
+    }
+
+    @Bean
+    @Primary
+    @SuppressWarnings("unchecked")
+    public DynamoDbTable<NovaEntity> mockNovaTable() {
         return Mockito.mock(DynamoDbTable.class);
     }
 

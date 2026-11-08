@@ -61,13 +61,13 @@ class KeyServiceTest {
     @DisplayName("getAllKeyPairs returns sorted keys for the current user")
     void testGetAllKeyPairs() {
         KeyPairItem key1 = KeyPairItem.builder()
-                .keyName("key-alpha")
+                .keyId("key-alpha")
                 .keyFingerprint("SHA256:111")
                 .keyType("RSA")
                 .createdAt(1000L)
                 .build();
         KeyPairItem key2 = KeyPairItem.builder()
-                .keyName("key-beta")
+                .keyId("key-beta")
                 .keyFingerprint("SHA256:222")
                 .keyType("RSA")
                 .createdAt(2000L)
@@ -92,7 +92,7 @@ class KeyServiceTest {
     @DisplayName("getKeyPair returns existing key by name")
     void testGetKeyPairSuccess() {
         KeyPairItem key = KeyPairItem.builder()
-                .keyName("my-prod-key")
+                .keyId("my-prod-key")
                 .keyFingerprint("SHA256:abcdef")
                 .keyType("RSA")
                 .createdAt(1500L)
@@ -131,7 +131,7 @@ class KeyServiceTest {
     @DisplayName("createKeyPair throws ConflictException if key name already exists")
     void testCreateKeyPairConflict() {
         KeyPairItem existing = KeyPairItem.builder()
-                .keyName("duplicate-key")
+                .keyId("key-duplicate-key-12345678")
                 .build();
 
         UserEntity user = UserEntity.builder()
@@ -163,7 +163,7 @@ class KeyServiceTest {
                 .failedEntryCount(0)
                 .entries(List.of(java.util.Map.of("EventId", "mock-event-id-123")))
                 .build();
-        when(eventBridgeGatewayClient.sendKeySyncEvent(any(), any(), any(), any(), any(), any()))
+        when(eventBridgeGatewayClient.sendKeySyncEvent(anyString(), anyString(), anyString(), anyString(), any(), anyString()))
                 .thenReturn(ebResp);
 
         CreateKeyPairRequest req = new CreateKeyPairRequest();
@@ -173,11 +173,12 @@ class KeyServiceTest {
         KeyPairResponse response = keyService.createKeyPair(req);
 
         assertThat(response).isNotNull();
-        assertThat(response.getKeyName()).isEqualTo("new-rsa-key");
+        assertThat(response.getKeyId()).startsWith("key-new-rsa-key-");
+        assertThat(response.getKeyName()).startsWith("key-new-rsa-key-");
         assertThat(response.getPrivateKey()).contains("BEGIN RSA PRIVATE KEY");
         assertThat(response.getPublicKey()).startsWith("ssh-rsa ");
         assertThat(response.getKeyFingerprint()).startsWith("SHA256:");
         verify(userRepository, times(1)).save(any(UserEntity.class));
-        verify(auditLogService, times(1)).logAction(eq("CREATE_KEYPAIR"), eq("KEY"), eq("new-rsa-key"), anyString());
+        verify(auditLogService, times(1)).logAction(eq("CREATE_KEYPAIR"), eq("KEY"), anyString(), anyString());
     }
 }

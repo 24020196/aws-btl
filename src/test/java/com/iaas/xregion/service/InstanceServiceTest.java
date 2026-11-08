@@ -3,6 +3,7 @@ package com.iaas.xregion.service;
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.InstanceStatus;
+import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
@@ -43,6 +44,9 @@ class InstanceServiceTest {
     private DynamoDbTable<InstanceEntity> instancesTable;
 
     @Mock
+    private DynamoDbTable<NovaEntity> novaTable;
+
+    @Mock
     private AuditLogService auditLogService;
 
     @Mock
@@ -51,13 +55,13 @@ class InstanceServiceTest {
     @Mock
     private AuthService authService;
 
-    @InjectMocks
     private InstanceService instanceService;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("testuser", "pass", List.of()));
+        instanceService = new InstanceService(instancesTable, novaTable, auditLogService, eventBridgeGatewayClient, authService);
     }
 
     @AfterEach
@@ -73,6 +77,7 @@ class InstanceServiceTest {
                 .instanceId("i-user1")
                 .instanceName("User VM")
                 .username("testuser")
+                .activeNovaId("nova-user1")
                 .currentRegion("ap-southeast-2")
                 .currentStatus("RUNNING")
                 .lastMigrationTimestamp(2000L)
@@ -81,6 +86,7 @@ class InstanceServiceTest {
                 .instanceId("i-other")
                 .instanceName("Other VM")
                 .username("otheruser")
+                .activeNovaId("nova-other")
                 .currentRegion("us-east-1")
                 .currentStatus("RUNNING")
                 .lastMigrationTimestamp(3000L)
@@ -107,6 +113,7 @@ class InstanceServiceTest {
                 .instanceId("i-12345")
                 .instanceName("Web Server")
                 .username("testuser")
+                .activeNovaId("nova-12345")
                 .currentRegion("ap-southeast-2")
                 .currentStatus("RUNNING")
                 .build();
@@ -167,7 +174,7 @@ class InstanceServiceTest {
         verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
         verify(auditLogService, times(1)).logAction(eq("LAUNCH_VM"), eq("INSTANCE"), anyString(), anyString());
         verify(eventBridgeGatewayClient, times(1)).sendInstanceLaunchEvent(
-                eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"));
+                anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"));
     }
 
     @Test
@@ -201,6 +208,7 @@ class InstanceServiceTest {
                 .instanceName("App")
                 .flavor("m1.small")
                 .username("testuser")
+                .activeNovaId("nova-stopped")
                 .currentStatus("STOPPED")
                 .build();
 
@@ -226,6 +234,7 @@ class InstanceServiceTest {
                 .instanceId("i-action-test")
                 .instanceName("Target")
                 .username("testuser")
+                .activeNovaId("nova-action-test")
                 .currentStatus("RUNNING")
                 .build();
 
@@ -247,6 +256,7 @@ class InstanceServiceTest {
                 .instanceId("i-action-test2")
                 .instanceName("Target")
                 .username("testuser")
+                .activeNovaId("nova-action-test2")
                 .currentStatus("RUNNING")
                 .build();
 
@@ -259,5 +269,48 @@ class InstanceServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(InstanceStatus.SHUTTING_DOWN.name());
+    }
+
+    @Test
+    @DisplayName("mapToResponse returns PENDING when activeNovaId is null")
+    void testMapToResponseWithoutActiveNovaIdReturnsPending() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-no-nova")
+                .instanceName("Pending VM")
+                .username("testuser")
+                .activeNovaId(null)
+                .currentStatus("RUNNING") // even if currentStatus was RUNNING, without activeNovaId it must be PENDING
+                .build();
+
+        InstanceResponse response = instanceService.mapToResponse(inst);
+        assertThat(response.getStatus()).isEqualTo(InstanceStatus.PENDING.name());
+        assertThat(response.getActiveNovaId()).isNull();
+    }
+
+    @Test
+    @DisplayName("mapToResponse returns status based on active Nova VM from novaTable")
+    void testMapToResponseWithActiveNovaIdFetchesStatusFromNovaTable() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-with-nova")
+                .instanceName("Active VM")
+                .username("testuser")
+                .activeNovaId("nova-uuid-999")
+                .novaIds(List.of("nova-uuid-999"))
+                .currentStatus("PENDING")
+                .build();
+
+        NovaEntity nova = NovaEntity.builder()
+                .novaId("nova-uuid-999")
+                .status("ACTIVE")
+                .instanceName("Active VM on Nova")
+                .flavor("m1.medium")
+                .build();
+
+        when(novaTable.getItem(Key.builder().partitionValue("nova-uuid-999").build())).thenReturn(nova);
+
+        InstanceResponse response = instanceService.mapToResponse(inst);
+        assertThat(response.getStatus()).isEqualTo(InstanceStatus.RUNNING.name());
+        assertThat(response.getActiveNovaId()).isEqualTo("nova-uuid-999");
+        assertThat(response.getNovaIds()).containsExactly("nova-uuid-999");
     }
 }

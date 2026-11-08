@@ -17,23 +17,27 @@ public class DynamoDbTableInitializer implements ApplicationRunner {
     private final String instancesTableName;
     private final String migrationsTableName;
     private final String usersTableName;
+    private final String novaTableName;
 
     public DynamoDbTableInitializer(DynamoDbClient dynamoDbClient,
                                     @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}") String instancesTableArn,
                                     @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}") String migrationsTableArn,
-                                    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}") String usersTableArn) {
+                                    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}") String usersTableArn,
+                                    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}") String novaTableArn) {
         this.dynamoDbClient = dynamoDbClient;
         this.instancesTableName = DynamoDbConfig.parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
         this.migrationsTableName = DynamoDbConfig.parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");
         this.usersTableName = DynamoDbConfig.parseTableNameFromArn(usersTableArn, "XRegion-Users");
+        this.novaTableName = DynamoDbConfig.parseTableNameFromArn(novaTableArn, "XRegion-Nova");
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}] and [{}]", instancesTableName, migrationsTableName, usersTableName);
+        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}], [{}] and [{}]", instancesTableName, migrationsTableName, usersTableName, novaTableName);
         verifyTable(instancesTableName);
         verifyTable(migrationsTableName);
         verifyTable(usersTableName);
+        verifyTable(novaTableName);
     }
 
     private void verifyTable(String tableName) {
