@@ -1,7 +1,7 @@
 // Trang chi tiết máy ảo (instance-detail.html) — Lực.
 // Các file trong js/pages/instance-detail/ dùng chung biến toàn cục `det` và các hàm tiện ích trong core.js.
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
-// Tab Bảo mật & Mạng: Security Group, rule inbound/outbound, đổi nhóm, VPC/ENI, Route 53.
+// Tab Security (Security Group, rule inbound/outbound, đổi nhóm) và tab Networking (VPC/ENI, Route 53).
 
 // ---------------- Security groups & network ----------------
 async function loadSecurityAndNetwork() {

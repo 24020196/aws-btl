@@ -83,12 +83,13 @@
     </section>
 
     <!-- Tabs -->
-    <div class="det-tabs" role="tablist" aria-label="Thông tin máy ảo">
-      <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true">Chi tiết</button>
-      <button class="det-tab" role="tab" data-tab="security" id="tabBtn-security" aria-controls="tab-security" aria-selected="false">Bảo mật &amp; Mạng</button>
-      <button class="det-tab" role="tab" data-tab="storage" id="tabBtn-storage" aria-controls="tab-storage" aria-selected="false">Lưu trữ</button>
-      <button class="det-tab" role="tab" data-tab="monitoring" id="tabBtn-monitoring" aria-controls="tab-monitoring" aria-selected="false">Giám sát</button>
-      <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false">Chuyển vùng <span class="tab-dot" id="migTabDot" hidden></span></button>
+    <div class="det-tabs" role="tablist" aria-label="Instance details">
+      <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-info"></use></svg><span data-i18n="tabDetails">Chi tiết</span></button>
+      <button class="det-tab" role="tab" data-tab="security" id="tabBtn-security" aria-controls="tab-security" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-shield"></use></svg><span data-i18n="tabSecurity">Bảo mật</span></button>
+      <button class="det-tab" role="tab" data-tab="networking" id="tabBtn-networking" aria-controls="tab-networking" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-network"></use></svg><span data-i18n="tabNetworking">Mạng</span></button>
+      <button class="det-tab" role="tab" data-tab="storage" id="tabBtn-storage" aria-controls="tab-storage" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-storage"></use></svg><span data-i18n="tabStorage">Lưu trữ</span></button>
+      <button class="det-tab" role="tab" data-tab="monitoring" id="tabBtn-monitoring" aria-controls="tab-monitoring" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chart"></use></svg><span data-i18n="tabMonitoring">Giám sát</span></button>
+      <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg><span data-i18n="tabMigration">Chuyển vùng</span> <span class="tab-dot" id="migTabDot" hidden></span></button>
     </div>
 
     <!-- TAB 1: Hardware & identity -->
@@ -121,7 +122,7 @@
       </div>
     </section>
 
-    <!-- TAB 2: Security groups & network -->
+    <!-- TAB: Security -->
     <section class="det-panel" id="tab-security" role="tabpanel" aria-labelledby="tabBtn-security">
       <div class="card">
         <div class="card-header">
@@ -160,21 +161,10 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Network interface (ENI)</div>
-            <div class="card-sub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Interface ID</th><th>Gắn vào</th><th>Primary IP (Bare Metal)</th><th>Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
-            <tbody id="eniBody"></tbody>
-          </table>
-        </div>
-      </div>
+    </section>
 
+    <!-- TAB: Networking -->
+    <section class="det-panel" id="tab-networking" role="tabpanel" aria-labelledby="tabBtn-networking">
       <div class="card">
         <div class="card-header">
           <div class="card-title">Mạng &amp; Route 53</div>
@@ -196,6 +186,21 @@
           </table>
         </div>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Network interface (ENI)</div>
+            <div class="card-sub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Interface ID</th><th>Gắn vào</th><th>Primary IP (Bare Metal)</th><th>Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
+            <tbody id="eniBody"></tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
 
     <!-- TAB: Storage -->

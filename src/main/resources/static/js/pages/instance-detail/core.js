@@ -113,7 +113,7 @@ function fmtCountdown(sec) {
 }
 
 // ---------------- Tabs ----------------
-const DET_TABS = ['details', 'security', 'storage', 'monitoring', 'migration'];
+const DET_TABS = ['details', 'security', 'networking', 'storage', 'monitoring', 'migration'];
 const SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
 
 function sshUser(inst) {
