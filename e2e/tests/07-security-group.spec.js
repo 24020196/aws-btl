@@ -40,6 +40,8 @@ test.describe('Module 07: Security Group riêng của máy', () => {
     await page.goto(`/instance-detail.html?id=${vmA.id}#security`);
     await expect(page.locator('#sgChips')).toContainText('sg-a-sg');
     await expect(page.locator('#sgChips')).not.toContainText('dùng chung');
+    // Chờ bảng rule tải xong (có rule SSH 22 mặc định) rồi mới đếm, máy chậm đếm sớm sẽ ra sai
+    await expect(page.locator('#inboundRulesBody')).toContainText('22');
     const before = await page.locator('#inboundRulesBody tr').count();
 
     await page.click("button[onclick=\"openAddRuleModal('inbound')\"]");
