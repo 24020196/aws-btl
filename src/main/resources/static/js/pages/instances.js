@@ -207,7 +207,7 @@ function filterInstancesUI() {
       </td>
       <td>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <a href="/instance-detail.html?id=${encodeURIComponent(inst.id)}" style="font-family: monospace; color: var(--accent-cyan); font-weight: 700; text-decoration: none;" title="${t('Xem chi tiết', 'View details')}">
+          <a href="/instance-detail.html?id=${encodeURIComponent(inst.id)}" style="font-family: monospace; color: var(--accent-cyan); font-weight: 700; text-decoration: none; white-space: nowrap;" title="${t('Xem chi tiết', 'View details')}">
             ${inst.id}
           </a>
           <button class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 11px;" onclick="copyToClipboard('${inst.id}', 'Instance ID')" title="Copy ID">
@@ -220,13 +220,13 @@ function filterInstancesUI() {
           ${transitionSpinner}<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}
         </span>
       </td>
-      <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace;">${inst.flavor}</span></td>
+      <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace; text-transform: none; letter-spacing: 0;">${inst.flavor}</span></td>
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
       <td><code style="color: var(--accent-cyan);">${inst.publicIp || '--'}</code></td>
       <td><code>${inst.privateIp || '--'}</code></td>
       <td>${renderSecurityGroupBadge(inst.securityGroup)}</td>
       <td>
-        <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px;">
+        <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;">
           ${ICON('svc-key-pair', 'ico-xs')}
           <span>${inst.keyName || 'xregion-key'}</span>
         </span>
@@ -250,7 +250,7 @@ function renderSecurityGroupBadge(sgString) {
   const sgs = String(sgString || 'sg-default').split(',').map(x => x.trim()).filter(Boolean);
   const first = sgs[0] || 'sg-default';
   const extra = sgs.length > 1 ? ` +${sgs.length - 1}` : '';
-  return `<span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace; display: inline-flex; align-items: center; gap: 4px;" title="${sgs.join(', ')}">
+  return `<span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;" title="${sgs.join(', ')}">
     ${ICON('svc-security-group', 'ico-xs')}
     <span>${first}${extra}</span>
   </span>`;
@@ -483,7 +483,7 @@ function renderSplitDetailsTab(inst) {
     </div>
     <div class="split-kv-item">
       <div class="split-kv-label">${t('Loại cấu hình', 'Instance type')}</div>
-      <div class="split-kv-value"><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace;">${inst.flavor}</span></div>
+      <div class="split-kv-value"><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace; text-transform: none; letter-spacing: 0;">${inst.flavor}</span></div>
     </div>
     <div class="split-kv-item">
       <div class="split-kv-label">${t('Vùng đám mây', 'Region')}</div>
@@ -508,7 +508,7 @@ function renderSplitSecurityTab(inst) {
     <div class="split-kv-item">
       <div class="split-kv-label">${t('Cặp khóa SSH (Key pair)', 'Key pair name')}</div>
       <div class="split-kv-value">
-        <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px;">
+        <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;">
           ${ICON('svc-key-pair', 'ico-xs')}
           <span>${inst.keyName || 'xregion-key'}</span>
         </span>
