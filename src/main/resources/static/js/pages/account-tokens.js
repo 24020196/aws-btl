@@ -108,7 +108,14 @@ async function loadUserTokens() {
       }
 
       const now = Date.now();
-      tbody.innerHTML = list.map(t => {
+      tbody.innerHTML = list.map(raw => {
+        // API trả tên trường dạng camelCase (tokenId, createdAt, expiresAt); vẫn đọc được dạng cũ snake_case
+        const t = {
+          ...raw,
+          token_id: raw.tokenId ?? raw.token_id,
+          created_at: raw.createdAt ?? raw.created_at,
+          expires_at: raw.expiresAt ?? raw.expires_at
+        };
         const isExpired = t.expires_at > 0 && now > t.expires_at;
         let statusBadge = `<span class="badge-status-active">${tk('tokensStatusActive', 'Hoạt động')}</span>`;
         if (!t.active) {
