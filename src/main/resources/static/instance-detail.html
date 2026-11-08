@@ -128,12 +128,10 @@
         <div class="card-header">
           <div>
             <div class="card-title">Security Groups</div>
-            <div class="card-sub" data-i18n="detSgSub">Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.</div>
+            <div class="card-sub" data-i18n="detSgSub">Mỗi máy ảo có một Security Group riêng. Lưu lượng chỉ đi qua khi khớp ít nhất một rule inbound/outbound.</div>
           </div>
           <div class="det-actions">
-            <button class="btn btn-secondary btn-sm" onclick="openChangeSgModal()" data-i18n="detSgChange">Đổi Security Group</button>
-            <button class="btn btn-secondary btn-sm" onclick="openCreateSgModal()" data-i18n="detSgCreate">+ Tạo Security Group</button>
-            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')" data-i18n="detRuleAdd">+ Thêm rule</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')" data-i18n="detRuleAdd">+ Thêm inbound rule</button>
           </div>
         </div>
         <div class="sg-chips" id="sgChips"><span class="muted" data-i18n="detLoading">Đang tải...</span></div>
@@ -144,7 +142,7 @@
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColSource">Nguồn</th><th>Security group</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
+            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColSource">Nguồn</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
             <tbody id="inboundRulesBody"></tbody>
           </table>
         </div>
@@ -155,7 +153,7 @@
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColDest">Đích</th><th>Security group</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
+            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColDest">Đích</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
             <tbody id="outboundRulesBody"></tbody>
           </table>
         </div>
@@ -367,6 +365,7 @@
   <div class="modal-overlay" id="addRuleModal" role="dialog" aria-modal="true" aria-labelledby="addRuleTitle">
     <form class="modal-card" style="max-width: 560px;" onsubmit="submitAddRule(event)">
       <h2 class="modal-title" id="addRuleTitle" data-i18n="detRuleModalTitle">Thêm rule</h2>
+      <input type="hidden" id="ruleGroup">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="ruleDirection" data-i18n="detRuleDir">Chiều</label>
@@ -375,12 +374,6 @@
             <option value="outbound" data-i18n="detRuleOut">Outbound (ra ngoài)</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="ruleGroup">Security Group</label>
-          <select class="form-select" id="ruleGroup" required></select>
-        </div>
-      </div>
-      <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="ruleType" data-i18n="detColType">Loại</label>
           <select class="form-select" id="ruleType" onchange="applyRulePreset()">
@@ -395,13 +388,13 @@
             <option value="all">All traffic</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="ruleFromPort" data-i18n="detRulePorts">Cổng (hoặc dải cổng)</label>
-          <div class="port-range">
-            <input type="number" class="form-input" id="ruleFromPort" min="0" max="65535" required>
-            <span class="muted">–</span>
-            <input type="number" class="form-input" id="ruleToPort" min="0" max="65535" placeholder="đến" data-i18n-placeholder="detRuleTo">
-          </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ruleFromPort" data-i18n="detRulePorts">Cổng (hoặc dải cổng)</label>
+        <div class="port-range">
+          <input type="number" class="form-input" id="ruleFromPort" min="0" max="65535" required>
+          <span class="muted">–</span>
+          <input type="number" class="form-input" id="ruleToPort" min="0" max="65535" placeholder="đến" data-i18n-placeholder="detRuleTo">
         </div>
       </div>
       <div class="form-group">
@@ -420,27 +413,6 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('addRuleModal')" data-i18n="detCancel">Hủy</button>
         <button type="submit" class="btn btn-primary" data-i18n="detRuleSubmit">Thêm rule</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- MODAL: create security group -->
-  <div class="modal-overlay" id="createSgModal" role="dialog" aria-modal="true" aria-labelledby="createSgTitle">
-    <form class="modal-card" style="max-width: 480px;" onsubmit="submitCreateSg(event)">
-      <h2 class="modal-title" id="createSgTitle" data-i18n="detSgCreateTitle">Tạo Security Group</h2>
-      <div class="form-group">
-        <label class="form-label" for="sgName" data-i18n="detColName">Tên</label>
-        <input type="text" class="form-input" id="sgName" required pattern="[a-zA-Z0-9._\-]{2,64}" title="Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)" data-i18n-title="detSgNameTitle" placeholder="web-backend">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="sgDesc" data-i18n="detColDesc">Mô tả</label>
-        <input type="text" class="form-input" id="sgDesc" maxlength="160" placeholder="Ví dụ: Cho phép API nội bộ cổng 8080" data-i18n-placeholder="detSgDescPh">
-      </div>
-      <label class="check-row"><input type="checkbox" id="sgAttach" checked> <span data-i18n="detSgAttach">Gắn vào máy ảo này sau khi tạo</span></label>
-      <p class="muted" style="margin-top: 8px;" data-i18n="detSgCreateNote">Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi tạo.</p>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('createSgModal')" data-i18n="detCancel">Hủy</button>
-        <button type="submit" class="btn btn-primary" data-i18n="detSgCreateSubmit">Tạo Security Group</button>
       </div>
     </form>
   </div>
@@ -506,19 +478,6 @@
         <button class="btn btn-secondary" onclick="closeModal('connectModal')" data-i18n="detClose">Đóng</button>
       </div>
     </div>
-  </div>
-
-  <!-- MODAL: change security groups -->
-  <div class="modal-overlay" id="changeSgModal" role="dialog" aria-modal="true" aria-labelledby="changeSgTitle">
-    <form class="modal-card" style="max-width: 560px;" onsubmit="submitChangeSg(event)">
-      <h2 class="modal-title" id="changeSgTitle" data-i18n="detSgChange">Đổi Security Group</h2>
-      <p class="modal-text" data-i18n="detSgChangeNote">Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.</p>
-      <div class="sg-pick" id="changeSgList"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('changeSgModal')" data-i18n="detCancel">Hủy</button>
-        <button type="submit" class="btn btn-primary" data-i18n="detSave">Lưu thay đổi</button>
-      </div>
-    </form>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>

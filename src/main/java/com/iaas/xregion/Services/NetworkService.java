@@ -172,15 +172,91 @@ public class NetworkService {
         return sg;
     }
 
-    /** Nhóm đang gắn vào máy: lưu ở cột security_group của bảng Instances (nhiều nhóm cách nhau dấu phẩy). */
+    /**
+     * Mỗi máy ảo có đúng một Security Group riêng (nhóm thống nhất không dùng chung nhóm giữa các máy).
+     * Mã nhóm lưu ở cột security_group của bảng Instances. Máy chưa có nhóm riêng (mới tạo, hoặc đang trỏ
+     * vào nhóm dùng chung cũ như sg-default / sg-web-public) thì tạo nhóm riêng, chép lại các rule đang có.
+     */
+    @SuppressWarnings("unchecked")
+    private synchronized String ensureInstanceGroup(InstanceEntity inst) {
+        String owner = inst.getUsername() != null && !inst.getUsername().isBlank() ? inst.getUsername() : getCurrentUsername();
+        List<String> current = new ArrayList<>();
+        String raw = inst.getSecurityGroup();
+        if (raw != null && !raw.isBlank()) {
+            Arrays.stream(raw.split(",")).map(String::trim).filter(x -> !x.isEmpty()).forEach(current::add);
+        }
+        if (current.size() == 1) {
+            Map<String, Object> sg = securityGroups.get(current.get(0));
+            if (sg != null && owner.equalsIgnoreCase(String.valueOf(sg.get("owner")))) {
+                return current.get(0);
+            }
+        }
+        if (current.isEmpty()) {
+            current = DEFAULT_INSTANCE_GROUPS;
+        }
+
+        // Chép rule của các nhóm đang gắn (bỏ rule trỏ tới nhóm khác như "sg-default"), rule thuộc về chủ máy
+        List<Map<String, Object>> inbound = new CopyOnWriteArrayList<>();
+        List<Map<String, Object>> outbound = new CopyOnWriteArrayList<>();
+        for (String id : current) {
+            Map<String, Object> old = securityGroups.get(id);
+            if (old == null) {
+                continue;
+            }
+            copyRules((List<Map<String, Object>>) old.get("inboundRules"), inbound, owner);
+            copyRules((List<Map<String, Object>>) old.get("outboundRules"), outbound, owner);
+        }
+        if (outbound.isEmpty()) {
+            outbound.add(rule("all", 0, 65535, "0.0.0.0/0", "Allow all outbound traffic", owner));
+        }
+        if (inbound.isEmpty()) {
+            // Giống nhóm launch-wizard mặc định của EC2: mở SSH để còn kết nối được vào máy
+            inbound.add(rule("tcp", 22, 22, "0.0.0.0/0", "SSH", owner));
+        }
+
+        String name = (inst.getInstanceName() != null && !inst.getInstanceName().isBlank() ? inst.getInstanceName() : inst.getInstanceId()) + "-sg";
+        Map<String, Object> sg = new LinkedHashMap<>();
+        sg.put("groupId", "sg-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10));
+        sg.put("name", name);
+        sg.put("description", "Security group of " + inst.getInstanceId());
+        sg.put("region", inst.getCurrentRegion() != null ? inst.getCurrentRegion() : "all");
+        sg.put("owner", owner);
+        sg.put("inboundRules", inbound);
+        sg.put("outboundRules", outbound);
+        sg.put("createdAt", System.currentTimeMillis());
+        String groupId = String.valueOf(sg.get("groupId"));
+        securityGroups.put(groupId, sg);
+        persist(sg);
+
+        inst.setSecurityGroup(groupId);
+        instancesTable.putItem(inst);
+        auditLogService.logAction("SG_CREATE", "INSTANCE", inst.getInstanceId(),
+                "Created dedicated security group " + groupId + " (from " + current + ")");
+        return groupId;
+    }
+
+    private static void copyRules(List<Map<String, Object>> from, List<Map<String, Object>> to, String owner) {
+        if (from == null) {
+            return;
+        }
+        for (Map<String, Object> r : from) {
+            String cidr = String.valueOf(r.get("cidr"));
+            if (cidr.startsWith("sg-")) {
+                continue;
+            }
+            boolean exists = to.stream().anyMatch(x -> Objects.equals(x.get("protocol"), r.get("protocol"))
+                    && Objects.equals(x.get("fromPort"), r.get("fromPort")) && Objects.equals(x.get("toPort"), r.get("toPort"))
+                    && Objects.equals(x.get("cidr"), r.get("cidr")));
+            if (!exists) {
+                to.add(rule(String.valueOf(r.get("protocol")), ((Number) r.get("fromPort")).intValue(), ((Number) r.get("toPort")).intValue(),
+                        cidr, String.valueOf(r.getOrDefault("description", "")), owner));
+            }
+        }
+    }
+
     private List<String> attachedGroupIds(String instanceId) {
         InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
-        String raw = inst != null ? inst.getSecurityGroup() : null;
-        if (raw == null || raw.isBlank()) {
-            return DEFAULT_INSTANCE_GROUPS;
-        }
-        List<String> ids = Arrays.stream(raw.split(",")).map(String::trim).filter(x -> !x.isEmpty()).distinct().collect(Collectors.toList());
-        return ids.isEmpty() ? DEFAULT_INSTANCE_GROUPS : ids;
+        return inst == null ? List.of() : List.of(ensureInstanceGroup(inst));
     }
 
     private InstanceEntity ownedInstance(String instanceId, String user) {
@@ -199,9 +275,9 @@ public class NetworkService {
         return "admin";
     }
 
+    /** Chỉ chủ máy thấy và sửa được nhóm của máy mình; các nhóm dùng chung cũ không còn hiện ra. */
     private boolean visibleTo(Map<String, Object> sg, String username) {
-        Object owner = sg.get("owner");
-        return SYSTEM_OWNER.equals(owner) || username.equalsIgnoreCase(String.valueOf(owner));
+        return username.equalsIgnoreCase(String.valueOf(sg.get("owner")));
     }
 
     public NetworkResponse getNetworkOverview() {
@@ -309,6 +385,7 @@ public class NetworkService {
     public List<Map<String, Object>> getSecurityGroups(String instanceId) {
         String user = getCurrentUsername();
         if (instanceId != null && !instanceId.isBlank()) {
+            ownedInstance(instanceId.trim(), user);
             return attachedGroupIds(instanceId.trim()).stream()
                     .map(securityGroups::get)
                     .filter(Objects::nonNull)
@@ -316,8 +393,14 @@ public class NetworkService {
                     .map(this::copyOf)
                     .collect(Collectors.toList());
         }
+        // Danh sách chung: nhóm riêng của từng máy (chưa bị xóa) của người dùng, tạo nếu máy chưa có
+        Set<String> ids = instancesTable.scan().items().stream()
+                .filter(i -> user.equalsIgnoreCase(i.getUsername()))
+                .filter(i -> !"TERMINATED".equalsIgnoreCase(i.getCurrentStatus()))
+                .map(this::ensureInstanceGroup)
+                .collect(Collectors.toSet());
         return securityGroups.values().stream()
-                .filter(sg -> visibleTo(sg, user))
+                .filter(sg -> visibleTo(sg, user) && ids.contains(String.valueOf(sg.get("groupId"))))
                 .sorted(Comparator.comparing(sg -> String.valueOf(sg.get("groupId"))))
                 .map(this::copyOf)
                 .collect(Collectors.toList());
@@ -331,34 +414,16 @@ public class NetworkService {
     public Map<String, Object> createOrUpdateSecurityGroup(SecurityGroupRequest request) {
         String user = getCurrentUsername();
         Map<String, Object> sg;
-        boolean created;
+        boolean created = false;
 
         if (request.getGroupId() != null && !request.getGroupId().isBlank()) {
             sg = securityGroups.get(request.getGroupId().trim());
             if (sg == null || !visibleTo(sg, user)) {
                 throw new ResourceNotFoundException("Không tìm thấy Security Group: " + request.getGroupId());
             }
-            created = false;
         } else {
-            if (request.getName() == null || request.getName().isBlank()) {
-                throw new AppException("Cần nhập tên khi tạo Security Group mới");
-            }
-            String name = request.getName().trim();
-            boolean duplicate = securityGroups.values().stream()
-                    .anyMatch(g -> visibleTo(g, user) && name.equalsIgnoreCase(String.valueOf(g.get("name"))));
-            if (duplicate) {
-                throw new ConflictException("Đã có Security Group tên [" + name + "]");
-            }
-            sg = new LinkedHashMap<>();
-            sg.put("groupId", "sg-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10));
-            sg.put("name", name);
-            sg.put("description", request.getDescription() != null ? request.getDescription().trim() : "");
-            sg.put("region", request.getRegion() != null && !request.getRegion().isBlank() ? request.getRegion() : "all");
-            sg.put("owner", user);
-            sg.put("inboundRules", new CopyOnWriteArrayList<Map<String, Object>>());
-            sg.put("outboundRules", allowAllOutbound());
-            sg.put("createdAt", System.currentTimeMillis());
-            created = true;
+            // Mỗi máy có sẵn một Security Group riêng; chỉ thêm/xóa rule, không tạo nhóm dùng chung
+            throw new AppException("Mỗi máy ảo đã có Security Group riêng. Hãy thêm rule inbound/outbound vào nhóm của máy.");
         }
 
         String groupId = String.valueOf(sg.get("groupId"));
@@ -398,31 +463,9 @@ public class NetworkService {
         return result;
     }
 
-    /**
-     * Thay toàn bộ danh sách Security Group gắn vào máy ảo (giống "Change security groups" trên EC2).
-     * Một máy phải luôn có ít nhất một nhóm.
-     */
+    /** Không còn đổi nhóm: mỗi máy có một Security Group riêng (giữ endpoint để báo lỗi rõ ràng). */
     public List<Map<String, Object>> setInstanceSecurityGroups(String instanceId, List<String> groupIds) {
-        String user = getCurrentUsername();
-        if (groupIds == null || groupIds.isEmpty()) {
-            throw new AppException("Máy ảo phải gắn ít nhất một Security Group");
-        }
-        List<String> ids = groupIds.stream().map(String::trim).filter(s -> !s.isEmpty()).distinct().collect(Collectors.toList());
-        for (String id : ids) {
-            Map<String, Object> sg = securityGroups.get(id);
-            if (sg == null || !visibleTo(sg, user)) {
-                throw new ResourceNotFoundException("Không tìm thấy Security Group: " + id);
-            }
-        }
-        if (ids.size() > 5) {
-            throw new AppException("Mỗi máy ảo gắn tối đa 5 Security Group");
-        }
-        InstanceEntity inst = ownedInstance(instanceId, user);
-        List<String> before = attachedGroupIds(instanceId);
-        inst.setSecurityGroup(String.join(",", ids));
-        instancesTable.putItem(inst);
-        auditLogService.logAction("SG_CHANGE", "INSTANCE", instanceId, "Security groups " + before + " -> " + ids);
-        return getSecurityGroups(instanceId);
+        throw new AppException("Mỗi máy ảo có một Security Group riêng, không đổi hoặc dùng chung nhóm giữa các máy.");
     }
 
     private int addRules(List<Map<String, Object>> target, List<SecurityGroupRequest.Rule> rules, String user) {
@@ -471,11 +514,8 @@ public class NetworkService {
             Map<String, Object> r = found.get();
             String addedBy = String.valueOf(r.get("addedBy"));
             boolean ownsGroup = user.equalsIgnoreCase(String.valueOf(sg.get("owner")));
-            if (SYSTEM_OWNER.equals(addedBy) && !ownsGroup) {
-                throw new ConflictException("Đây là rule mặc định của nhóm dùng chung " + sg.get("name") + ", không thể xóa.");
-            }
-            if (!ownsGroup && !user.equalsIgnoreCase(addedBy)) {
-                throw new ConflictException("Bạn chỉ xóa được rule do chính mình thêm.");
+            if (!ownsGroup) {
+                throw new ConflictException("Bạn chỉ xóa được rule trong Security Group của máy mình.");
             }
             rules.remove(r);
             persist(sg);
@@ -496,8 +536,8 @@ public class NetworkService {
             for (Map<String, Object> r : (List<Map<String, Object>>) sg.get(key)) {
                 Map<String, Object> copy = new LinkedHashMap<>(r);
                 String addedBy = String.valueOf(r.get("addedBy"));
-                copy.put("deletable", ownsGroup || (!SYSTEM_OWNER.equals(addedBy) && user.equalsIgnoreCase(addedBy)));
-                copy.put("system", SYSTEM_OWNER.equals(addedBy));
+                copy.put("deletable", ownsGroup);
+                copy.put("system", false);
                 copy.remove("addedBy");
                 rules.add(copy);
             }

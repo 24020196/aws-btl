@@ -462,7 +462,6 @@ function renderActions() {
           <button type="button" class="ec2-actions-trigger"><span>${tk('tabSecurity')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
-            ${editLink('security-groups', 'Đổi Security group', 'Change security groups', false)}
             ${editLink('key-pair', 'Đổi Key pair SSH', 'Change SSH key pair', false)}
           </div>
         </div>

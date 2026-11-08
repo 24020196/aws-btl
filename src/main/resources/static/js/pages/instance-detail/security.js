@@ -1,13 +1,11 @@
 // Trang chi tiết máy ảo (instance-detail.html) — Lực.
 // Các file trong js/pages/instance-detail/ dùng chung biến toàn cục `det` và các hàm tiện ích trong core.js.
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
-// Tab Security (Security Group, rule inbound/outbound, đổi nhóm) và tab Networking (VPC/ENI, Route 53).
+// Tab Security (Security Group riêng của máy, thêm/xóa rule inbound/outbound) và tab Networking (VPC/ENI, Route 53).
 
 registerI18n({
-  detSgSub: ['Tường lửa ảo gắn vào card mạng của máy. Lưu lượng chỉ đi qua khi khớp ít nhất một rule.', 'Virtual firewall attached to the instance network interface. Traffic is allowed only if it matches at least one rule.'],
-  detSgChange: ['Đổi Security Group', 'Change security groups'],
-  detSgCreate: ['+ Tạo Security Group', '+ Create security group'],
-  detRuleAdd: ['+ Thêm rule', '+ Add rule'],
+  detSgSub: ['Mỗi máy ảo có một Security Group riêng. Lưu lượng chỉ đi qua khi khớp ít nhất một rule inbound/outbound.', 'Each instance has its own security group. Traffic is allowed only if it matches at least one inbound/outbound rule.'],
+  detRuleAdd: ['+ Thêm inbound rule', '+ Add inbound rule'],
   detRuleAddOut: ['+ Thêm outbound rule', '+ Add outbound rule'],
   detRuleFilter: ['Lọc rule (cổng, nguồn, mô tả…)', 'Filter rules (port, source, description…)'],
   detRuleFilterAria: ['Lọc rule inbound và outbound', 'Filter inbound and outbound rules'],
@@ -36,41 +34,22 @@ registerI18n({
   detRuleDesc: ['Mô tả (không bắt buộc)', 'Description (optional)'],
   detRuleDescPh: ['Ví dụ: API nội bộ', 'e.g. internal API'],
   detRuleSubmit: ['Thêm rule', 'Add rule'],
-  detSgCreateTitle: ['Tạo Security Group', 'Create security group'],
-  detSgNameTitle: ['Chữ, số, dấu chấm, gạch ngang, gạch dưới (2-64 ký tự)', 'Letters, digits, dot, hyphen, underscore (2-64 characters)'],
-  detSgDescPh: ['Ví dụ: Cho phép API nội bộ cổng 8080', 'e.g. Allow internal API on port 8080'],
-  detSgAttach: ['Gắn vào máy ảo này sau khi tạo', 'Attach to this instance after creating'],
-  detSgCreateNote: ['Nhóm mới chỉ có outbound mở mọi lưu lượng. Thêm inbound rule sau khi tạo.', 'A new group only allows all outbound traffic. Add inbound rules after creating it.'],
-  detSgCreateSubmit: ['Tạo Security Group', 'Create security group'],
   detDnsTitle: ['Cập nhật bản ghi Route 53', 'Update Route 53 record'],
   detDnsTargetIp: ['Trỏ tới IP', 'Target IP'],
   detDnsIpTitle: ['Địa chỉ IPv4', 'IPv4 address'],
   detDnsTtl: ['TTL (giây)', 'TTL (seconds)'],
   detDnsNote: ['Mặc định là Elastic IP hiện tại của máy. Sau mỗi lần chuyển vùng, hệ thống tự cập nhật bản ghi này.', 'Defaults to the current Elastic IP. The record is updated automatically after every migration.'],
-  detDnsSubmit: ['Cập nhật DNS', 'Update DNS'],
-  detSgChangeNote: ['Chọn các nhóm gắn vào máy ảo. Rule của mọi nhóm được cộng lại; máy phải có ít nhất một nhóm.', 'Choose the groups attached to the instance. Rules of all groups are combined; at least one group is required.'],
-  detSave: ['Lưu thay đổi', 'Save changes']
+  detDnsSubmit: ['Cập nhật DNS', 'Update DNS']
 });
 
 // ---------------- Security groups & network ----------------
 async function loadSecurityAndNetwork() {
-  // Danh sách nhóm gắn vào máy lấy từ API mạng (mặc định sg-default + sg-web-public, đổi được nhiều nhóm).
-  // Nếu lúc Launch người dùng chọn một nhóm khác (cột security_group), nhóm đó được hiển thị kèm theo.
-  const [attached, all, net] = await Promise.all([
+  // Mỗi máy có đúng một Security Group riêng (backend tự tạo nếu máy chưa có).
+  const [attached, net] = await Promise.all([
     apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null),
-    apiRequest('/network/security-groups').catch(() => null),
     apiRequest('/network').catch(() => null)
   ]);
   det.groups = attached || [];
-  const chosen = typeof det.inst.securityGroup === 'string'
-    ? det.inst.securityGroup.split(',').map(x => x.trim()).filter(Boolean) : [];
-  const isDefaultSet = det.groups.map(g => g.groupId).sort().join(',') === 'sg-default,sg-web-public';
-  if (isDefaultSet) chosen.forEach(id => {
-    if (!det.groups.some(g => g.groupId === id)) {
-      const g = (all || []).find(x => x.groupId === id);
-      if (g) det.groups.push(g);
-    }
-  });
   if (net) {
     det.vpc = (net.vpcs || []).find(v => v.region === det.inst.region) || null;
     det.dns = (net.dnsRecords || []).find(d => String(d.domainName).toLowerCase() === String(det.inst.dnsDomain).toLowerCase()) || null;
@@ -110,14 +89,12 @@ function ruleMatches(g, r, q) {
 }
 
 function renderSecurityGroups() {
-  // Giống AWS: mỗi nhóm chỉ hiện "sg-xxx (tên)", mô tả để trong tooltip.
   setHtml('sgChips', det.groups.length
     ? det.groups.map(g => `
         <span class="sg-chip" title="${esc(g.description || g.name)}">
-          <code>${esc(g.groupId)}</code> <span>(${esc(g.name)})</span>
-          ${g.shared ? `<span class="tag-shared" title="${t('Nhóm dùng chung của hệ thống', 'Shared system group')}">${t('dùng chung', 'shared')}</span>` : ''}
+          ${ICON('svc-security-group', 'ico-md')} <span class="muted">Security group</span> <code>${esc(g.groupId)}</code> <span>(${esc(g.name)})</span>
         </span>`).join('')
-    : `<span class="muted">${t('Máy ảo chưa gắn Security Group nào.', 'No security groups attached.')}</span>`);
+    : `<span class="muted">${t('Không tải được Security Group của máy.', 'Could not load the security group.')}</span>`);
 
   const filterEl = document.getElementById('ruleFilter');
   const q = filterEl ? filterEl.value.trim().toLowerCase() : '';
@@ -134,16 +111,15 @@ function renderSecurityGroups() {
             <td class="mono">${esc(rulePorts(r))}</td>
             <td><span class="proto">${esc(String(r.protocol).toUpperCase())}</span></td>
             <td class="mono nowrap">${esc(r.cidr)}${open ? ` <span class="tag-open" title="${t('Mở cho toàn Internet', 'Open to the whole Internet')}">${t('mở công khai', 'public')}</span>` : ''}</td>
-            <td class="nowrap" title="${esc(g.description || '')}"><code>${esc(g.groupId)}</code> <span class="muted">(${esc(g.name)})</span></td>
             <td>${esc(r.description || '–')}</td>
             <td class="rule-actions">${r.deletable
               ? `<button class="btn btn-danger btn-sm" onclick="deleteRule('${esc(g.groupId)}', '${esc(r.ruleId)}', '${dir}')" aria-label="${t('Xóa rule', 'Delete rule')} ${esc(ruleType(r))} ${esc(rulePorts(r))}">${t('Xóa', 'Delete')}</button>`
-              : `<span class="muted" title="${r.system ? t('Rule mặc định của nhóm dùng chung', 'Default rule of a shared group') : t('Rule do người khác thêm', 'Rule added by another user')}">${r.system ? t('Mặc định', 'Default') : '–'}</span>`}</td>
+              : '<span class="muted">–</span>'}</td>
           </tr>`;
         }).join('')
-      : `<tr><td colspan="8" class="empty-cell">${q && all.length
+      : `<tr><td colspan="7" class="empty-cell">${q && all.length
           ? t(`Không có ${dir} rule nào khớp "${esc(q)}".`, `No ${dir} rules match "${esc(q)}".`)
-          : t(`Chưa có ${dir} rule nào. Bấm "Thêm rule" để mở cổng.`, `No ${dir} rules. Choose "Add rule" to open a port.`)}</td></tr>`);
+          : t(`Chưa có ${dir} rule nào. Bấm "Thêm ${dir} rule" để mở cổng.`, `No ${dir} rules. Choose "Add ${dir} rule" to open a port.`)}</td></tr>`);
   });
 }
 
@@ -193,14 +169,11 @@ function renderNetwork() {
 
 function openAddRuleModal(direction) {
   if (!det.groups.length) {
-    showToast(t('Máy chưa gắn Security Group nào. Tạo một nhóm trước.', 'No security group is attached. Create one first.'), 'error');
+    showToast(t('Chưa tải được Security Group của máy, thử làm mới trang.', 'The security group is not loaded yet, try refreshing.'), 'error');
     return;
   }
   document.getElementById('ruleDirection').value = direction;
-  document.getElementById('ruleGroup').innerHTML = det.groups
-    .map(g => `<option value="${esc(g.groupId)}">${esc(g.groupId)} (${esc(g.name)})</option>`).join('');
-  const preferred = det.groups.find(g => !g.shared) || det.groups.find(g => g.groupId === 'sg-web-public');
-  if (preferred) document.getElementById('ruleGroup').value = preferred.groupId;
+  document.getElementById('ruleGroup').value = det.groups[0].groupId;
   document.getElementById('ruleType').value = 'custom-tcp';
   document.getElementById('ruleDesc').value = '';
   setRuleCidr('0.0.0.0/0');
@@ -218,6 +191,7 @@ function applyRulePreset() {
   from.readOnly = fixed;
   to.readOnly = fixed;
   const dir = document.getElementById('ruleDirection').value;
+  setText('addRuleTitle', dir === 'inbound' ? t('Thêm inbound rule', 'Add inbound rule') : t('Thêm outbound rule', 'Add outbound rule'));
   setText('ruleCidrLabel', dir === 'inbound' ? t('Nguồn (CIDR)', 'Source (CIDR)') : t('Đích (CIDR)', 'Destination (CIDR)'));
   checkRuleWarning();
 }
@@ -285,49 +259,6 @@ async function deleteRule(groupId, ruleId, dir) {
   }
 }
 
-function openCreateSgModal() {
-  document.getElementById('sgName').value = '';
-  document.getElementById('sgDesc').value = '';
-  document.getElementById('sgAttach').checked = true;
-  openModal('createSgModal');
-  setTimeout(() => document.getElementById('sgName').focus(), 50);
-}
-
-async function submitCreateSg(e) {
-  e.preventDefault();
-  const attach = document.getElementById('sgAttach').checked;
-  const fieldSupported = Object.prototype.hasOwnProperty.call(det.inst, 'securityGroup');
-  const body = {
-    name: document.getElementById('sgName').value.trim(),
-    description: document.getElementById('sgDesc').value.trim(),
-    region: det.inst.region,
-    attachInstanceId: attach && !fieldSupported ? det.id : null
-  };
-  try {
-    const sg = await apiRequest('/network/security-groups', { method: 'POST', body: JSON.stringify(body) });
-    if (attach && fieldSupported) {
-      // security_group is stored on the instance (InstanceEntity), so attach through the edit API
-      await apiRequest(`/instances/${encodeURIComponent(det.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          name: det.inst.name,
-          flavor: det.inst.flavor,
-          keyPairName: det.inst.keyName,
-          domainName: det.inst.dnsDomain,
-          cooldownSeconds: det.inst.cooldownSeconds,
-          securityGroup: sg.groupId
-        })
-      });
-      await loadInstance();
-    }
-    closeModal('createSgModal');
-    showToast(t('Đã tạo Security Group ', 'Created security group ') + esc(sg.groupId), 'success');
-    await loadSecurityAndNetwork();
-  } catch (err) {
-    showToast(t('Không tạo được Security Group: ', 'Could not create security group: ') + esc(err.message), 'error');
-  }
-}
-
 function openDnsModal() {
   document.getElementById('dnsDomain').value = det.inst.dnsDomain || '';
   document.getElementById('dnsTarget').value = det.inst.publicIp && det.inst.publicIp !== 'Chưa gán' ? det.inst.publicIp : '';
@@ -358,41 +289,3 @@ async function submitDnsUpdate(e) {
     if (el) el.addEventListener('input', () => (id === 'ruleDirection' ? applyRulePreset() : checkRuleWarning()));
   });
 });
-
-// ---------------- Change security groups ----------------
-async function openChangeSgModal() {
-  let all;
-  try {
-    all = await apiRequest('/network/security-groups');
-  } catch (err) {
-    showToast(t('Không tải được danh sách Security Group: ', 'Could not load security groups: ') + esc(err.message), 'error');
-    return;
-  }
-  const single = false;
-  const current = det.groups.map(g => g.groupId);
-  const type = single ? 'radio' : 'checkbox';
-  setHtml('changeSgList', (all || []).map(g => `
-    <label class="sg-pick-row">
-      <input type="${type}" name="sgPick" value="${esc(g.groupId)}" ${current.includes(g.groupId) ? 'checked' : ''}>
-      <span><code>${esc(g.groupId)}</code> <strong>${esc(g.name)}</strong>
-      <span class="muted">${esc(g.description || '')} · ${(g.inboundRules || []).length} inbound</span></span>
-    </label>`).join('') || `<p class="muted">${t('Chưa có Security Group nào.', 'No security groups yet.')}</p>`);
-  openModal('changeSgModal');
-}
-
-async function submitChangeSg(e) {
-  e.preventDefault();
-  const ids = [...document.querySelectorAll('#changeSgList input[name="sgPick"]:checked')].map(i => i.value);
-  if (!ids.length) {
-    showToast(t('Phải chọn ít nhất một Security Group', 'Select at least one security group'), 'error');
-    return;
-  }
-  try {
-    await apiRequest(`/network/security-groups/instances/${encodeURIComponent(det.id)}`, { method: 'PUT', body: JSON.stringify({ groupIds: ids }) });
-    closeModal('changeSgModal');
-    showToast(t('Đã cập nhật Security Group: ', 'Security groups updated: ') + esc(ids.join(', ')), 'success');
-    await loadSecurityAndNetwork();
-  } catch (err) {
-    showToast(t('Không đổi được Security Group: ', 'Could not change security groups: ') + esc(err.message), 'error');
-  }
-}
