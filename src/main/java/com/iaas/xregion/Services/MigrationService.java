@@ -35,6 +35,7 @@ public class MigrationService {
     private final DynamoDbTable<MigrationEntity> migrationsTable;
     private final AuditLogService auditLogService;
     private final NetworkService networkService;
+    private final NovaLookup novaLookup;
 
     private final Map<String, MigrationResponse> activeRuns = new ConcurrentHashMap<>();
 
@@ -122,6 +123,7 @@ public class MigrationService {
 
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        novaLookup.fill(instance);
         if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
             throw new ResourceNotFoundException(msg(lang, "Không tìm thấy máy ảo " + instanceId + ".", "Instance not found: " + instanceId));
         }
@@ -282,6 +284,8 @@ public class MigrationService {
             instance.setElasticIp(newIp);
             instance.setPrivateIp(newPrivateIp);
             instance.setCurrentRegion(dstRegion);
+            // Vùng / IP của máy nằm ở bản ghi Nova đang chạy: ghi vào đó để trang danh sách và chi tiết thấy vùng mới
+            novaLookup.saveLocation(instance, dstRegion, newPrivateIp, newIp);
             updateStep(run, 5, 90, MigrationStep.BOOT_TARGET_VM.getDescription(), "Booted NovaVM in " + dstRegion + " with IP: " + newIp);
             migrationRecord.setCopyProgress(90);
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
@@ -384,6 +388,7 @@ public class MigrationService {
         Map<String, InstanceEntity> mine = instancesTable.scan().items().stream()
                 .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
                 .filter(i -> instanceId == null || instanceId.equals(i.getInstanceId()))
+                .peek(novaLookup::fill)
                 .collect(Collectors.toMap(InstanceEntity::getInstanceId, i -> i, (a, b) -> a, LinkedHashMap::new));
         if (instanceId != null && mine.isEmpty()) {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
@@ -469,6 +474,7 @@ public class MigrationService {
     public Map<String, Object> getHistory(String instanceId) {
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        novaLookup.fill(instance);
         if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
         }
@@ -528,6 +534,7 @@ public class MigrationService {
         Map<String, InstanceEntity> mine = instancesTable.scan().items().stream()
                 .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
                 .filter(i -> !"TERMINATED".equalsIgnoreCase(i.getCurrentStatus()))
+                .peek(novaLookup::fill)
                 .collect(Collectors.toMap(InstanceEntity::getInstanceId, i -> i, (a, b) -> a, LinkedHashMap::new));
 
         List<MigrationEntity> all = new ArrayList<>();

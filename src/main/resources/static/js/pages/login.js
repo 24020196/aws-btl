@@ -1,10 +1,16 @@
 // Chỉ dùng cho login.html
 
+// Trang cần mở sau khi đăng nhập (?redirect=/instance-detail.html?id=...), chỉ nhận đường dẫn trong cùng trang web
+function loginRedirectTarget() {
+  const r = new URLSearchParams(window.location.search).get('redirect') || '';
+  return r.startsWith('/') && !r.startsWith('//') && !/^\/(login|register)\.html/.test(r) ? r : '/instances.html';
+}
+
 (function () {
   const existingToken = localStorage.getItem('xregion_jwt');
   const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
   if (existingToken && (!expAt || Date.now() < expAt)) {
-    window.location.replace('/instances.html');
+    window.location.replace(loginRedirectTarget());
   }
 
   const savedUser = localStorage.getItem('xregion_last_username');
@@ -116,7 +122,7 @@ async function handleLoginPageSubmit(e) {
       localStorage.setItem('xregion_jwt_expires_at', String(expiresAt));
       showToast(tk('loginSuccessToast'), 'success');
       setTimeout(() => {
-        window.location.replace('/instances.html');
+        window.location.replace(loginRedirectTarget());
       }, 500);
     } else {
       throw new Error(data.message || t('Sai tên đăng nhập hoặc mật khẩu.', 'Invalid username or password.'));

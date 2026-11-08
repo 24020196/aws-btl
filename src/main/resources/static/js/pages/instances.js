@@ -37,6 +37,7 @@ registerI18n({
 });
 
 let cachedInstances = [];
+let cachedGroups = new Map(); // groupId -> nhóm (để hiện tên Security Group)
 let selectedInstanceIds = new Set();
 let statePollingInterval = null;
 let currentSplitTab = 'tabDetails';
@@ -120,6 +121,13 @@ async function loadInstances() {
   }
 
   try {
+    // Lấy nhóm trước: server tạo nhóm riêng <tên-máy>-sg cho máy nào chưa có, rồi danh sách máy mới trả đúng mã nhóm
+    const groups = await apiRequest('/network/security-groups').catch(() => null);
+    if (groups) {
+      cachedGroups = new Map(groups.map(g => [g.groupId, g]));
+      // Nhóm riêng của từng máy (server trả instanceId), vì bảng Instances không còn lưu mã nhóm
+      groups.filter(g => g.instanceId).forEach(g => cachedGroups.set(`inst:${g.instanceId}`, g));
+    }
     const instances = await apiRequest('/instances');
     cachedInstances = instances || [];
     // Loại bỏ các ID không còn tồn tại khỏi selectedInstanceIds
@@ -225,7 +233,7 @@ function filterInstancesUI() {
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
       <td><code style="color: var(--accent-cyan);">${inst.publicIp || '--'}</code></td>
       <td><code>${inst.privateIp || '--'}</code></td>
-      <td>${renderSecurityGroupBadge(inst.securityGroup)}</td>
+      <td>${renderSecurityGroupBadge(inst.securityGroup, inst.id)}</td>
       <td>
         <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;">
           ${ICON('svc-key-pair', 'ico-xs')}
@@ -264,13 +272,18 @@ function instanceStateBadge(status) {
   return `<span class="ec2-state ${cls}" style="white-space: nowrap;">${spin}${label ? tk(label) : (status || 'unknown')}</span>`;
 }
 
-function renderSecurityGroupBadge(sgString) {
-  const sgs = String(sgString || 'sg-default').split(',').map(x => x.trim()).filter(Boolean);
+function renderSecurityGroupBadge(sgString, instanceId) {
+  const own = instanceId ? cachedGroups.get(`inst:${instanceId}`) : null;
+  const sgs = own ? [own.groupId] : String(sgString || 'sg-default').split(',').map(x => x.trim()).filter(Boolean);
   const first = sgs[0] || 'sg-default';
   const extra = sgs.length > 1 ? ` +${sgs.length - 1}` : '';
-  return `<span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;" title="${sgs.join(', ')}">
+  // Hiện tên nhóm (vd. web-sg) như cột "Security group name" của EC2, mã nhóm để ở tooltip
+  const g = cachedGroups.get(first);
+  const label = g ? g.name : first;
+  const title = sgs.map(id => (cachedGroups.get(id) ? `${id} (${cachedGroups.get(id).name})` : id)).join(', ');
+  return `<span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;" title="${splitEsc(title)}">
     ${ICON('svc-security-group', 'ico-xs')}
-    <span>${first}${extra}</span>
+    <span>${splitEsc(label)}${extra}</span>
   </span>`;
 }
 
@@ -577,7 +590,7 @@ function renderSplitSecurityTab(inst) {
   const grid = document.getElementById('splitSecurityGrid');
   if (!grid) return;
   grid.innerHTML = [
-    splitKv('Security group', renderSecurityGroupBadge(inst.securityGroup)),
+    splitKv('Security group', `<span id="splitSgName">${renderSecurityGroupBadge(inst.securityGroup, inst.id)}</span>`),
     splitKv('Key pair', `<code>${splitEsc(inst.keyName || '–')}</code>`),
     splitKv('Inbound rules', `<span id="splitInboundRules" class="muted">${t('Đang tải…', 'Loading…')}</span>`)
   ].join('');
@@ -586,6 +599,10 @@ function renderSplitSecurityTab(inst) {
     const el = document.getElementById('splitInboundRules');
     if (!el) return;
     const rules = (groups || []).flatMap(g => g.inboundRules || []);
+    const sgEl = document.getElementById('splitSgName');
+    if (sgEl && groups && groups.length) {
+      sgEl.innerHTML = groups.map(g => `<code>${splitEsc(g.groupId)}</code> (${splitEsc(g.name)})`).join('<br>');
+    }
     const port = r => (r.protocol === 'all' || r.protocol === 'icmp') ? 'All' : (r.fromPort === r.toPort ? r.fromPort : `${r.fromPort}-${r.toPort}`);
     el.className = '';
     el.innerHTML = rules.length

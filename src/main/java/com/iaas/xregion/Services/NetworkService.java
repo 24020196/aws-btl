@@ -39,6 +39,7 @@ public class NetworkService {
     private final DynamoDbEnhancedClient enhancedClient;
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final ObjectMapper objectMapper;
+    private final NovaLookup novaLookup;
 
     /** Bản ghi Route 53 người dùng tự cập nhật (ghi đè bản ghi sinh từ dns + elastic_ip của máy). */
     private final List<Map<String, Object>> dnsStore = new CopyOnWriteArrayList<>();
@@ -180,6 +181,14 @@ public class NetworkService {
     @SuppressWarnings("unchecked")
     private synchronized String ensureInstanceGroup(InstanceEntity inst) {
         String owner = inst.getUsername() != null && !inst.getUsername().isBlank() ? inst.getUsername() : getCurrentUsername();
+        // Cột security_group không còn lưu ở bảng Instances: nhận ra nhóm riêng của máy qua mô tả "Security group of <id>"
+        String marker = "Security group of " + inst.getInstanceId();
+        for (Map<String, Object> g : securityGroups.values()) {
+            if (marker.equals(g.get("description")) && owner.equalsIgnoreCase(String.valueOf(g.get("owner")))) {
+                return String.valueOf(g.get("groupId"));
+            }
+        }
+        novaLookup.fill(inst);
         List<String> current = new ArrayList<>();
         String raw = inst.getSecurityGroup();
         if (raw != null && !raw.isBlank()) {
@@ -218,7 +227,7 @@ public class NetworkService {
         Map<String, Object> sg = new LinkedHashMap<>();
         sg.put("groupId", "sg-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10));
         sg.put("name", name);
-        sg.put("description", "Security group of " + inst.getInstanceId());
+        sg.put("description", marker);
         sg.put("region", inst.getCurrentRegion() != null ? inst.getCurrentRegion() : "all");
         sg.put("owner", owner);
         sg.put("inboundRules", inbound);
@@ -228,8 +237,6 @@ public class NetworkService {
         securityGroups.put(groupId, sg);
         persist(sg);
 
-        inst.setSecurityGroup(groupId);
-        instancesTable.putItem(inst);
         auditLogService.logAction("SG_CREATE", "INSTANCE", inst.getInstanceId(),
                 "Created dedicated security group " + groupId + " (from " + current + ")");
         return groupId;
@@ -334,6 +341,9 @@ public class NetworkService {
         Map<String, Map<String, Object>> records = new LinkedHashMap<>();
         try {
             for (InstanceEntity i : instancesTable.scan().items()) {
+                if (user.equalsIgnoreCase(i.getUsername())) {
+                    novaLookup.fill(i);
+                }
                 if (!user.equalsIgnoreCase(i.getUsername()) || i.getDns() == null || i.getDns().isBlank()
                         || i.getElasticIp() == null || i.getElasticIp().isBlank()
                         || "TERMINATED".equalsIgnoreCase(i.getCurrentStatus())) {
@@ -560,6 +570,11 @@ public class NetworkService {
         String user = getCurrentUsername();
         boolean ownsGroup = user.equalsIgnoreCase(String.valueOf(sg.get("owner")));
         Map<String, Object> out = new LinkedHashMap<>(sg);
+        // Nhóm riêng của máy: trả kèm instanceId để giao diện ghép nhóm với máy
+        String desc = String.valueOf(sg.get("description"));
+        if (desc.startsWith("Security group of ")) {
+            out.put("instanceId", desc.substring("Security group of ".length()));
+        }
         for (String key : List.of("inboundRules", "outboundRules")) {
             List<Map<String, Object>> rules = new ArrayList<>();
             for (Map<String, Object> r : (List<Map<String, Object>>) sg.get(key)) {

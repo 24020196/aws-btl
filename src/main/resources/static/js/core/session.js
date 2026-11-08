@@ -117,7 +117,7 @@ function enforceAuthGuard() {
 
   // Nếu chưa đăng nhập thì chặn toàn bộ trang (bao gồm cả / và /index.html) và đẩy về /login.html
   if (!isAuthPage && !token) {
-    window.location.replace('/login.html');
+    window.location.replace('/login.html?redirect=' + encodeURIComponent(path + window.location.search));
   }
 }
 
