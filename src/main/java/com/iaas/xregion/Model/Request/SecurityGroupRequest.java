@@ -30,6 +30,9 @@ public class SecurityGroupRequest {
     /** Optional: attach the (new or existing) group to this instance. */
     private String attachInstanceId;
 
+    /** Kiểu gọi cũ "đổi nhóm" (không còn hỗ trợ). Có trường này thì API báo lỗi thay vì ghi đè rule thành rỗng. */
+    private java.util.List<String> groupIds;
+
     @Valid
     private List<Rule> inboundRules = new ArrayList<>();
 
