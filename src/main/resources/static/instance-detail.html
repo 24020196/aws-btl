@@ -344,9 +344,10 @@
 
   <!-- MODAL: confirm migration -->
   <div class="modal-overlay" id="migrateModal" role="dialog" aria-modal="true" aria-labelledby="migrateModalTitle">
-    <div class="modal-card" style="max-width: 520px;">
+    <div class="modal-card" style="max-width: 640px;">
       <h2 class="modal-title" id="migrateModalTitle">Chuyển vùng máy ảo?</h2>
       <p class="modal-text" id="migrateModalText"></p>
+      <div class="mig-facts" id="migrateModalFacts"></div>
       <ul class="modal-list">
         <li>Máy nguồn dừng trong lúc tạo snapshot cuối, dịch vụ tạm gián đoạn.</li>
         <li>Elastic IP mới được cấp ở vùng đích, bản ghi Route 53 tự trỏ sang.</li>

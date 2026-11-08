@@ -143,6 +143,18 @@ function openMigrateModal() {
   }
   const inst = det.inst;
   setHtml('migrateModalText', `<strong>${esc(inst.name)}</strong> sẽ được chuyển từ ${regionTag(inst.region)} sang ${regionTag(otherRegion(inst.region))}.`);
+  const h = det.history || {};
+  const rto = h.expectedDowntimeSeconds;
+  setHtml('migrateModalFacts', `
+    <div class="mig-fact"><span class="mig-sum-label">Downtime dự kiến</span>
+      <strong class="rto">${rto ? '≈ ' + esc(rto) + ' giây' : '≈ 10–15 giây'}</strong>
+      <span class="muted">${rto ? 'trung bình các lần trước của máy này' : 'chưa có lần chuyển nào để ước tính'}</span></div>
+    <div class="mig-fact"><span class="mig-sum-label">Elastic IP</span>
+      <strong class="mono">${esc(inst.publicIp || '–')} → IP mới</strong>
+      <span class="muted">${inst.dnsDomain ? 'Truy cập qua ' + esc(inst.dnsDomain) + ' tự chuyển sau ≤ 60 giây (TTL)' : 'Nên dùng tên miền Route 53 để không phải đổi IP'}</span></div>
+    <div class="mig-fact"><span class="mig-sum-label">Sau khi xong</span>
+      <strong>Cooldown ${esc(Math.round((h.cooldownSeconds || 300) / 60))} phút</strong>
+      <span class="muted">không chuyển vùng tiếp được trong thời gian này</span></div>`);
   openModal('migrateModal');
 }
 
