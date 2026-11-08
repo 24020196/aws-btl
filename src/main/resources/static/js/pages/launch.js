@@ -173,23 +173,11 @@ function selectOs(imageId, osName) {
   const imgInput = document.getElementById('instImage');
   if (imgInput) imgInput.value = imageId;
 
-  const osCards = ['optOsUbuntu', 'optOsDebian', 'optOsRocky', 'optOsAlpine'];
-  osCards.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('selected');
+  // Thẻ OS được vẽ lại từ API /images với id="optOs-<imageId>"; giữ cả id cũ của bản HTML tĩnh
+  const legacyIds = { 'img-u22': 'optOsUbuntu', 'img-deb12': 'optOsDebian', 'img-rocky9': 'optOsRocky', 'img-alp319': 'optOsAlpine' };
+  document.querySelectorAll('[id^="optOs"]').forEach(card => {
+    card.classList.toggle('selected', card.id === `optOs-${imageId}` || card.id === legacyIds[imageId]);
   });
-
-  const cardMap = {
-    'img-u22': 'optOsUbuntu',
-    'img-deb12': 'optOsDebian',
-    'img-rocky9': 'optOsRocky',
-    'img-alp319': 'optOsAlpine'
-  };
-  const activeCardId = cardMap[imageId];
-  if (activeCardId) {
-    const activeCard = document.getElementById(activeCardId);
-    if (activeCard) activeCard.classList.add('selected');
-  }
 
   const radio = document.querySelector(`input[name="osRadio"][value="${imageId}"]`);
   if (radio) radio.checked = true;
