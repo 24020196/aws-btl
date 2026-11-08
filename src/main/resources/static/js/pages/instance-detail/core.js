@@ -40,18 +40,19 @@ function isTransitional(s) { return DET_TRANSITIONAL.includes(String(s || '').to
 function isGone(s) { return ['TERMINATED', 'TERMINATING', 'SHUTTING_DOWN'].includes(String(s || '').toUpperCase()); }
 
 // UI status from the API -> EC2 state shown on screen
+// Trạng thái máy → [class badge (status-badges.css), key i18n dùng chung st*]; trang chủ và trang danh sách dùng cùng kiểu
 const DET_STATES = {
-  ACTIVE:        { cls: 'state-running',       label: 'Running' },
-  RUNNING:       { cls: 'state-running',       label: 'Running' },
-  SHUTOFF:       { cls: 'state-stopped',       label: 'Stopped' },
-  STOPPED:       { cls: 'state-stopped',       label: 'Stopped' },
-  PENDING:       { cls: 'state-pending',       label: 'Pending' },
-  STOPPING:      { cls: 'state-stopping',      label: 'Stopping' },
-  SHUTTING_DOWN: { cls: 'state-shutting-down', label: 'Shutting-down' },
-  TERMINATING:   { cls: 'state-shutting-down', label: 'Terminating' },
-  REBOOTING:     { cls: 'state-rebooting',     label: 'Rebooting' },
-  MIGRATING:     { cls: 'state-migrating',     label: 'Migrating' },
-  TERMINATED:    { cls: 'state-terminated',    label: 'Terminated' },
+  ACTIVE:        { cls: 'state-running',       key: 'stRunning' },
+  RUNNING:       { cls: 'state-running',       key: 'stRunning' },
+  SHUTOFF:       { cls: 'state-stopped',       key: 'stStopped' },
+  STOPPED:       { cls: 'state-stopped',       key: 'stStopped' },
+  PENDING:       { cls: 'state-pending',       key: 'stPending' },
+  STOPPING:      { cls: 'state-stopping',      key: 'stStopping' },
+  SHUTTING_DOWN: { cls: 'state-shutting-down', key: 'stShuttingDown' },
+  TERMINATING:   { cls: 'state-shutting-down', key: 'stShuttingDown' },
+  REBOOTING:     { cls: 'state-rebooting',     key: 'stRebooting' },
+  MIGRATING:     { cls: 'state-migrating',     key: 'stMigrating' },
+  TERMINATED:    { cls: 'state-terminated',    key: 'stTerminated' },
   ERROR:         { cls: 'state-error',         label: 'Error' }
 };
 
@@ -109,8 +110,10 @@ function regionTag(code) {
 }
 
 function stateTag(status) {
-  const s = DET_STATES[String(status || '').toUpperCase()] || { cls: 'state-error', label: status || 'Unknown' };
-  return `<span class="ec2-state ${s.cls}">${esc(s.label)}</span>`;
+  const key = String(status || '').toUpperCase();
+  const s = DET_STATES[key] || { cls: 'state-error', label: status || 'Unknown' };
+  const spin = isTransitional(key) ? ICON('ui-spinner', 'ico-xs ico-spin') + ' ' : '';
+  return `<span class="ec2-state ${s.cls}">${spin}${esc(s.key ? tk(s.key) : s.label)}</span>`;
 }
 
 function setText(id, value) {
@@ -420,11 +423,11 @@ function renderActions() {
   };
 
   setHtml('detailActionButtons', `
-    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">${ICON('ui-refresh')}</button>
-    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal')} ${tk('actConnect')}</button>
+    <button class="btn btn-secondary btn-sm" id="btnRefresh" onclick="refreshAll()">${ICON('ui-refresh', 'ico-sm')} ${tk('actRefresh')}</button>
+    <button class="btn btn-secondary btn-sm" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal', 'ico-sm')} ${tk('actConnect')}</button>
     <div class="state-menu" id="stateMenu">
-      <button type="button" class="btn btn-secondary" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
-        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
+        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power', 'ico-sm')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="state-menu-list" id="stateMenuList" role="menu" aria-labelledby="stateMenuBtn" hidden>
         ${item('START', ICON('ui-play') + ' ' + t('Khởi động máy ảo', 'Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
         ${item('STOP', ICON('ui-stop') + ' ' + t('Dừng máy ảo', 'Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
@@ -434,7 +437,7 @@ function renderActions() {
       </div>
     </div>
     <div class="ec2-actions-menu" id="ec2ActionsMenu">
-      <button type="button" class="btn btn-secondary" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
+      <button type="button" class="btn btn-secondary btn-sm" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
         onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${tk('actActions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
         <div class="ec2-actions-group">
@@ -474,7 +477,7 @@ function renderActions() {
         </div>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate')} Fast Migrate X-Region</button>
+    <button class="btn btn-primary btn-sm" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region</button>
   `);
 
   setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');
