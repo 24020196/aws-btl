@@ -70,27 +70,26 @@ const ICON = (id, cls = '') => `<svg class="ico ${cls}" aria-hidden="true"><use 
 
 | Thành viên | Việc hôm nay | File sở hữu (chỉ người này sửa) |
 |---|---|---|
-| **1. Nguyễn Mạnh Cường** — *Shell & i18n core* | **A.** PR "shell" (chặn các bạn khác, **merge trước 11:30**): sidebar, layout khung, breadcrumb/page-header dùng chung, `ICON()`, `registerI18n`, favicon/logo trên header<br>**B.** Áp dụng sidebar + icon + i18n cho trang của mình<br>**C.** Viết bảng thuật ngữ EN/VI (mục 4) vào code i18n | **Dùng chung:** `js/core/ui.js`, `js/core/i18n.js`, **mới** `js/core/sidebar.js`, `css/dashboard.css`, `css/base/header.css`, `css/base/layout.css`, `css/base/sub-nav.css`, **mới** `css/base/sidebar.css`, `css/header-extras.css`<br>**Trang:** `login.html`, `register.html`, `account-tokens.html`, `instance-edit.html` + `js/pages/login.js`, `register.js`, `account-tokens.js`, `instance-edit.js`, `css/auth.css`, `css/actions-menu.css`, `css/pages/auth-shared.css`, `login.css`, `register.css`, `account-tokens.css`, `instance-edit.css` |
-| **2. Tạ Duy Anh** — *Danh sách & Khởi tạo máy ảo* | **A.** `instances.html` theo bố cục EC2 Instances (list + split-pane chi tiết)<br>**B.** `launch.html` theo bố cục EC2 "Launch an instance" (section + Summary bên phải)<br>**C.** Xóa emoji/SVG cũ, chuyển text sang `data-i18n` cho 2 trang | `instances.html`, `launch.html`, `js/pages/instances.js`, `js/pages/launch.js`, `css/launch.css`, `css/console-detail.css`, **mới** `css/pages/instances.css` |
+| **1. Nguyễn Mạnh Cường** — *Shell & i18n core* | **A.** PR "shell" (chặn các bạn khác, ưu tiên merge trước): sidebar, layout khung, breadcrumb/page-header dùng chung, `ICON()`, `registerI18n`, favicon/logo trên header<br>**B.** Áp dụng sidebar + icon + i18n cho trang của mình<br>**C.** Viết bảng thuật ngữ EN/VI (mục 4) vào code i18n | **Dùng chung:** `js/core/ui.js`, `js/core/i18n.js`, **mới** `js/core/sidebar.js`, `css/dashboard.css`, `css/base/header.css`, `css/base/layout.css`, `css/base/sub-nav.css`, **mới** `css/base/sidebar.css`, `css/header-extras.css`<br>**Trang:** `login.html`, `register.html`, `account-tokens.html`, `instance-edit.html` + `js/pages/login.js`, `register.js`, `account-tokens.js`, `instance-edit.js`, `css/auth.css`, `css/actions-menu.css`, `css/pages/auth-shared.css`, `login.css`, `register.css`, `account-tokens.css`, `instance-edit.css` |
+| **2. Tạ Duy Anh** — *Danh sách & Khởi tạo máy ảo* | **A.** `instances.html` theo bố cục EC2 Instances (list + split-pane chi tiết + **chọn nhiều máy ảo cùng lúc để thao tác hàng loạt** Start/Stop/Reboot/Terminate)<br>**B.** `launch.html` theo bố cục EC2 "Launch an instance" (section + Summary bên phải)<br>**C.** Xóa emoji/SVG cũ, chuyển text sang `data-i18n` cho 2 trang | `instances.html`, `launch.html`, `js/pages/instances.js`, `js/pages/launch.js`, `css/launch.css`, `css/console-detail.css`, **mới** `css/pages/instances.css` |
 | **3. Hoàng Xuân Lực** — *Dashboard & Chi tiết máy ảo* | **A.** `index.html` theo bố cục "EC2 Dashboard" (Resources tiles, Region cards, migration summary)<br>**B.** `instance-detail.html` theo bố cục EC2 Instance summary + Tabs<br>**C.** Xóa emoji/SVG cũ, chuyển text sang `data-i18n` cho 2 trang | `index.html`, `instance-detail.html`, `js/pages/overview.js`, `overview-migration.js`, `js/pages/instance-detail/*.js`, `css/overview.css`, `css/overview-migration.css`, `css/instance-detail.css`, `css/base/status-badges.css`, `css/base/pipeline.css` |
 
 > **Quy tắc vàng hôm nay:** chỉ Cường được sửa `js/core/*`, `css/base/*` (trừ `status-badges.css`, `pipeline.css` của Lực), `dashboard.css`. Ai cần thêm gì vào file dùng chung → nhắn Cường, không tự sửa.
 
 ---
 
-## 2. MỐC THỜI GIAN
+## 2. TRÌNH TỰ TRIỂN KHAI
 
-| Giờ | Cường | Duy Anh | Lực |
+| Giai đoạn | Cường | Duy Anh | Lực |
 |---|---|---|---|
-| 09:00–09:30 | Cả nhóm `git pull origin main`, mở `/icons-preview.html`, đọc tài liệu này | ← | ← |
-| 09:30–11:30 | **PR shell** (mục 3.1) | Thay emoji/SVG trong `instances.js`, `launch.js`; dựng bố cục mới **bên trong** vùng nội dung (chưa đụng nav) | Thay emoji/SVG trong `overview*.js`, `instance-detail/*.js`; dựng bố cục mới bên trong vùng nội dung |
-| **11:30** | **Merge PR shell vào `main`** → báo nhóm | `git pull` / rebase | `git pull` / rebase |
-| 13:30–15:30 | Gắn sidebar + i18n cho 4 trang của mình | Gắn sidebar, breadcrumb, `data-i18n` cho `instances`, `launch` | Gắn sidebar, breadcrumb, `data-i18n` cho `index`, `instance-detail` |
-| 15:30 | Mở PR trang | Mở PR trang | Mở PR trang |
-| 15:30–17:00 | Review PR Lực | Review PR Cường | Review PR Duy Anh |
-| 17:00–17:30 | Merge lần lượt: Cường → Duy Anh → Lực; chạy checklist nghiệm thu (mục 6) | ← | ← |
+| **1. Khởi động** | Cả nhóm `git pull origin main`, mở `/icons-preview.html`, đọc tài liệu này | ← | ← |
+| **2. Bố cục & Shell** | **PR shell** (mục 3.1) | Thay emoji/SVG trong `instances.js`, `launch.js`; dựng bố cục mới **bên trong** vùng nội dung (chưa đụng nav) | Thay emoji/SVG trong `overview*.js`, `instance-detail/*.js`; dựng bố cục mới bên trong vùng nội dung |
+| **3. Merge Shell** | **Merge PR shell vào `main`** → báo nhóm | `git pull` / rebase | `git pull` / rebase |
+| **4. Ghép trang** | Gắn sidebar + i18n cho 4 trang của mình | Gắn sidebar, breadcrumb, `data-i18n` cho `instances`, `launch` | Gắn sidebar, breadcrumb, `data-i18n` cho `index`, `instance-detail` |
+| **5. Mở PR** | Mở PR trang | Mở PR trang | Mở PR trang |
+| **6. Review** | Review PR Lực | Review PR Cường | Review PR Duy Anh |
+| **7. Nghiệm thu** | Merge lần lượt: Cường → Duy Anh → Lực; chạy checklist nghiệm thu (mục 6) | ← | ← |
 
-Tên nhánh: `ui/shell/cuong`, `ui/pages/cuong`, `ui/instances-launch/duyanh`, `ui/dashboard-detail/luc`.
 
 ---
 
@@ -98,7 +97,7 @@ Tên nhánh: `ui/shell/cuong`, `ui/pages/cuong`, `ui/instances-launch/duyanh`, `
 
 ### 👤 1. Nguyễn Mạnh Cường — Shell (Sidebar + Layout) & i18n core
 
-#### 3.1 PR shell (xong trước 11:30)
+#### 3.1 PR shell (Ưu tiên làm trước)
 
 - [ ] **`css/dashboard.css`**: thêm vào **cuối** 2 dòng `@import url('base/icons.css');` và `@import url('base/sidebar.css');`.
 - [ ] **`js/core/ui.js`**: thêm hàm `ICON(id, cls)` (mục 0).
@@ -160,7 +159,7 @@ Tên nhánh: `ui/shell/cuong`, `ui/pages/cuong`, `ui/instances-launch/duyanh`, `
 
 Thứ tự nạp mới: `ui.js → api.js → session.js → auth.js → i18n.js → sidebar.js → pages/*.js`. Cập nhật lại bảng trong `docs/frontend-structure.md`.
 
-#### 3.2 Trang của Cường (chiều)
+#### 3.2 Các trang của Cường
 - [ ] `account-tokens.html`, `instance-edit.html`: xóa `<nav class="sub-nav">` (7 và 4 SVG vẽ tay), thay bằng hợp đồng HTML trên. Breadcrumb: `EC2 › Instances › i-xxx › Edit` và `Account › API Tokens`.
 - [ ] `login.html`, `register.html` (**không** có sidebar): logo `img/logo.svg`, favicon `img/favicon.svg`, bỏ emoji (2 + 6 trong HTML, 3 + 12 trong `login.js`/`register.js`), dùng `ui-user`, `ui-lock`, `ui-error`.
 - [ ] `instance-edit.js` (1 emoji), `ui.js` (4 emoji trong toast/modal → `ui-check-circle`, `ui-warning`, `ui-error`, `ui-info`), `i18n.js` (6 emoji trong từ điển).
@@ -174,6 +173,13 @@ Thứ tự nạp mới: `ui.js → api.js → session.js → auth.js → i18n.js
 - [ ] Page header: `Instances (N)` + nút bên phải: `ui-refresh` · **Connect** (`ui-terminal`) · **Instance state ▾** (`ui-power`: Start/Stop/Reboot/Terminate) · **Actions ▾** · **Launch instances** (nút cam, `ui-plus`). Các nút sáng/tối theo dòng đang chọn.
 - [ ] Thanh lọc: ô tìm kiếm có `ui-search` + `#instanceStatusFilter` (giữ id cũ).
 - [ ] Bảng: cột checkbox chọn dòng · Name · Instance ID (kèm nút `ui-copy`) · Instance state (badge) · Instance type · Region · Public IPv4 / DNS. Phân trang `ui-chevron-left/right` góc phải trên bảng.
+- [ ] **Chọn nhiều máy ảo cùng lúc (Multi-instance selection & Bulk actions like AWS EC2)**:
+  - Checkbox "Chọn tất cả" trên `<thead>` (hỗ trợ toggle all và trạng thái `indeterminate` khi chỉ chọn một phần).
+  - Checkbox trên từng dòng máy ảo; lưu trạng thái danh sách `selectedInstanceIds` (Array / Set).
+  - Khi chọn $\ge 1$ máy ảo:
+    - Hiển thị số lượng máy ảo đang chọn trên thanh công cụ (ví dụ: `2 instances selected` / `Đã chọn 2 máy ảo`).
+    - Nút menu **Instance state ▾** kích hoạt cho phép thao tác đồng thời: **Start**, **Stop**, **Reboot**, **Terminate** hàng loạt (gọi API xử lý song song/tuần tự kèm thông báo toast kết quả).
+    - Nếu chọn đúng 1 máy ảo: nút **Connect** sáng và panel split-pane chi tiết bên dưới hiển thị thông tin máy đó. Nếu chọn nhiều máy ảo: ẩn hoặc hiển thị panel tóm tắt bulk action.
 - [ ] **Split-pane chi tiết** (như EC2): chọn 1 dòng → panel dưới bảng hiện tabs `Details | Security | Networking | Storage` tóm tắt, có link **"View full details"** sang `instance-detail.html?id=…`. Kéo được hoặc tối thiểu có nút đóng `ui-close`.
 - [ ] Trạng thái chuyển tiếp: `ui-spinner ico-spin` + badge; khóa nút khi `PENDING/STOPPING/REBOOTING/SHUTTING_DOWN`.
 - [ ] Xóa 4 emoji trong `instances.js`, 5 SVG trong `instances.html`.
@@ -268,11 +274,12 @@ Select-String -Path *.html -Pattern '<svg viewBox|data:image/svg'
 
 ---
 
-## 6. CHECKLIST NGHIỆM THU 17:30
+## 6. CHECKLIST NGHIỆM THU
 
 - [ ] 6 trang có đăng nhập đều có sidebar, đúng mục `active`, thu gọn/mở rộng nhớ trạng thái khi chuyển trang.
 - [ ] Màn hình 375px: sidebar thành drawer, không tràn ngang.
 - [ ] Mọi trang có breadcrumb + page header; `instance-detail` có tabs, `instances` có split-pane.
+- [ ] `instances.html`: chọn được nhiều máy ảo cùng lúc (checkbox thead/tbody), menu **Instance state ▾** thực hiện thao tác hàng loạt (Start/Stop/Reboot/Terminate) cho các máy đã chọn.
 - [ ] Đổi ngôn ngữ sang EN: không còn chữ tiếng Việt (trừ dữ liệu người dùng); đổi lại VI: không còn nhãn kiểu "Việt (English)".
 - [ ] 2 lệnh quét ở mục 5 trả về rỗng; DevTools tab Network không có 404 cho `/img/**`.
 - [ ] Không có lỗi Console; login → instances → detail → edit → migrate vẫn chạy như trước.

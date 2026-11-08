@@ -5,11 +5,12 @@ registerI18n({
   regHeading: ['Đăng ký người dùng', 'User sign up'],
   regSubheading: ['Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn', 'Create a new account to launch and manage your virtual machines'],
   labelFullName: ['Họ và tên', 'Full Name'],
+  placeholderFullName: ['VD: Nguyễn Văn A', 'e.g. John Doe'],
   labelUsername: ['Tên đăng nhập *', 'Username *'],
+  placeholderUsername: ['VD: alex_dev', 'e.g. alex_dev'],
   labelPassword: ['Mật khẩu *', 'Password *'],
   labelConfirmPassword: ['Nhập lại mật khẩu *', 'Confirm password *'],
   showPassword: ['Hiển thị mật khẩu', 'Show Password'],
-  labelRole: ['Vai trò người dùng', 'User Role'],
   createBtn: ['Đăng ký tài khoản', 'Create account'],
   creatingBtn: ['Đang tạo tài khoản...', 'Creating account...'],
   orDivider: ['Đã có tài khoản?', 'Already have an account?'],
@@ -65,7 +66,7 @@ async function handleRegisterPageSubmit(e) {
     fullName: document.getElementById('regFullName').value.trim(),
     username: username,
     password: pass,
-    role: document.getElementById('regRole').value
+    role: 'ROLE_USER'
   };
 
   try {

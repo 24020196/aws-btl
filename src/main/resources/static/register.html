@@ -46,12 +46,12 @@
       <form id="authRegisterForm" onsubmit="handleRegisterPageSubmit(event)">
         <div class="xr-field-group">
           <label class="xr-label" for="regFullName" data-i18n="labelFullName">Họ và tên</label>
-          <input type="text" class="xr-input" id="regFullName" required placeholder="VD: Nguyễn Mạnh Cường">
+          <input type="text" class="xr-input" id="regFullName" required data-i18n-placeholder="placeholderFullName" placeholder="VD: Nguyễn Văn A">
         </div>
 
         <div class="xr-field-group">
           <label class="xr-label" for="regUsername" data-i18n="labelUsername">Tên đăng nhập *</label>
-          <input type="text" class="xr-input" id="regUsername" required placeholder="VD: cuong_admin" autocomplete="username">
+          <input type="text" class="xr-input" id="regUsername" required data-i18n-placeholder="placeholderUsername" placeholder="VD: alex_dev" autocomplete="username">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -70,14 +70,6 @@
             <input type="checkbox" onchange="toggleShowRegPasswords(this.checked)">
             <span data-i18n="showPassword">Hiển thị mật khẩu</span>
           </label>
-        </div>
-
-        <div class="xr-field-group">
-          <label class="xr-label" for="regRole" data-i18n="labelRole">Vai trò người dùng</label>
-          <select class="xr-select" id="regRole">
-            <option value="ROLE_ADMIN">Quản trị viên (Toàn quyền)</option>
-            <option value="ROLE_USER">Kỹ sư vận hành (DevOps User)</option>
-          </select>
         </div>
 
         <button type="submit" id="regBtn" class="xr-btn-orange" data-i18n="createBtn">
