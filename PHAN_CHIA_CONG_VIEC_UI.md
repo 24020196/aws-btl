@@ -101,23 +101,19 @@ const ICON = (id, cls = '') => `<svg class="ico ${cls}" aria-hidden="true"><use 
 
 - [ ] **`css/dashboard.css`**: thêm vào **cuối** 2 dòng `@import url('base/icons.css');` và `@import url('base/sidebar.css');`.
 - [ ] **`js/core/ui.js`**: thêm hàm `ICON(id, cls)` (mục 0).
-- [ ] **Mới `js/core/sidebar.js`**: tự render sidebar vào `<aside id="appSidebar" data-active="...">`. Danh sách menu khai báo **một chỗ** trong file này:
+- [ ] **Mới `js/core/sidebar.js`**: tự render sidebar vào `<aside id="appSidebar" data-active="...">`. Chuyển trực tiếp 4 mục từ thanh ngang (`.sub-nav`) xuống thành danh sách menu dọc đơn giản:
 
-  | Nhóm (giống EC2) | Mục | Link | `data-active` | Icon |
-  |---|---|---|---|---|
-  | — | EC2 Dashboard | `/index.html` | `dashboard` | `svc-ec2` |
-  | Instances | Instances | `/instances.html` | `instances` | `ui-server` |
-  | | Launch instance | `/launch.html` | `launch` | `ui-plus` |
-  | Images | AMIs | — *(mờ, "Coming soon")* | | `svc-ami` |
-  | Elastic Block Store | Volumes · Snapshots | — *(mờ)* | | `svc-ebs` · `svc-snapshot` |
-  | Network & Security | Security Groups · Elastic IPs · Key Pairs | — *(mờ, sẽ mở khi có API của Lực)* | | `svc-security-group` · `svc-elastic-ip` · `svc-key-pair` |
-  | Migration | Cross-Region Migration | — *(mờ)* | | `svc-migration` |
-  | Account | API Tokens | `/account-tokens.html` | `tokens` | `ui-token` |
+  | Mục | Link | `data-active` | Icon |
+  |---|---|---|---|
+  | Trang Chủ Overview / Overview Dashboard | `/index.html` | `dashboard` | `ui-dashboard` |
+  | Danh Sách Máy Ảo / Instances | `/instances.html` | `instances` | `ui-server` |
+  | Khởi Tạo Máy Ảo / Launch Instance (+ Launch VM) | `/launch.html` | `launch` | `ui-plus` |
+  | Tài Khoản & API Token / Account & API Tokens | `/account-tokens.html` | `tokens` | `ui-lock` |
 
-  - `instance-detail.html` và `instance-edit.html` dùng `data-active="instances"` (đúng phân tầng EC2: chi tiết máy thuộc nhóm Instances).
+  - `instance-detail.html` và `instance-edit.html` dùng `data-active="instances"` (thuộc nhóm quản lý máy ảo).
   - Nút thu gọn (`ui-sidebar`) lưu trạng thái vào `localStorage['xregion_sidebar_collapsed']`; khi thu gọn chỉ còn icon (rộng 56px), mở rộng 240px.
   - Màn hình < 900px: sidebar ẩn, nút `ui-menu` trên header mở dạng drawer + lớp phủ.
-  - Tên mục menu lấy qua `t()` / từ điển i18n.
+  - Tên mục menu và tiêu đề sidebar (`navSidebarTitle`) tự đổi theo ngôn ngữ qua `tk()`.
 - [ ] **Mới `css/base/sidebar.css`**: `.app-shell` (flex ngang), `.app-sidebar`, `.app-sidebar.collapsed`, `.sidebar-group-title`, `.sidebar-item`, `.sidebar-item.active` (viền trái `--accent-cyan`), `.sidebar-item.disabled`, `.app-main` (flex: 1, cuộn riêng), **`.breadcrumb`**, **`.page-header`** (tiêu đề + số lượng + nhóm nút bên phải).
 - [ ] **`css/base/sub-nav.css`**: để lại file nhưng đánh dấu `/* DEPRECATED — xóa sau khi 8 trang đã chuyển sang sidebar */`.
 - [ ] **`css/base/layout.css`**: điều chỉnh khung nội dung để chạy được trong `.app-main` (bỏ max-width cứng nếu có).
