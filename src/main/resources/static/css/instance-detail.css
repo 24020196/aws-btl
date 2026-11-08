@@ -90,18 +90,19 @@ a.btn { text-decoration: none; }
 .det-panel.active { display: block; }
 
 /* Security groups */
-.sg-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.sg-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .sg-chip {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-secondary);
   font-size: 13px;
+  white-space: nowrap;
   max-width: 100%;
+  cursor: default;
 }
 .sg-chip code { color: var(--accent-cyan); font-size: 12px; }
 .tag-shared, .tag-open {
@@ -113,9 +114,22 @@ a.btn { text-decoration: none; }
 }
 .tag-shared { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
 .tag-open { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
-.rules-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 18px 0 8px; }
+.rules-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin: 18px 0 8px; }
 .rules-title { font-size: 14px; font-weight: 700; }
-.rules-table td { vertical-align: top; }
+.rules-filter {
+  width: min(320px, 100%);
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+}
+.rules-filter:focus { outline: 2px solid var(--accent-cyan); outline-offset: 1px; border-color: transparent; }
+.rules-table td { vertical-align: middle; }
+.rules-table td.nowrap { white-space: nowrap; }
+.rules-table td code { color: var(--accent-cyan); font-size: 12px; }
 .rules-table td .muted { font-size: 11px; margin-top: 2px; }
 .rules-table .rule-actions { text-align: right; white-space: nowrap; width: 1%; }
 .proto { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #cbd5e1; }
@@ -350,3 +364,33 @@ a.btn { text-decoration: none; }
 
 .mig-sum-block { font-size: 14px; }
 .mig-sum-latest strong { font-size: 15px; }
+
+/* Khối thông báo khi không tìm thấy / không tải được máy ảo */
+.det-empty { max-width: 640px; margin: 48px auto; padding: 40px 32px; text-align: center; }
+.det-empty-icon { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; font-weight: 800; color: var(--accent-cyan); background: rgba(34,211,238,.10); border: 1px solid rgba(34,211,238,.35); }
+.det-empty-icon.is-error { color: #f87171; background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.4); }
+.det-empty-title { font-size: 20px; margin: 0 0 10px; }
+.det-empty-title code { font-family: var(--font-mono, ui-monospace, monospace); color: var(--accent-cyan); }
+.det-empty-text { color: var(--text-secondary, #94a3b8); line-height: 1.6; margin: 0 0 22px; }
+.det-empty-text code { font-family: var(--font-mono, ui-monospace, monospace); font-size: .9em; word-break: break-all; }
+.det-empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* Thông tin trước khi chuyển vùng (downtime dự kiến, IP, cooldown) */
+.mig-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.mig-fact { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; font-size: 13px;
+  border: 1px solid var(--border-color, rgba(255,255,255,.1)); background: rgba(15,23,42,.35); }
+.mig-fact .muted { font-size: 12px; line-height: 1.4; }
+@media (max-width: 640px) { .mig-facts { grid-template-columns: 1fr; } }
+
+.sim-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: #fbbf24; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.35); cursor: help; }
+
+/* Khung 6 bước: nháy viền khi tự cuộn tới sau lúc bấm chuyển vùng */
+.pipe-card:focus { outline: none; }
+.pipe-card.pipe-flash { animation: pipe-flash 1.6s ease-out; }
+@keyframes pipe-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--accent-cyan); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .pipe-card.pipe-flash { animation: none; } }

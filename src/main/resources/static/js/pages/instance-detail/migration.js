@@ -135,6 +135,25 @@ document.addEventListener('keydown', e => {
 });
 
 // ---------------- Migration: trigger + live pipeline ----------------
+// Sau khi bấm chuyển vùng: cuộn để khung 6 bước nằm giữa màn hình (nếu cao hơn màn hình thì đặt ngay dưới header).
+function focusPipelineCard() {
+  const card = document.getElementById('migPipelineCard');
+  if (!card) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  requestAnimationFrame(() => {
+    const header = document.querySelector('.header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+    const rect = card.getBoundingClientRect();
+    const free = window.innerHeight - headerH;
+    const offset = rect.height < free ? headerH + (free - rect.height) / 2 : headerH + 12;
+    window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - offset), behavior: smooth ? 'smooth' : 'auto' });
+    card.focus({ preventScroll: true });
+    card.classList.remove('pipe-flash');
+    void card.offsetWidth;
+    card.classList.add('pipe-flash');
+  });
+}
+
 function openMigrateModal() {
   const reason = migrationBlockReason();
   if (reason) {
@@ -143,6 +162,18 @@ function openMigrateModal() {
   }
   const inst = det.inst;
   setHtml('migrateModalText', `<strong>${esc(inst.name)}</strong> sẽ được chuyển từ ${regionTag(inst.region)} sang ${regionTag(otherRegion(inst.region))}.`);
+  const h = det.history || {};
+  const rto = h.expectedDowntimeSeconds;
+  setHtml('migrateModalFacts', `
+    <div class="mig-fact"><span class="mig-sum-label">Downtime dự kiến</span>
+      <strong class="rto">${rto ? '≈ ' + esc(rto) + ' giây' : '≈ 10–15 giây'}</strong>
+      <span class="muted">${rto ? 'trung bình các lần trước của máy này' : 'chưa có lần chuyển nào để ước tính'}</span></div>
+    <div class="mig-fact"><span class="mig-sum-label">Elastic IP</span>
+      <strong class="mono">${esc(inst.publicIp || '–')} → IP mới</strong>
+      <span class="muted">${inst.dnsDomain ? 'Truy cập qua ' + esc(inst.dnsDomain) + ' tự chuyển sau ≤ 60 giây (TTL)' : 'Nên dùng tên miền Route 53 để không phải đổi IP'}</span></div>
+    <div class="mig-fact"><span class="mig-sum-label">Sau khi xong</span>
+      <strong>Cooldown ${esc(Math.round((h.cooldownSeconds || 300) / 60))} phút</strong>
+      <span class="muted">không chuyển vùng tiếp được trong thời gian này</span></div>`);
   openModal('migrateModal');
 }
 
@@ -153,7 +184,7 @@ async function confirmMigrate() {
     const res = await apiRequest('/migrations/trigger', { method: 'POST', body: JSON.stringify({ id: det.id }) });
     closeModal('migrateModal');
     switchDetailTab('migration');
-    showToast('Đã bắt đầu chuyển vùng, theo dõi tiến trình bên dưới', 'success');
+    showToast('Đã bắt đầu chuyển vùng, đang theo dõi 6 bước', 'success');
     det.running = true;
     det.inst.status = 'MIGRATING';
     det.history = Object.assign({}, det.history, { migrationLock: true, lockStale: false, lockAcquiredAt: res && res.startedAt ? res.startedAt : Date.now() });
@@ -161,6 +192,7 @@ async function confirmMigrate() {
     renderLockAndCooldown();
     renderPipeline(res);
     startProgressPollingDetail();
+    focusPipelineCard();
   } catch (err) {
     closeModal('migrateModal');
     showToast(`Không chuyển vùng được: ${esc(err.message)}`, 'error');

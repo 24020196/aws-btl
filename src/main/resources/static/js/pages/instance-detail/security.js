@@ -54,37 +54,47 @@ function ruleRows(direction) {
   return rows;
 }
 
+function ruleMatches(g, r, q) {
+  if (!q) return true;
+  return [g.groupId, g.name, r.ruleId, ruleType(r), r.protocol, rulePorts(r), r.cidr, r.description]
+    .some(v => String(v || '').toLowerCase().includes(q));
+}
+
 function renderSecurityGroups() {
+  // Giống AWS: mỗi nhóm chỉ hiện "sg-xxx (tên)", mô tả để trong tooltip.
   setHtml('sgChips', det.groups.length
     ? det.groups.map(g => `
-        <div class="sg-chip">
-          <code>${esc(g.groupId)}</code>
-          <strong>${esc(g.name)}</strong>
-          <span class="muted">${esc(g.description || '')}</span>
+        <span class="sg-chip" title="${esc(g.description || g.name)}">
+          <code>${esc(g.groupId)}</code> <span>(${esc(g.name)})</span>
           ${g.shared ? '<span class="tag-shared" title="Nhóm dùng chung của hệ thống">dùng chung</span>' : ''}
-        </div>`).join('')
+        </span>`).join('')
     : '<span class="muted">Máy ảo chưa gắn Security Group nào.</span>');
 
+  const filterEl = document.getElementById('ruleFilter');
+  const q = filterEl ? filterEl.value.trim().toLowerCase() : '';
   ['inbound', 'outbound'].forEach(dir => {
-    const rows = ruleRows(dir);
-    setText(dir + 'Count', `(${rows.length})`);
+    const all = ruleRows(dir);
+    const rows = all.filter(({ g, r }) => ruleMatches(g, r, q));
+    setText(dir + 'Count', q ? `(${rows.length}/${all.length})` : `(${all.length})`);
     setHtml(dir + 'RulesBody', rows.length
       ? rows.map(({ g, r }) => {
           const open = dir === 'inbound' && r.cidr === '0.0.0.0/0' && ![80, 443].includes(r.fromPort);
           return `<tr>
-            <td><code>${esc(g.groupId)}</code><div class="muted">${esc(g.name)}</div></td>
             <td class="mono muted">${esc(r.ruleId || '–')}</td>
             <td>${esc(ruleType(r))}</td>
-            <td><span class="proto">${esc(String(r.protocol).toUpperCase())}</span></td>
             <td class="mono">${esc(rulePorts(r))}</td>
-            <td class="mono">${esc(r.cidr)}${open ? ' <span class="tag-open" title="Mở cho toàn Internet">mở công khai</span>' : ''}</td>
+            <td><span class="proto">${esc(String(r.protocol).toUpperCase())}</span></td>
+            <td class="mono nowrap">${esc(r.cidr)}${open ? ' <span class="tag-open" title="Mở cho toàn Internet">mở công khai</span>' : ''}</td>
+            <td class="nowrap" title="${esc(g.description || '')}"><code>${esc(g.groupId)}</code> <span class="muted">(${esc(g.name)})</span></td>
             <td>${esc(r.description || '–')}</td>
             <td class="rule-actions">${r.deletable
               ? `<button class="btn btn-danger btn-sm" onclick="deleteRule('${esc(g.groupId)}', '${esc(r.ruleId)}', '${dir}')" aria-label="Xóa rule ${esc(ruleType(r))} cổng ${esc(rulePorts(r))}">Xóa</button>`
               : `<span class="muted" title="${r.system ? 'Rule mặc định của nhóm dùng chung' : 'Rule do người khác thêm'}">${r.system ? 'Mặc định' : '–'}</span>`}</td>
           </tr>`;
         }).join('')
-      : `<tr><td colspan="8" class="empty-cell">Chưa có ${dir} rule nào. Bấm "Thêm rule" để mở cổng.</td></tr>`);
+      : `<tr><td colspan="8" class="empty-cell">${q && all.length
+          ? `Không có ${dir} rule nào khớp "${esc(q)}".`
+          : `Chưa có ${dir} rule nào. Bấm "Thêm rule" để mở cổng.`}</td></tr>`);
   });
 }
 

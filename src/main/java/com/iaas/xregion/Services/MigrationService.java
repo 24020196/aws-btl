@@ -320,6 +320,18 @@ public class MigrationService {
         run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] Step " + stepNum + "/6: " + logMsg);
     }
 
+    /** Thời điểm giữ migration_lock (ms): ưu tiên cột lock_acquired_at, không có thì lấy giờ bắt đầu lần chuyển vùng đang chạy. */
+    private Long lockSince(InstanceEntity instance, List<MigrationEntity> migrations) {
+        if (instance.getLockAcquiredAt() != null && instance.getLockAcquiredAt() > 0) {
+            return TimeSyncUtil.toEpochMillis(instance.getLockAcquiredAt());
+        }
+        return migrations.stream()
+                .filter(m -> "IN_PROGRESS".equalsIgnoreCase(m.getStatus()) && m.getStartedAt() != null && m.getStartedAt() > 0)
+                .map(m -> TimeSyncUtil.toEpochMillis(m.getStartedAt()))
+                .max(Long::compare)
+                .orElse(null);
+    }
+
     private boolean isLockStale(InstanceEntity instance) {
         if (!Boolean.TRUE.equals(instance.getMigrationLock())) {
             return false;
@@ -414,8 +426,12 @@ public class MigrationService {
         result.put("currentStatus", status);
         result.put("migrationLock", Boolean.TRUE.equals(instance.getMigrationLock()));
         result.put("lockStale", isLockStale(instance));
-        result.put("lockAcquiredAt", null);
+        result.put("lockAcquiredAt", Boolean.TRUE.equals(instance.getMigrationLock()) ? lockSince(instance, migrations) : null);
         result.put("cooldownSeconds", cooldown);
+        OptionalDouble avgRto = migrations.stream()
+                .filter(m -> m.getDowntimeSeconds() != null && m.getDowntimeSeconds() > 0)
+                .mapToLong(MigrationEntity::getDowntimeSeconds).average();
+        result.put("expectedDowntimeSeconds", avgRto.isPresent() ? Math.round(avgRto.getAsDouble()) : null);
         result.put("cooldownRemainingSeconds", remaining);
         result.put("transitional", TRANSITIONAL_STATES.contains(status));
         result.put("serverTime", TimeSyncUtil.nowEpochMillis());
@@ -471,7 +487,7 @@ public class MigrationService {
                     row.put("instanceId", i.getInstanceId());
                     row.put("instanceName", i.getInstanceName());
                     row.put("currentRegion", i.getCurrentRegion());
-                    row.put("lockAcquiredAt", null);
+                    row.put("lockAcquiredAt", lockSince(i, findMigrations(i.getInstanceId())));
                     row.put("stale", isLockStale(i));
                     return row;
                 })

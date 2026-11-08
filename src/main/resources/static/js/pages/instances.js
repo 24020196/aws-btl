@@ -167,7 +167,7 @@ function filterInstancesUI() {
       <td><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></td>
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
       <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace;">${inst.flavor}</span></td>
-      <td><span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace;">${inst.securityGroup || 'sg-default'}</span></td>
+      <td>${(() => { const sgs = String(inst.securityGroup || 'sg-default').split(',').map(x => x.trim()).filter(Boolean); return `<span class="badge" style="background:#1e293b; color:#38bdf8; font-family:monospace;" title="${sgs.join(', ')}">${sgs[0]}${sgs.length > 1 ? ' +' + (sgs.length - 1) : ''}</span>`; })()}</td>
       <td><code>${inst.publicIp || 'Chưa gán'}</code></td>
       <td><code>${inst.privateIp}</code></td>
       <td><span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace;">🔑 ${inst.keyName || 'xregion-key'}</span></td>

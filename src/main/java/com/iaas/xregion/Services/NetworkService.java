@@ -1,21 +1,33 @@
 package com.iaas.xregion.Services;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iaas.xregion.Entity.InstanceEntity;
+import com.iaas.xregion.Entity.SecurityGroupEntity;
 import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.SecurityGroupRequest;
 import com.iaas.xregion.Model.Request.UpdateDnsRequest;
 import com.iaas.xregion.Model.Response.NetworkResponse;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NetworkService {
@@ -24,22 +36,23 @@ public class NetworkService {
     private static final List<String> DEFAULT_INSTANCE_GROUPS = List.of("sg-default", "sg-web-public");
 
     private final AuditLogService auditLogService;
+    private final DynamoDbEnhancedClient enhancedClient;
+    private final DynamoDbTable<InstanceEntity> instancesTable;
+    private final ObjectMapper objectMapper;
+
+    /** Bản ghi Route 53 người dùng tự cập nhật (ghi đè bản ghi sinh từ dns + elastic_ip của máy). */
     private final List<Map<String, Object>> dnsStore = new CopyOnWriteArrayList<>();
 
-    /** groupId -> security group (in-memory, like the DNS store). */
+    /** groupId -> security group. Bộ nhớ đệm của bảng XRegion-SecurityGroups (ghi xuống bảng mỗi lần đổi). */
     private final Map<String, Map<String, Object>> securityGroups = new ConcurrentHashMap<>();
 
-    /** instanceId -> attached group ids. Instances not in this map use DEFAULT_INSTANCE_GROUPS. */
-    private final Map<String, List<String>> instanceGroups = new ConcurrentHashMap<>();
+    @Value("${aws.dynamodb.table.security-groups:XRegion-SecurityGroups}")
+    private String securityGroupsTableName;
+
+    private DynamoDbTable<SecurityGroupEntity> securityGroupsTable;
+    private volatile boolean securityGroupsPersistent;
 
     {
-        Map<String, Object> dns1 = new HashMap<>();
-        dns1.put("domainName", "web01.xregion.net");
-        dns1.put("targetIp", "3.27.235.135");
-        dns1.put("ttl", 60);
-        dns1.put("status", "SYNCED");
-        dnsStore.add(dns1);
-
         seedGroup("sg-default", "default",
                 "Mặc định: các máy cùng Security Group được nói chuyện với nhau",
                 List.of(rule("all", 0, 65535, "sg-default", "Lưu lượng nội bộ giữa các máy cùng nhóm")));
@@ -87,6 +100,95 @@ public class NetworkService {
         sg.put("outboundRules", allowAllOutbound());
         sg.put("createdAt", System.currentTimeMillis());
         securityGroups.put(id, sg);
+    }
+
+    /**
+     * Nạp Security Group từ DynamoDB lúc khởi động. Chưa có bảng thì thử tạo (DynamoDB Local);
+     * không tạo được thì vẫn chạy bằng bộ nhớ như trước và ghi cảnh báo.
+     */
+    @PostConstruct
+    void initSecurityGroupStore() {
+        try {
+            securityGroupsTable = enhancedClient.table(securityGroupsTableName, TableSchema.fromBean(SecurityGroupEntity.class));
+            try {
+                securityGroupsTable.describeTable();
+            } catch (software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException missing) {
+                log.info("Table [{}] not found, creating it", securityGroupsTableName);
+                securityGroupsTable.createTable();
+            }
+            for (SecurityGroupEntity e : securityGroupsTable.scan().items()) {
+                securityGroups.put(e.getGroupId(), fromEntity(e));
+            }
+            securityGroupsPersistent = true;
+            for (String id : List.of("sg-default", "sg-web-public", "sg-ssh-only")) {
+                if (securityGroupsTable.getItem(Key.builder().partitionValue(id).build()) == null) {
+                    persist(securityGroups.get(id));
+                }
+            }
+            log.info("Security groups loaded from [{}]: {} group(s)", securityGroupsTableName, securityGroups.size());
+        } catch (Exception e) {
+            securityGroupsPersistent = false;
+            log.warn("Security groups will be kept in memory only (table [{}] unavailable: {})", securityGroupsTableName, e.getMessage());
+        }
+    }
+
+    private void persist(Map<String, Object> sg) {
+        if (!securityGroupsPersistent || sg == null) {
+            return;
+        }
+        try {
+            securityGroupsTable.putItem(toEntity(sg));
+        } catch (Exception e) {
+            log.warn("Could not save security group [{}]: {}", sg.get("groupId"), e.getMessage());
+        }
+    }
+
+    private SecurityGroupEntity toEntity(Map<String, Object> sg) throws Exception {
+        return SecurityGroupEntity.builder()
+                .groupId(String.valueOf(sg.get("groupId")))
+                .name(String.valueOf(sg.get("name")))
+                .description(String.valueOf(sg.getOrDefault("description", "")))
+                .region(String.valueOf(sg.getOrDefault("region", "all")))
+                .owner(String.valueOf(sg.get("owner")))
+                .inboundRulesJson(objectMapper.writeValueAsString(sg.get("inboundRules")))
+                .outboundRulesJson(objectMapper.writeValueAsString(sg.get("outboundRules")))
+                .createdAt(sg.get("createdAt") instanceof Number n ? n.longValue() : System.currentTimeMillis())
+                .build();
+    }
+
+    private Map<String, Object> fromEntity(SecurityGroupEntity e) throws Exception {
+        TypeReference<List<Map<String, Object>>> listType = new TypeReference<>() {};
+        Map<String, Object> sg = new LinkedHashMap<>();
+        sg.put("groupId", e.getGroupId());
+        sg.put("name", e.getName());
+        sg.put("description", e.getDescription());
+        sg.put("region", e.getRegion());
+        sg.put("owner", e.getOwner());
+        sg.put("inboundRules", new CopyOnWriteArrayList<>(e.getInboundRulesJson() != null
+                ? objectMapper.readValue(e.getInboundRulesJson(), listType) : List.of()));
+        sg.put("outboundRules", new CopyOnWriteArrayList<>(e.getOutboundRulesJson() != null
+                ? objectMapper.readValue(e.getOutboundRulesJson(), listType) : List.of()));
+        sg.put("createdAt", e.getCreatedAt());
+        return sg;
+    }
+
+    /** Nhóm đang gắn vào máy: lưu ở cột security_group của bảng Instances (nhiều nhóm cách nhau dấu phẩy). */
+    private List<String> attachedGroupIds(String instanceId) {
+        InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        String raw = inst != null ? inst.getSecurityGroup() : null;
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_INSTANCE_GROUPS;
+        }
+        List<String> ids = Arrays.stream(raw.split(",")).map(String::trim).filter(x -> !x.isEmpty()).distinct().collect(Collectors.toList());
+        return ids.isEmpty() ? DEFAULT_INSTANCE_GROUPS : ids;
+    }
+
+    private InstanceEntity ownedInstance(String instanceId, String user) {
+        InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        if (inst == null || (inst.getUsername() != null && !user.equalsIgnoreCase(inst.getUsername()))) {
+            throw new ResourceNotFoundException("Không tìm thấy máy ảo: " + instanceId);
+        }
+        return inst;
     }
 
     private String getCurrentUsername() {
@@ -143,8 +245,44 @@ public class NetworkService {
         return NetworkResponse.builder()
                 .vpcs(vpcs)
                 .floatingIps(fips)
-                .dnsRecords(new ArrayList<>(dnsStore))
+                .dnsRecords(dnsRecordsForCurrentUser())
                 .build();
+    }
+
+    /**
+     * Bản ghi A của Route 53 cho các máy của người dùng: sinh từ cột dns + elastic_ip của máy,
+     * bản ghi người dùng tự cập nhật (dnsStore) ghi đè lên.
+     */
+    private List<Map<String, Object>> dnsRecordsForCurrentUser() {
+        String user = getCurrentUsername();
+        Map<String, Map<String, Object>> records = new LinkedHashMap<>();
+        try {
+            for (InstanceEntity i : instancesTable.scan().items()) {
+                if (!user.equalsIgnoreCase(i.getUsername()) || i.getDns() == null || i.getDns().isBlank()
+                        || i.getElasticIp() == null || i.getElasticIp().isBlank()
+                        || "TERMINATED".equalsIgnoreCase(i.getCurrentStatus())) {
+                    continue;
+                }
+                Map<String, Object> r = new HashMap<>();
+                r.put("domainName", i.getDns());
+                r.put("targetIp", i.getElasticIp());
+                r.put("ttl", 60);
+                r.put("status", "SYNCED");
+                r.put("instanceId", i.getInstanceId());
+                records.put(i.getDns().toLowerCase(Locale.ROOT), r);
+            }
+        } catch (Exception e) {
+            log.warn("Could not read instances for DNS records: {}", e.getMessage());
+        }
+        for (Map<String, Object> manual : dnsStore) {
+            String key = String.valueOf(manual.get("domainName")).toLowerCase(Locale.ROOT);
+            if (records.containsKey(key)) {
+                Map<String, Object> merged = new HashMap<>(records.get(key));
+                merged.putAll(manual);
+                records.put(key, merged);
+            }
+        }
+        return new ArrayList<>(records.values());
     }
 
     public Map<String, Object> updateDnsRecord(UpdateDnsRequest request) {
@@ -171,7 +309,7 @@ public class NetworkService {
     public List<Map<String, Object>> getSecurityGroups(String instanceId) {
         String user = getCurrentUsername();
         if (instanceId != null && !instanceId.isBlank()) {
-            return instanceGroups.getOrDefault(instanceId.trim(), DEFAULT_INSTANCE_GROUPS).stream()
+            return attachedGroupIds(instanceId.trim()).stream()
                     .map(securityGroups::get)
                     .filter(Objects::nonNull)
                     .filter(sg -> visibleTo(sg, user))
@@ -230,6 +368,11 @@ public class NetworkService {
 
         if (created) {
             securityGroups.put(groupId, sg);
+        }
+        if (created || added > 0) {
+            persist(sg);
+        }
+        if (created) {
             auditLogService.logAction("SG_CREATE", "SECURITY_GROUP", groupId,
                     "Created security group " + sg.get("name") + " with " + added + " rule(s)");
         } else if (added > 0) {
@@ -240,10 +383,12 @@ public class NetworkService {
         String attachTo = request.getAttachInstanceId();
         if (attachTo != null && !attachTo.isBlank()) {
             String instanceId = attachTo.trim();
-            List<String> current = new ArrayList<>(instanceGroups.getOrDefault(instanceId, DEFAULT_INSTANCE_GROUPS));
+            InstanceEntity inst = ownedInstance(instanceId, user);
+            List<String> current = new ArrayList<>(attachedGroupIds(instanceId));
             if (!current.contains(groupId)) {
                 current.add(groupId);
-                instanceGroups.put(instanceId, current);
+                inst.setSecurityGroup(String.join(",", current));
+                instancesTable.putItem(inst);
                 auditLogService.logAction("SG_ATTACH", "INSTANCE", instanceId, "Attached security group " + groupId);
             }
         }
@@ -272,8 +417,10 @@ public class NetworkService {
         if (ids.size() > 5) {
             throw new AppException("Mỗi máy ảo gắn tối đa 5 Security Group");
         }
-        List<String> before = instanceGroups.getOrDefault(instanceId, DEFAULT_INSTANCE_GROUPS);
-        instanceGroups.put(instanceId, ids);
+        InstanceEntity inst = ownedInstance(instanceId, user);
+        List<String> before = attachedGroupIds(instanceId);
+        inst.setSecurityGroup(String.join(",", ids));
+        instancesTable.putItem(inst);
         auditLogService.logAction("SG_CHANGE", "INSTANCE", instanceId, "Security groups " + before + " -> " + ids);
         return getSecurityGroups(instanceId);
     }
@@ -331,6 +478,7 @@ public class NetworkService {
                 throw new ConflictException("Bạn chỉ xóa được rule do chính mình thêm.");
             }
             rules.remove(r);
+            persist(sg);
             auditLogService.logAction("SG_RULE_DELETE", "SECURITY_GROUP", groupId,
                     "Deleted " + key.replace("Rules", "") + " rule " + r.get("protocol") + " " + r.get("fromPort") + "-" + r.get("toPort") + " " + r.get("cidr"));
             return copyOf(sg);

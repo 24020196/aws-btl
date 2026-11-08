@@ -157,10 +157,11 @@
 
         <div class="rules-head">
           <h3 class="rules-title">Inbound rules <span class="muted" id="inboundCount"></span></h3>
+          <input type="search" class="rules-filter" id="ruleFilter" placeholder="Lọc rule (cổng, nguồn, mô tả…)" aria-label="Lọc rule inbound và outbound" oninput="renderSecurityGroups()">
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Nguồn</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Nguồn</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
             <tbody id="inboundRulesBody"></tbody>
           </table>
         </div>
@@ -171,7 +172,7 @@
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Đích</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Đích</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
             <tbody id="outboundRulesBody"></tbody>
           </table>
         </div>
@@ -253,7 +254,7 @@
       <div class="card-header mon-head">
         <div>
           <div class="card-title" id="monTitle">Chỉ số 1 giờ qua</div>
-          <div class="card-sub">Chu kỳ <span id="monPeriod">5 phút</span>, giống CloudWatch. Cập nhật lúc <span id="monUpdated">–</span>.</div>
+          <div class="card-sub">Basic monitoring, chu kỳ <span id="monPeriod">5 phút</span> như CloudWatch. Cập nhật lúc <span id="monUpdated">–</span>. <span class="sim-badge" title="Chỉ số được sinh mô phỏng ở backend (MonitoringService), chưa đọc từ CloudWatch thật">Dữ liệu mô phỏng</span></div>
         </div>
         <div class="mon-controls">
           <div class="seg" role="group" aria-label="Khoảng thời gian">
@@ -303,7 +304,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card pipe-card" id="migPipelineCard" tabindex="-1" aria-label="Tiến trình chuyển vùng">
         <div class="card-header">
           <div>
             <div class="card-title">Tiến trình chuyển vùng (6 bước)</div>
@@ -344,9 +345,10 @@
 
   <!-- MODAL: confirm migration -->
   <div class="modal-overlay" id="migrateModal" role="dialog" aria-modal="true" aria-labelledby="migrateModalTitle">
-    <div class="modal-card" style="max-width: 520px;">
+    <div class="modal-card" style="max-width: 640px;">
       <h2 class="modal-title" id="migrateModalTitle">Chuyển vùng máy ảo?</h2>
       <p class="modal-text" id="migrateModalText"></p>
+      <div class="mig-facts" id="migrateModalFacts"></div>
       <ul class="modal-list">
         <li>Máy nguồn dừng trong lúc tạo snapshot cuối, dịch vụ tạm gián đoạn.</li>
         <li>Elastic IP mới được cấp ở vùng đích, bản ghi Route 53 tự trỏ sang.</li>
