@@ -177,6 +177,7 @@ async function initInstanceDetail() {
     return;
   }
   setText('breadcrumbInstanceId', det.id);
+  setText('detInstanceId', det.id);
 
   const ok = await loadInstance();
   if (!ok) return;
@@ -211,9 +212,9 @@ function renderLoadFailure(err) {
   clearApiError();
   const msg = String((err && err.message) || '');
   const notFound = !det.id || /not found|không tìm thấy|404/i.test(msg);
-  const main = document.querySelector('main.main-content');
+  const main = document.querySelector('main.app-main');
   if (!main) return;
-  [...main.children].forEach(el => { if (!el.classList.contains('breadcrumb')) el.hidden = true; });
+  [...main.children].forEach(el => { if (!el.classList.contains('breadcrumb') && el.id !== 'apiErrorBanner') el.hidden = true; });
   setText('breadcrumbInstanceId', det.id || '–');
   document.title = (notFound ? 'Không tìm thấy máy ảo' : 'Lỗi tải máy ảo') + ' | XRegion-EC2';
   const box = document.createElement('section');
@@ -259,9 +260,12 @@ function renderInstance() {
   const inst = det.inst;
   const spec = FLAVOR_SPECS[inst.flavor];
 
-  setText('detInstanceName', inst.name || inst.id);
+  setText('detInstanceName', inst.name ? `(${inst.name})` : '');
   setText('detInstanceId', inst.id);
-  setText('detRegionName', `${regionLabel(inst.region)} (${inst.region})`);
+  setText('breadcrumbInstanceId', inst.id);
+  setHtml('detRegionName', regionTag(inst.region));
+  setText('detUpdated', t('Cập nhật lúc ', 'Updated ') + new Date().toLocaleTimeString(getLang() === 'en' ? 'en-US' : 'vi-VN', { hour12: false }));
+  document.title = `${inst.name || inst.id} | Instance summary - XRegion-EC2`;
   document.getElementById('detStatusBadge').outerHTML = stateTag(inst.status).replace('class="ec2-state', 'id="detStatusBadge" class="ec2-state');
 
   // Summary strip
@@ -274,6 +278,9 @@ function renderInstance() {
   setText('sumDns', inst.dnsDomain || '–');
   setText('sumKey', inst.keyName || '–');
   setHtml('sumChecks', statusChecks(inst.status));
+  setText('sumAmi', inst.imageName || inst.imageId || '–');
+  setText('sumLaunch', inst.createdAt ? fmtTime(inst.createdAt) : '–');
+  setText('sumOwner', inst.username || inst.owner || '–');
 
   setText('detSeries', spec && spec.series ? spec.series : '');
   setText('detName', inst.name || '–');
