@@ -195,8 +195,6 @@ function filterInstancesUI() {
     tr.id = `row-${inst.id}`;
     if (isSelected) tr.classList.add('row-selected');
 
-    // Thêm icon spinner trước tên trạng thái nếu đang chuyển tiếp
-    const transitionSpinner = isTrans ? `<span style="margin-right: 4px;">${ICON('ui-spinner', 'ico-xs ico-spin')}</span>` : '';
 
     tr.innerHTML = `
       <td style="text-align: center;" onclick="event.stopPropagation()">
@@ -216,9 +214,7 @@ function filterInstancesUI() {
         </div>
       </td>
       <td>
-        <span class="badge ${cfg.cssClass}">
-          ${transitionSpinner}<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}
-        </span>
+        ${instanceStateBadge(inst.status)}
       </td>
       <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace; text-transform: none; letter-spacing: 0;">${inst.flavor}</span></td>
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
@@ -244,6 +240,23 @@ function filterInstancesUI() {
 
   const selectedInFiltered = filtered.filter(i => selectedInstanceIds.has(i.id)).length;
   updateMasterCheckbox(selectedInFiltered, filtered.length);
+}
+
+// Badge trạng thái giống trang chi tiết và trang chủ: class ec2-state (status-badges.css) + nhãn i18n dùng chung st*
+const INSTANCE_STATE_UI = {
+  RUNNING: ['state-running', 'stRunning'], ACTIVE: ['state-running', 'stRunning'],
+  STOPPED: ['state-stopped', 'stStopped'], SHUTOFF: ['state-stopped', 'stStopped'],
+  PENDING: ['state-pending', 'stPending'], STOPPING: ['state-stopping', 'stStopping'],
+  REBOOTING: ['state-rebooting', 'stRebooting'], SHUTTING_DOWN: ['state-shutting-down', 'stShuttingDown'],
+  TERMINATING: ['state-shutting-down', 'stShuttingDown'], TERMINATED: ['state-terminated', 'stTerminated'],
+  MIGRATING: ['state-migrating', 'stMigrating']
+};
+
+function instanceStateBadge(status) {
+  const key = String(status || '').toUpperCase();
+  const [cls, label] = INSTANCE_STATE_UI[key] || ['state-error', ''];
+  const spin = getStatusBadgeConfig(status).isTransitioning ? ICON('ui-spinner', 'ico-xs ico-spin') + ' ' : '';
+  return `<span class="ec2-state ${cls}" style="white-space: nowrap;">${spin}${label ? tk(label) : (status || 'unknown')}</span>`;
 }
 
 function renderSecurityGroupBadge(sgString) {
@@ -479,7 +492,7 @@ function renderSplitDetailsTab(inst) {
     </div>
     <div class="split-kv-item">
       <div class="split-kv-label">${t('Trạng thái', 'Instance state')}</div>
-      <div class="split-kv-value"><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></div>
+      <div class="split-kv-value">${instanceStateBadge(inst.status)}</div>
     </div>
     <div class="split-kv-item">
       <div class="split-kv-label">${t('Loại cấu hình', 'Instance type')}</div>
