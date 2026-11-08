@@ -14,3 +14,16 @@
 .lfw-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 14px !important; }
 .lfw-warn { margin-top: 8px; }
 .lfw-modal { max-width: 560px; }
+
+/* Hộp "Sửa Security Group" ở trang Máy ảo (instances-sg-editor.js) */
+.sge-modal { max-width: 920px; width: 100%; max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.sge-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.sge-head .modal-title { margin-bottom: 4px; }
+.sge-target { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.sge-detail { font-size: 13px; white-space: nowrap; }
+.sge-body { overflow-y: auto; min-height: 0; flex: 1; }
+.sge-body .table-wrap { overflow-x: auto; }
+.sge-body .lfw-head h3 { display: flex; gap: 6px; align-items: baseline; }
+@media (max-width: 600px) {
+  .sge-modal { padding: 16px; }
+}
