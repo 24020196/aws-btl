@@ -367,13 +367,59 @@ function updateSelectionToolbar() {
 
   // Nút Instance State sáng khi chọn >= 1 máy ảo
   if (btnState) btnState.disabled = (count === 0);
+  updateStateMenuItems();
+}
+
+// Máy nào được Start / Stop / Reboot / Terminate (giống trang chi tiết: máy đang chạy thì khóa Start...)
+const ACTION_ALLOWED_FROM = {
+  START: ['STOPPED', 'SHUTOFF'],
+  STOP: ['RUNNING', 'ACTIVE'],
+  REBOOT: ['RUNNING', 'ACTIVE'],
+  TERMINATE: ['RUNNING', 'ACTIVE', 'STOPPED', 'SHUTOFF', 'ERROR']
+};
+
+function selectedInstancesFor(action) {
+  const allowed = ACTION_ALLOWED_FROM[action] || [];
+  return Array.from(selectedInstanceIds)
+    .map(id => cachedInstances.find(i => i.id === id))
+    .filter(i => i && allowed.includes(String(i.status || '').toUpperCase()));
+}
+
+function actionDisabledReason(action) {
+  if (selectedInstanceIds.size === 0) return t('Chọn ít nhất một máy ảo', 'Select at least one instance');
+  if (selectedInstancesFor(action).length > 0) return '';
+  return {
+    START: t('Các máy đã chọn đang chạy hoặc đang chuyển trạng thái', 'The selected instances are already running or changing state'),
+    STOP: t('Các máy đã chọn đã dừng hoặc đang chuyển trạng thái', 'The selected instances are already stopped or changing state'),
+    REBOOT: t('Chỉ reboot được máy đang chạy', 'Only running instances can be rebooted'),
+    TERMINATE: t('Các máy đã chọn đang chuyển trạng thái hoặc đã xóa', 'The selected instances are changing state or terminated')
+  }[action];
+}
+
+// Khóa / mở từng mục trong menu "Trạng thái máy ảo" và các nút trong khung chọn nhiều máy
+function updateStateMenuItems() {
+  document.querySelectorAll('#instanceStateDropdown [onclick^="handleBulkAction"], #splitBulkSummary [onclick^="handleBulkAction"]').forEach(btn => {
+    const action = (btn.getAttribute('onclick').match(/'([A-Z]+)'/) || [])[1];
+    const reason = actionDisabledReason(action);
+    btn.disabled = !!reason;
+    btn.title = reason || '';
+  });
 }
 
 // 7. Thao tác hàng loạt (Bulk Actions)
 async function handleBulkAction(action) {
   closeAllDropdowns();
-  const ids = Array.from(selectedInstanceIds);
-  if (ids.length === 0) return;
+  // Chỉ gửi lệnh cho máy đang ở trạng thái hợp lệ; máy khác bỏ qua và báo lại
+  const eligible = selectedInstancesFor(action);
+  const skipped = selectedInstanceIds.size - eligible.length;
+  if (eligible.length === 0) {
+    showToast(actionDisabledReason(action), 'error');
+    return;
+  }
+  if (skipped > 0) {
+    showToast(t(`Bỏ qua ${skipped} máy không ở trạng thái phù hợp`, `Skipping ${skipped} instance(s) in an incompatible state`), 'info');
+  }
+  const ids = eligible.map(i => i.id);
 
   const actionNameMap = {
     'START': t('Khởi động', 'Start'),
@@ -635,6 +681,7 @@ function renderSplitBulkSummary(count) {
       </button>
     </div>
   `;
+  updateStateMenuItems();
 }
 
 function closeSplitPane() {
@@ -674,6 +721,7 @@ function toggleStateDropdown(ev) {
   const drop = document.getElementById('instanceStateDropdown');
   const actDrop = document.getElementById('actionsDropdown');
   if (actDrop) actDrop.classList.remove('show');
+  updateStateMenuItems();
   if (drop) drop.classList.toggle('show');
 }
 
