@@ -1,83 +1,52 @@
-// Chỉ dùng cho login.html (trước đây viết thẳng trong thẻ <script> cuối trang).
+// Chỉ dùng cho login.html
 
 (function () {
   const existingToken = localStorage.getItem('xregion_jwt');
   const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
   if (existingToken && (!expAt || Date.now() < expAt)) {
-    window.location.replace('/index.html');
+    window.location.replace('/instances.html');
   }
 
   const savedUser = localStorage.getItem('xregion_last_username');
   if (savedUser) {
-    document.getElementById('authUsername').value = savedUser;
+    const userInput = document.getElementById('authUsername');
+    if (userInput) userInput.value = savedUser;
   }
 })();
 
-const LOGIN_I18N = {
-  vi: {
-    brandSubtitle: 'Hệ Thống Quản Trị Máy Ảo Đa Vùng',
-    signInHeading: 'Đăng nhập người dùng',
-    signInDesc: 'Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn',
-    troubleTitle: 'Tài khoản mặc định để thử nghiệm:',
-    troubleAutoFill: 'Bấm vào đây để tự động điền admin / admin123',
-    labelUsername: 'Tên đăng nhập',
-    rememberAccount: 'Ghi nhớ tài khoản này',
-    labelPassword: 'Mật khẩu',
-    showPassword: 'Hiển thị mật khẩu',
-    havingTrouble: 'Tài khoản mẫu?',
-    signInBtn: 'Đăng nhập',
-    signingInBtn: 'Đang đăng nhập...',
-    orDivider: 'Chưa có tài khoản?',
-    createAccountLink: 'Tạo tài khoản mới',
-    promoHeadline: 'Triển khai & chuyển vùng máy ảo chỉ trong vài phút.',
-    promoSubtext: 'Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ tầng.',
-    promoCta: 'Bắt đầu trải nghiệm ngay',
-    footerPrivacy: 'Bảo mật',
-    footerTerms: 'Điều khoản sử dụng',
-    footerSwitchLang: '🌐 Switch to English',
-    loginSuccessToast: 'Đăng nhập thành công! Đang chuyển hướng...',
-    loginErrorPrefix: 'Lỗi đăng nhập:'
-  },
-  en: {
-    brandSubtitle: 'Multi-Region Cloud Console',
-    signInHeading: 'User sign in',
-    signInDesc: 'Sign in to manage your virtual machines and cloud infrastructure',
-    troubleTitle: 'Default demo credentials:',
-    troubleAutoFill: 'Click here to auto-fill admin / admin123',
-    labelUsername: 'Username',
-    rememberAccount: 'Remember this account',
-    labelPassword: 'Password',
-    showPassword: 'Show Password',
-    havingTrouble: 'Demo account?',
-    signInBtn: 'Sign in',
-    signingInBtn: 'Signing in...',
-    orDivider: 'New to XRegion?',
-    createAccountLink: 'Create a new account',
-    promoHeadline: 'Deploy & migrate virtual machines in minutes.',
-    promoSubtext: 'Manage VM lifecycles intuitively with automated disk replication and instant cross-region failover.',
-    promoCta: 'Get started now',
-    footerPrivacy: 'Privacy',
-    footerTerms: 'Terms of Use',
-    footerSwitchLang: '🌐 Chuyển sang Tiếng Việt',
-    loginSuccessToast: 'Signed in successfully! Redirecting...',
-    loginErrorPrefix: 'Sign-in error:'
-  }
-};
+// Đăng ký từ điển i18n cho trang đăng nhập
+registerI18n({
+  brandSubtitle: ['Hệ Thống Quản Trị Máy Ảo Đa Vùng', 'Multi-Region Cloud Console'],
+  signInHeading: ['Đăng nhập người dùng', 'User sign in'],
+  signInDesc: ['Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn', 'Sign in to manage your virtual machines and cloud infrastructure'],
+  troubleTitle: ['Tài khoản mặc định để thử nghiệm:', 'Default demo credentials:'],
+  troubleAutoFill: ['Bấm vào đây để tự động điền admin / admin123', 'Click here to auto-fill admin / admin123'],
+  labelUsername: ['Tên đăng nhập', 'Username'],
+  rememberAccount: ['Ghi nhớ tài khoản này', 'Remember this account'],
+  labelPassword: ['Mật khẩu', 'Password'],
+  showPassword: ['Hiển thị mật khẩu', 'Show Password'],
+  havingTrouble: ['Tài khoản mẫu?', 'Demo account?'],
+  signInBtn: ['Đăng nhập', 'Sign in'],
+  signingInBtn: ['Đang đăng nhập...', 'Signing in...'],
+  orDivider: ['Chưa có tài khoản?', 'New to XRegion?'],
+  createAccountLink: ['Tạo tài khoản mới', 'Create a new account'],
+  promoHeadline: ['Triển khai & chuyển vùng máy ảo chỉ trong vài phút.', 'Deploy & migrate virtual machines in minutes.'],
+  promoSubtext: [
+    'Quản lý vòng đời máy ảo trực quan, tự động sao lưu ổ đĩa và chuyển đổi vùng dự phòng tức thì khi có sự cố hạ tầng.',
+    'Manage VM lifecycles intuitively with automated disk replication and instant cross-region failover.'
+  ],
+  promoCta: ['Bắt đầu trải nghiệm ngay', 'Get started now'],
+  footerPrivacy: ['Bảo mật', 'Privacy'],
+  footerTerms: ['Điều khoản sử dụng', 'Terms of Use'],
+  footerSwitchLang: ['Switch to English', 'Chuyển sang Tiếng Việt'],
+  loginSuccessToast: ['Đăng nhập thành công! Đang chuyển hướng...', 'Signed in successfully! Redirecting...'],
+  loginErrorPrefix: ['Lỗi đăng nhập:', 'Sign-in error:']
+});
 
-function changeXrLanguage(lang) {
-  const targetLang = LOGIN_I18N[lang] ? lang : 'vi';
-  localStorage.setItem('xregion_lang', targetLang);
+onLangChange(lang => {
   const select = document.getElementById('xrLangSelect');
-  if (select) select.value = targetLang;
-
-  const dict = LOGIN_I18N[targetLang];
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (dict[key]) {
-      el.innerHTML = dict[key];
-    }
-  });
-}
+  if (select) select.value = lang;
+});
 
 function toggleShowLoginPassword(show) {
   const passInput = document.getElementById('authPassword');
@@ -96,23 +65,19 @@ function toggleTroubleBox() {
 function fillDefaultAdminCredentials() {
   document.getElementById('authUsername').value = 'admin';
   document.getElementById('authPassword').value = 'admin123';
-  showToast('Đã điền tài khoản mặc định: admin / admin123', 'success');
+  showToast(t('Đã điền tài khoản mặc định: admin / admin123', 'Filled demo account: admin / admin123'), 'success');
 }
-
-changeXrLanguage(localStorage.getItem('xregion_lang') || 'vi');
 
 async function handleLoginPageSubmit(e) {
   e.preventDefault();
-  const lang = localStorage.getItem('xregion_lang') || 'vi';
-  const dict = LOGIN_I18N[lang] || LOGIN_I18N.vi;
 
   const errBox = document.getElementById('loginErrorBox');
   errBox.style.display = 'none';
 
   const btn = document.getElementById('loginBtn');
-  const origText = dict.signInBtn;
+  const origText = tk('signInBtn');
   btn.disabled = true;
-  btn.textContent = dict.signingInBtn;
+  btn.textContent = tk('signingInBtn');
 
   const username = document.getElementById('authUsername').value.trim();
   const password = document.getElementById('authPassword').value;
@@ -137,15 +102,16 @@ async function handleLoginPageSubmit(e) {
       localStorage.setItem('xregion_jwt', data.data.token);
       localStorage.setItem('xregion_user', data.data.fullName || username);
       localStorage.setItem('xregion_jwt_expires_at', String(expiresAt));
-      showToast(dict.loginSuccessToast, 'success');
+      showToast(tk('loginSuccessToast'), 'success');
       setTimeout(() => {
-        window.location.replace('/index.html');
+        window.location.replace('/instances.html');
       }, 500);
     } else {
-      throw new Error(data.message || 'Sai tên đăng nhập hoặc mật khẩu.');
+      throw new Error(data.message || t('Sai tên đăng nhập hoặc mật khẩu.', 'Invalid username or password.'));
     }
   } catch (err) {
-    errBox.innerHTML = `<strong>⚠️ ${dict.loginErrorPrefix}</strong> ${err.message}`;
+    const iconWarn = typeof ICON === 'function' ? ICON('ui-warning', 'ico-warning') : '';
+    errBox.innerHTML = `<strong>${iconWarn} ${tk('loginErrorPrefix')}</strong> ${err.message}`;
     errBox.style.display = 'block';
     showToast(err.message, 'error');
   } finally {

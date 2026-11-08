@@ -24,6 +24,8 @@ Mọi trang vẫn chỉ nạp **một** file `css/dashboard.css`. File này gi�
 | 13 | `overview-migration.css` | Khung tóm tắt chuyển vùng trên trang chủ | Lực |
 | 14 | `actions-menu.css` | Menu "Hành động" nhiều cấp | Cường |
 | 15 | `header-extras.css` | Ô chọn ngôn ngữ, co giãn header trên điện thoại | **Dùng chung** |
+| 16 | `base/icons.css` | Class thư viện icon (.ico, .ico-sm, .svc-tile...) | **Dùng chung** |
+| 17 | `base/sidebar.css` | Khung .app-shell, .app-sidebar, .breadcrumb, .page-header | **Dùng chung** |
 
 Thứ tự import quyết định CSS nào ghi đè CSS nào, **không đổi thứ tự** nếu chưa kiểm tra lại giao diện.
 
@@ -34,11 +36,12 @@ Thêm CSS cho trang mình thì viết vào file của trang đó. Cần file m�
 ## JavaScript (`js/`)
 
 ```
-js/core/ui.js            FLAVOR_SPECS, openModal/closeModal, showApiError/clearApiError, showToast, getStatusBadgeConfig
+js/core/ui.js            FLAVOR_SPECS, openModal/closeModal, showApiError/clearApiError, showToast, getStatusBadgeConfig, ICON(id, cls)
 js/core/api.js           apiRequest
 js/core/session.js       biến toàn cục (API_BASE, authToken...), chặn trang khi chưa đăng nhập, đồng bộ giờ server, tự đăng xuất
 js/core/auth.js          đăng nhập, đăng ký, đăng xuất
-js/core/i18n.js          song ngữ Việt/Anh (t, setGlobalLang, applyPageTranslations), badge người dùng
+js/core/i18n.js          song ngữ Việt/Anh (registerI18n, tk, onLangChange, setGlobalLang, applyPageTranslations), badge người dùng
+js/core/sidebar.js       sidebar navigation kiểu AWS Console (tự động render vào <aside id="appSidebar">)
 js/pages/overview.js           trang chủ                (index.html)
 js/pages/overview-migration.js khung chuyển vùng trang chủ (index.html)      — Lực
 js/pages/instances.js          danh sách máy ảo         (instances.html)     — Duy Anh
@@ -57,7 +60,7 @@ js/pages/account-tokens.js         trang Tài khoản & API Token — Cường
 
 ### Thứ tự nạp (đã có sẵn trong từng file HTML)
 
-Mọi trang nạp 5 file core theo thứ tự:
+Mọi trang nạp các file core theo thứ tự (các trang có sidebar nạp thêm `sidebar.js` trước file của trang):
 
 ```html
 <script src="/js/core/ui.js"></script>
@@ -65,6 +68,7 @@ Mọi trang nạp 5 file core theo thứ tự:
 <script src="/js/core/session.js"></script>
 <script src="/js/core/auth.js"></script>
 <script src="/js/core/i18n.js"></script>
+<script src="/js/core/sidebar.js"></script>
 ```
 
 `ui.js` và `api.js` phải đứng **trước** `session.js`, vì `session.js` chạy kiểm tra đăng nhập ngay khi nạp và có thể gọi `showToast`.

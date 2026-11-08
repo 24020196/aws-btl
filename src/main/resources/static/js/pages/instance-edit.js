@@ -396,7 +396,7 @@ async function handleEditInstanceSubmit(e) {
     }, 600);
   } catch (err) {
     if (errBox) {
-      errBox.innerHTML = `<strong>❌ Lỗi cập nhật:</strong><br>${err.message}`;
+      errBox.innerHTML = `<strong>${ICON('ui-error', 'ico-danger')} ${t('Lỗi cập nhật:', 'Update error:')}</strong><br>${err.message}`;
       errBox.style.display = 'block';
     }
     showToast(`Lỗi cập nhật: ${err.message}`, 'error');

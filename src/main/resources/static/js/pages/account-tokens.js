@@ -1,9 +1,69 @@
-// Chỉ dùng cho account-tokens.html (trước đây viết thẳng trong thẻ <script> cuối trang).
+// Chỉ dùng cho account-tokens.html
 
 let currentNewToken = '';
 
+// Đăng ký từ điển i18n riêng cho trang Account & Tokens
+registerI18n({
+  tokensBreadcrumb: ['Tài Khoản & API Token', 'Account & API Tokens'],
+  tokensPageTitle: ['Quản Lý Tài Khoản & API Token Xác Thực', 'Account & Personal Access Tokens'],
+  tokensPageSubtitle: [
+    'Quản lý tài khoản quản trị và cấp phát API Token độc lập để xác thực an toàn qua AWS API Gateway (Edge-Optimized).',
+    'Manage administrative account credentials and provision personal access tokens for secure AWS API Gateway requests.'
+  ],
+  tokensProfileHeading: ['Thông Tin Tài Khoản', 'Account Profile'],
+  tokensLabelUsername: ['Tên đăng nhập:', 'Username:'],
+  tokensLabelFullName: ['Họ và tên:', 'Full name:'],
+  tokensLabelRole: ['Vai trò (Role):', 'Role:'],
+  tokensLabelCreatedAt: ['Ngày khởi tạo:', 'Created at:'],
+  tokensChangePassHeading: ['Đổi Mật Khẩu', 'Change Password'],
+  tokensOldPassLabel: ['Mật khẩu hiện tại', 'Current password'],
+  tokensOldPassPlaceholder: ['Nhập mật khẩu hiện tại', 'Enter current password'],
+  tokensNewPassLabel: ['Mật khẩu mới', 'New password'],
+  tokensNewPassPlaceholder: ['Nhập mật khẩu mới', 'Enter new password'],
+  tokensUpdatePassBtn: ['Cập Nhật Mật Khẩu', 'Update Password'],
+  tokensCreateHeading: ['Tạo API Token Xác Thực Mới', 'Generate New Personal Access Token'],
+  tokensCreateDesc: [
+    'API Token được tạo riêng biệt với phiên đăng nhập Web Dashboard, lưu trữ vào DynamoDB và dùng để gọi trực tiếp các dịch vụ qua AWS API Gateway (Edge-Optimized).',
+    'Personal API tokens are stored in DynamoDB and used to authenticate direct API requests via AWS API Gateway (Edge-Optimized).'
+  ],
+  tokensNameLabel: ['Tên gợi nhớ của Token', 'Token Name / Description'],
+  tokensNamePlaceholder: ['Ví dụ: CI/CD Deployment, CLI Tool, Monitoring System', 'e.g. CI/CD Deployment, CLI Tool, Monitoring System'],
+  tokensDurationLabel: ['Thời hạn hiệu lực', 'Expiration'],
+  tokensOpt1Month: ['1 Tháng (30 ngày)', '1 Month (30 days)'],
+  tokensOpt3Months: ['3 Tháng (90 ngày)', '3 Months (90 days)'],
+  tokensOpt6Months: ['6 Tháng (180 ngày)', '6 Months (180 days)'],
+  tokensOptForever: ['Không thời hạn (No Date / Vĩnh viễn)', 'No Expiration (Never expires)'],
+  tokensSubmitBtn: ['+ Sinh API Token Mới', '+ Generate New Token'],
+  tokensCreatedSuccess: ['API Token của bạn đã được khởi tạo thành công!', 'Your API token has been generated successfully!'],
+  tokensCopyBtn: ['Sao Chép Token', 'Copy Token'],
+  tokensCopyWarning: [
+    'Vui lòng sao chép token ngay bây giờ. Token này sẽ được sử dụng trong header Authorization: Bearer <TOKEN>.',
+    'Please copy the token now. It will be used in the header Authorization: Bearer <TOKEN>.'
+  ],
+  tokensTableHeading: ['Danh Sách API Token Đã Cấp Phát', 'Issued API Access Tokens'],
+  tokensColName: ['TÊN TOKEN', 'TOKEN NAME'],
+  tokensColId: ['TOKEN ID', 'TOKEN ID'],
+  tokensColPrefix: ['MÃ TOKEN (TRÍCH XUẤT)', 'TOKEN PREFIX'],
+  tokensColCreated: ['NGÀY TẠO', 'CREATED AT'],
+  tokensColExpiry: ['HẠN DÙNG', 'EXPIRES AT'],
+  tokensColStatus: ['TRẠNG THÁI', 'STATUS'],
+  tokensColActions: ['THAO TÁC', 'ACTIONS'],
+  tokensLoading: ['Đang tải danh sách token...', 'Loading tokens list...'],
+  tokensEmpty: ['Chưa có API Token nào. Hãy tạo token mới ở trên!', 'No API tokens found. Generate a new token above!'],
+  tokensStatusActive: ['Hoạt động', 'Active'],
+  tokensStatusRevoked: ['Đã thu hồi', 'Revoked'],
+  tokensStatusExpired: ['Đã hết hạn', 'Expired'],
+  tokensNeverExpires: ['Không thời hạn (Vĩnh viễn)', 'Never expires'],
+  tokensRevokeBtn: ['Thu hồi', 'Revoke'],
+  tokensCurlHeading: ['Hướng Dẫn Gọi AWS API Gateway (Edge-Optimized)', 'AWS API Gateway (Edge-Optimized) cURL Guide'],
+  tokensCurlDesc: [
+    'Endpoint đã được tối ưu hóa toàn cầu qua mạng CloudFront Edge. Sử dụng lệnh cURL sau để gửi sự kiện vào Amazon EventBridge:',
+    'Global edge-optimized endpoint via CloudFront. Use the following cURL command to publish lifecycle events to Amazon EventBridge:'
+  ]
+});
+
 document.addEventListener('DOMContentLoaded', () => {
-  initUserBadge();
+  renderUserBadge();
   loadUserProfile();
   loadUserTokens();
 });
@@ -25,7 +85,7 @@ async function loadUserProfile() {
       document.getElementById('profUsername').textContent = u.username || 'admin';
       document.getElementById('profFullName').textContent = u.fullName || u.username || 'Administrator';
       document.getElementById('profRole').textContent = u.role || 'ROLE_ADMIN';
-      document.getElementById('profCreatedAt').textContent = u.createdAt ? new Date(u.createdAt).toLocaleString('vi-VN') : 'Mặc định';
+      document.getElementById('profCreatedAt').textContent = u.createdAt ? new Date(u.createdAt).toLocaleString('vi-VN') : tk('tokensStatusActive', 'Mặc định');
     }
   } catch (e) {
     console.error('Lỗi tải thông tin user:', e);
@@ -43,22 +103,22 @@ async function loadUserTokens() {
     if (res.ok && data.data) {
       const list = data.data;
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Chưa có API Token nào. Hãy tạo token mới ở trên!</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">${tk('tokensEmpty', 'Chưa có API Token nào. Hãy tạo token mới ở trên!')}</td></tr>`;
         return;
       }
 
       const now = Date.now();
       tbody.innerHTML = list.map(t => {
         const isExpired = t.expires_at > 0 && now > t.expires_at;
-        let statusBadge = '<span class="badge-status-active">Hoạt động</span>';
+        let statusBadge = `<span class="badge-status-active">${tk('tokensStatusActive', 'Hoạt động')}</span>`;
         if (!t.active) {
-          statusBadge = '<span class="badge-status-revoked">Đã thu hồi</span>';
+          statusBadge = `<span class="badge-status-revoked">${tk('tokensStatusRevoked', 'Đã thu hồi')}</span>`;
         } else if (isExpired) {
-          statusBadge = '<span class="badge-status-expired">Đã hết hạn</span>';
+          statusBadge = `<span class="badge-status-expired">${tk('tokensStatusExpired', 'Đã hết hạn')}</span>`;
         }
 
         const expiryText = (t.expires_at === 0 || !t.expires_at)
-          ? 'Không thời hạn (Vĩnh viễn)'
+          ? tk('tokensNeverExpires', 'Không thời hạn (Vĩnh viễn)')
           : new Date(t.expires_at).toLocaleDateString('vi-VN');
 
         const tokenMasked = t.token ? (t.token.substring(0, 15) + '...' + t.token.substring(t.token.length - 8)) : '***';
@@ -72,8 +132,8 @@ async function loadUserTokens() {
             <td>${expiryText}</td>
             <td>${statusBadge}</td>
             <td style="text-align: right;">
-              ${t.token ? `<button class="btn btn-secondary" onclick="copyTokenText('${t.token}')" style="padding: 3px 8px; font-size: 11px; margin-right: 4px;">Copy</button>` : ''}
-              ${t.active ? `<button class="btn btn-secondary" onclick="revokeToken('${t.token_id}')" style="padding: 3px 8px; font-size: 11px; color: #ef4444;">Thu hồi</button>` : ''}
+              ${t.token ? `<button class="btn btn-secondary btn-sm" onclick="copyTokenText('${t.token}')" style="margin-right: 4px;">${ICON('ui-copy', 'ico-xs')} ${tk('commonCopy', 'Copy')}</button>` : ''}
+              ${t.active ? `<button class="btn btn-secondary btn-sm" onclick="revokeToken('${t.token_id}')" style="color: #ef4444;">${ICON('ui-trash', 'ico-xs')} ${tk('tokensRevokeBtn', 'Thu hồi')}</button>` : ''}
             </td>
           </tr>
         `;
@@ -106,7 +166,7 @@ async function submitCreateToken(e) {
       document.getElementById('newGeneratedTokenCode').textContent = currentNewToken;
       document.getElementById('tokenDisplayBox').style.display = 'block';
       document.getElementById('tokenName').value = '';
-      showToast('Đã tạo API Token mới thành công!', 'success');
+      showToast(tk('tokensCreatedSuccess', 'Đã tạo API Token mới thành công!'), 'success');
       loadUserTokens();
     } else {
       alert('Lỗi tạo token: ' + (data.message || 'Không xác định'));
@@ -119,13 +179,13 @@ async function submitCreateToken(e) {
 function copyNewToken() {
   if (currentNewToken) {
     navigator.clipboard.writeText(currentNewToken);
-    showToast('Đã sao chép API Token vào Clipboard!', 'success');
+    showToast(tk('commonCopied', 'Đã sao chép API Token vào Clipboard!'), 'success');
   }
 }
 
 function copyTokenText(tokenVal) {
   navigator.clipboard.writeText(tokenVal);
-  showToast('Đã sao chép token vào Clipboard!', 'success');
+  showToast(tk('commonCopied', 'Đã sao chép token vào Clipboard!'), 'success');
 }
 
 async function revokeToken(tokenId) {
@@ -176,22 +236,5 @@ async function submitChangePassword(e) {
     }
   } catch (e) {
     alert('Lỗi: ' + e.message);
-  }
-}
-
-function initUserBadge() {
-  const container = document.getElementById('userBadgeContainer');
-  const token = localStorage.getItem('xregion_jwt');
-  if (container) {
-    if (token) {
-      container.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 13px; color: var(--text-main); font-weight: 500;">admin</span>
-          <button onclick="logout()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">Đăng xuất</button>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `<a href="/login.html" class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; text-decoration: none;">Đăng nhập</a>`;
-    }
   }
 }
