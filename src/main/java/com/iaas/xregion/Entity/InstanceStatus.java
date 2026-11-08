@@ -8,6 +8,7 @@ public enum InstanceStatus {
     REBOOTING,
     SHUTTING_DOWN,
     TERMINATED,
+    FAILED,
     MIGRATING
 }
 
