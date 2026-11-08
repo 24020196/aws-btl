@@ -13,6 +13,7 @@
   <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/pages/instances.css">
+  <link rel="stylesheet" href="/css/pages/launch-firewall.css">
 </head>
 
 <body>
@@ -80,6 +81,15 @@
               <use href="/img/icons/sprite.svg#ui-refresh"></use>
             </svg>
             <span data-i18n="actRefresh">Refresh</span>
+          </button>
+
+          <!-- Sửa Security Group của máy đang chọn (sáng khi chọn đúng 1 máy) -->
+          <button class="btn btn-secondary btn-sm" id="btnEditSecurityGroup" onclick="openSgEditor()" disabled
+            title="Xem và sửa rule Security Group của máy đang chọn" data-i18n-title="sgeBtnTitle">
+            <svg class="ico ico-sm" aria-hidden="true">
+              <use href="/img/icons/sprite.svg#svc-security-group"></use>
+            </svg>
+            <span data-i18n="sgeBtn">Security group</span>
           </button>
 
           <!-- Connect Button (active when 1 instance is selected) -->
@@ -384,6 +394,8 @@
     <script src="/js/core/sidebar.js"></script>
     <script src="/js/pages/instance-actions-menu.js"></script>
     <script src="/js/pages/instances.js"></script>
+    <script src="/js/pages/launch-firewall.js"></script>
+    <script src="/js/pages/instances-sg-editor.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         initInstancesPage();

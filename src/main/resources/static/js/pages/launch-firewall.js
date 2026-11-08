@@ -89,7 +89,8 @@ function lfwRender() {
 
 // ---------------- Hộp thoại "Thêm rule" (tạo bằng JS để không phải sửa launch.html) ----------------
 function lfwVpcCidr() {
-  const region = (document.getElementById('instRegion') || {}).value || '';
+  // Trang Máy ảo (hộp sửa Security Group) đặt lfw.region theo máy đang sửa
+  const region = lfw.region || (document.getElementById('instRegion') || {}).value || '';
   return region.includes('us-east') ? '10.1.0.0/16' : '10.0.0.0/16';
 }
 
