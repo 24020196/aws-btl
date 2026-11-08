@@ -49,12 +49,15 @@ public class NetworkController {
         return ResponseEntity.ok(ApiResponse.ok(message, group));
     }
 
-    /** PUT /api/network/security-groups/instances/{instanceId}  body: {"groupIds": ["sg-default", ...]} */
+    /**
+     * PUT /api/network/security-groups/instances/{instanceId}
+     * body: {"inboundRules": [...], "outboundRules": [...]} — ghi đè rule của Security Group riêng của máy.
+     */
     @PutMapping("/security-groups/instances/{instanceId}")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> setInstanceSecurityGroups(
-            @PathVariable String instanceId, @RequestBody Map<String, List<String>> body) {
-        return ResponseEntity.ok(ApiResponse.ok("Instance security groups updated",
-                networkService.setInstanceSecurityGroups(instanceId, body.get("groupIds"))));
+    public ResponseEntity<ApiResponse<Map<String, Object>>> replaceInstanceRules(
+            @PathVariable String instanceId, @Valid @RequestBody SecurityGroupRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Security group rules replaced",
+                networkService.replaceInstanceRules(instanceId, request)));
     }
 
     /** DELETE /api/network/security-groups/{groupId}/rules/{ruleId}: xóa một inbound/outbound rule. */

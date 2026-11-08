@@ -10,6 +10,7 @@
     }
   </script>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/pages/launch-firewall.css">
 </head>
 <body>
 
@@ -208,24 +209,41 @@
             </div>
           </div>
 
-          <!-- Step 6: Security Group & Network Firewall -->
+          <!-- Step 6: Firewall (security group) — phần soạn rule ở js/pages/launch-firewall.js (Lực) -->
           <div class="card" style="padding: 22px;">
             <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
               <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">6</span>
-              Nhóm Bảo Mật (Network Security Group)
+              <span data-i18n="lfwTitle">Firewall (Security group)</span>
             </div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-              Nhóm bảo mật (Security Group) hoạt động như một tường lửa ảo kiểm soát lưu lượng truy cập mạng vào/ra instance:
-            </div>
+            <p class="lfw-sub" data-i18n="lfwSub">Hệ thống tạo một Security Group riêng cho máy này. Chỉ lưu lượng khớp rule bên dưới mới được đi qua; sau khi tạo vẫn sửa được ở tab Security của máy.</p>
 
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Chọn Security Group *</label>
-              <select class="form-select" id="instSecurityGroup" onchange="updatePageLaunchSummary()">
-                <option value="sg-default" selected>sg-default — Mặc định (Inbound: SSH 22, HTTP 80, HTTPS 443)</option>
-                <option value="sg-web-public">sg-web-public — Public Web (Inbound: HTTP 80, HTTPS 443, TCP 8080)</option>
-                <option value="sg-ssh-only">sg-ssh-only — Quản trị an toàn (Inbound: Chỉ mở SSH 22)</option>
-              </select>
+            <div class="lfw-head">
+              <h3><span data-i18n="lfwInbound">Inbound rules</span> <span class="muted" id="lfwInboundCount"></span></h3>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('inbound')" data-i18n="lfwAddIn">+ Thêm inbound rule</button>
             </div>
+            <div class="table-scroll">
+              <table class="data-table lfw-table">
+                <thead><tr><th data-i18n="lfwColType">Loại</th><th data-i18n="lfwColPort">Cổng</th><th data-i18n="lfwColSource">Nguồn (CIDR)</th><th data-i18n="lfwColDesc">Mô tả</th><th><span class="sr-only">Xóa</span></th></tr></thead>
+                <tbody id="lfwInboundBody"></tbody>
+              </table>
+            </div>
+            <div class="form-warn lfw-warn" id="lfwWarn" hidden data-i18n="lfwWarn">Có rule mở cổng khác HTTP/HTTPS cho 0.0.0.0/0 (toàn Internet). Nên giới hạn nguồn, ví dụ trong VPC 10.0.0.0/16.</div>
+
+            <div class="lfw-head">
+              <h3><span data-i18n="lfwOutbound">Outbound rules</span> <span class="muted" id="lfwOutboundCount"></span></h3>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('outbound')" data-i18n="lfwAddOut">+ Thêm outbound rule</button>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table lfw-table">
+                <thead><tr><th data-i18n="lfwColType">Loại</th><th data-i18n="lfwColPort">Cổng</th><th data-i18n="lfwColDest">Đích (CIDR)</th><th data-i18n="lfwColDesc">Mô tả</th><th><span class="sr-only">Xóa</span></th></tr></thead>
+                <tbody id="lfwOutboundBody"></tbody>
+              </table>
+            </div>
+            <datalist id="lfwCidrList">
+              <option value="0.0.0.0/0"></option>
+              <option value="10.0.0.0/16"></option>
+              <option value="10.1.0.0/16"></option>
+            </datalist>
           </div>
 
           <!-- Step 7: Block Storage & DNS -->
@@ -280,7 +298,7 @@
 
             <div style="margin-bottom: 14px;">
               <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">SECURITY GROUP</div>
-              <div id="sumSgText" style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 3px;">sg-default</div>
+              <div id="sumSgText" style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 3px;">–</div>
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -338,6 +356,7 @@
   <script src="/js/core/auth.js"></script>
   <script src="/js/core/i18n.js"></script>
   <script src="/js/pages/launch.js"></script>
+  <script src="/js/pages/launch-firewall.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       initLaunchPage();

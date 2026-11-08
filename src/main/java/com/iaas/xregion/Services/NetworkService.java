@@ -463,9 +463,34 @@ public class NetworkService {
         return result;
     }
 
-    /** Không còn đổi nhóm: mỗi máy có một Security Group riêng (giữ endpoint để báo lỗi rõ ràng). */
-    public List<Map<String, Object>> setInstanceSecurityGroups(String instanceId, List<String> groupIds) {
-        throw new AppException("Mỗi máy ảo có một Security Group riêng, không đổi hoặc dùng chung nhóm giữa các máy.");
+    /**
+     * Ghi đè toàn bộ rule inbound/outbound của Security Group riêng của máy (dùng ở bước 6 trang Launch).
+     * Nhóm chưa có thì tạo; outbound để trống thì giữ mặc định cho phép mọi lưu lượng đi ra.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> replaceInstanceRules(String instanceId, SecurityGroupRequest request) {
+        String user = getCurrentUsername();
+        InstanceEntity inst = ownedInstance(instanceId, user);
+        String groupId = ensureInstanceGroup(inst);
+        Map<String, Object> sg = securityGroups.get(groupId);
+        List<Map<String, Object>> inbound = (List<Map<String, Object>>) sg.get("inboundRules");
+        List<Map<String, Object>> outbound = (List<Map<String, Object>>) sg.get("outboundRules");
+        List<Map<String, Object>> newIn = new CopyOnWriteArrayList<>();
+        List<Map<String, Object>> newOut = new CopyOnWriteArrayList<>();
+        int added = addRules(newIn, request.getInboundRules(), user) + addRules(newOut, request.getOutboundRules(), user);
+        if (newOut.isEmpty()) {
+            newOut.add(rule("all", 0, 65535, "0.0.0.0/0", "Allow all outbound traffic", user));
+        }
+        inbound.clear();
+        inbound.addAll(newIn);
+        outbound.clear();
+        outbound.addAll(newOut);
+        persist(sg);
+        auditLogService.logAction("SG_RULES_SET", "SECURITY_GROUP", groupId,
+                "Set " + newIn.size() + " inbound / " + newOut.size() + " outbound rule(s) for " + instanceId);
+        Map<String, Object> result = copyOf(sg);
+        result.put("rulesAdded", added);
+        return result;
     }
 
     private int addRules(List<Map<String, Object>> target, List<SecurityGroupRequest.Rule> rules, String user) {
