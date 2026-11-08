@@ -40,6 +40,7 @@ public class NetworkService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final ObjectMapper objectMapper;
 
+    /** Bản ghi Route 53 người dùng tự cập nhật (ghi đè bản ghi sinh từ dns + elastic_ip của máy). */
     private final List<Map<String, Object>> dnsStore = new CopyOnWriteArrayList<>();
 
     /** groupId -> security group. Bộ nhớ đệm của bảng XRegion-SecurityGroups (ghi xuống bảng mỗi lần đổi). */
@@ -52,13 +53,6 @@ public class NetworkService {
     private volatile boolean securityGroupsPersistent;
 
     {
-        Map<String, Object> dns1 = new HashMap<>();
-        dns1.put("domainName", "web01.xregion.net");
-        dns1.put("targetIp", "3.27.235.135");
-        dns1.put("ttl", 60);
-        dns1.put("status", "SYNCED");
-        dnsStore.add(dns1);
-
         seedGroup("sg-default", "default",
                 "Mặc định: các máy cùng Security Group được nói chuyện với nhau",
                 List.of(rule("all", 0, 65535, "sg-default", "Lưu lượng nội bộ giữa các máy cùng nhóm")));
@@ -251,8 +245,44 @@ public class NetworkService {
         return NetworkResponse.builder()
                 .vpcs(vpcs)
                 .floatingIps(fips)
-                .dnsRecords(new ArrayList<>(dnsStore))
+                .dnsRecords(dnsRecordsForCurrentUser())
                 .build();
+    }
+
+    /**
+     * Bản ghi A của Route 53 cho các máy của người dùng: sinh từ cột dns + elastic_ip của máy,
+     * bản ghi người dùng tự cập nhật (dnsStore) ghi đè lên.
+     */
+    private List<Map<String, Object>> dnsRecordsForCurrentUser() {
+        String user = getCurrentUsername();
+        Map<String, Map<String, Object>> records = new LinkedHashMap<>();
+        try {
+            for (InstanceEntity i : instancesTable.scan().items()) {
+                if (!user.equalsIgnoreCase(i.getUsername()) || i.getDns() == null || i.getDns().isBlank()
+                        || i.getElasticIp() == null || i.getElasticIp().isBlank()
+                        || "TERMINATED".equalsIgnoreCase(i.getCurrentStatus())) {
+                    continue;
+                }
+                Map<String, Object> r = new HashMap<>();
+                r.put("domainName", i.getDns());
+                r.put("targetIp", i.getElasticIp());
+                r.put("ttl", 60);
+                r.put("status", "SYNCED");
+                r.put("instanceId", i.getInstanceId());
+                records.put(i.getDns().toLowerCase(Locale.ROOT), r);
+            }
+        } catch (Exception e) {
+            log.warn("Could not read instances for DNS records: {}", e.getMessage());
+        }
+        for (Map<String, Object> manual : dnsStore) {
+            String key = String.valueOf(manual.get("domainName")).toLowerCase(Locale.ROOT);
+            if (records.containsKey(key)) {
+                Map<String, Object> merged = new HashMap<>(records.get(key));
+                merged.putAll(manual);
+                records.put(key, merged);
+            }
+        }
+        return new ArrayList<>(records.values());
     }
 
     public Map<String, Object> updateDnsRecord(UpdateDnsRequest request) {
