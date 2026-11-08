@@ -1,8 +1,8 @@
-// Module 12: Security Group riêng của từng máy (tab Security) — Lực
+// Module 07: Security Group riêng của từng máy (tab Security) — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, api, createInstance, loginPage, watchPage } = require('./helpers');
 
-test.describe('Module 12: Security Group riêng của máy', () => {
+test.describe('Module 07: Security Group riêng của máy', () => {
   let user, vmA, vmB;
 
   test.beforeAll(async ({ request }) => {

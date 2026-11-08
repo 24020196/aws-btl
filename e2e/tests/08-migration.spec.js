@@ -1,8 +1,8 @@
-// Module 13: Chuyển vùng (tab Migration, snapshot, lỗi theo ngôn ngữ) — Lực
+// Module 08: Chuyển vùng (tab Migration, snapshot, lỗi theo ngôn ngữ) — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, api, createInstance, loginPage, watchPage } = require('./helpers');
 
-test.describe('Module 13: Fast Migrate X-Region', () => {
+test.describe('Module 08: Fast Migrate X-Region', () => {
   let user, vm;
 
   test.beforeAll(async ({ request }) => {

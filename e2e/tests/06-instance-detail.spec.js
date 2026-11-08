@@ -1,8 +1,8 @@
-// Module 11: Trang chi tiết máy ảo (instance-detail.html) — Lực
+// Module 06: Trang chi tiết máy ảo (instance-detail.html) — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, createInstance, loginPage, watchPage, vietnameseLines } = require('./helpers');
 
-test.describe('Module 11: Instance summary', () => {
+test.describe('Module 06: Instance summary', () => {
   let user, vm;
 
   test.beforeAll(async ({ request }) => {

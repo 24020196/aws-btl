@@ -1,4 +1,4 @@
-// Module 15: Trang danh sách và trang chi tiết đồng bộ với nhau — Lực
+// Module 10: Trang danh sách và trang chi tiết đồng bộ với nhau — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, createInstance, loginPage, watchPage } = require('./helpers');
 
@@ -6,7 +6,7 @@ async function selectRow(page, id) {
   await page.locator(`#instanceTableBody tr:has(input[value="${id}"]) .row-checkbox`).check();
 }
 
-test.describe('Module 15: Đồng bộ trang Máy ảo và trang chi tiết', () => {
+test.describe('Module 10: Đồng bộ trang Máy ảo và trang chi tiết', () => {
   let user, vm;
 
   test.beforeAll(async ({ request }) => {

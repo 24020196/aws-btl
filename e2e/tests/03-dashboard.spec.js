@@ -1,8 +1,8 @@
-// Module 10: EC2 Dashboard (index.html) — Lực
+// Module 03: EC2 Dashboard (index.html) — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, createInstance, loginPage, watchPage, vietnameseLines } = require('./helpers');
 
-test.describe('Module 10: EC2 Dashboard', () => {
+test.describe('Module 03: EC2 Dashboard', () => {
   let user;
 
   test.beforeAll(async ({ request }) => {

@@ -1,8 +1,8 @@
-// Module 14: Trang Launch — bước 6 Firewall (Security group) — Lực
+// Module 09: Trang Launch — bước 6 Firewall (Security group) — Lực
 const { test, expect } = require('@playwright/test');
 const { createUser, api, loginPage, watchPage } = require('./helpers');
 
-test.describe('Module 14: Launch – Firewall (security group)', () => {
+test.describe('Module 09: Launch – Firewall (security group)', () => {
   let user;
 
   test.beforeAll(async ({ request }) => {
