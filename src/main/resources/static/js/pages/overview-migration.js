@@ -1,25 +1,24 @@
-// Phần mở rộng cho trang Tổng quan (index.html): badge trạng thái kiểu EC2 và tóm tắt chuyển vùng.
-// Không sửa initOverviewPage() trong app.js: chỉ đọc API riêng và trang trí lại bảng sau khi app.js vẽ xong.
+// Trang chủ (index.html) — Lực. Khung tóm tắt chuyển vùng (gọi /api/migrations/summary).
 
-const OV_STATE = {
-  ACTIVE: ['state-running', 'Running'], RUNNING: ['state-running', 'Running'],
-  SHUTOFF: ['state-stopped', 'Stopped'], STOPPED: ['state-stopped', 'Stopped'],
-  PENDING: ['state-pending', 'Pending'], BUILDING: ['state-pending', 'Pending'],
-  STOPPING: ['state-stopping', 'Stopping'], SHUTTING_DOWN: ['state-shutting-down', 'Shutting-down'],
-  REBOOTING: ['state-rebooting', 'Rebooting'], MIGRATING: ['state-migrating', 'Migrating'],
-  TERMINATED: ['state-terminated', 'Terminated'], ERROR: ['state-error', 'Error']
-};
+registerI18n({
+  dashMigTitle: ['Chuyển vùng', 'Cross-region migration'],
+  dashMigSub: ['Tổng hợp từ bảng XRegion-Migrations cho các máy ảo của bạn.', 'Summary of XRegion-Migrations for your instances.'],
+  dashMigPick: ['Chọn máy để chuyển vùng', 'Pick an instance to migrate'],
+  dashMigOk: ['Thành công', 'Completed'],
+  dashMigFail: ['Thất bại / rollback', 'Failed / rolled back'],
+  dashMigFailFoot: ['Khóa được nhả tự động', 'Lock released automatically'],
+  dashMigRun: ['Đang chạy', 'In progress'],
+  dashMigRto: ['Downtime trung bình (RTO)', 'Average downtime (RTO)'],
+  dashMigRtoFoot: ['Từ lúc dừng VM nguồn tới khi DNS đổi IP', 'From stopping the source VM to the DNS switch'],
+  dashMigLatest: ['Lần chuyển vùng gần nhất', 'Latest migration'],
+  dashMigLocked: ['Máy đang giữ migration_lock', 'Instances holding migration_lock']
+});
+
 const OV_REGION = { 'ap-southeast-2': ['reg-apse2', 'Sydney'], 'us-east-1': ['reg-use1', 'N. Virginia'] };
 let ovSummaryTimer = null;
 
 function ovEsc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-function ovStateTag(status) {
-  const key = String(status || '').toUpperCase();
-  const [cls, label] = OV_STATE[key] || ['state-stopped', key || '–'];
-  return `<span class="ec2-state ${cls}">${ovEsc(label)}</span>`;
 }
 
 function ovRegionTag(region) {
@@ -39,20 +38,6 @@ function ovAgo(ms, now) {
 function ovTime(ms) {
   if (!ms) return '–';
   return typeof formatSyncedDateTime === 'function' ? formatSyncedDateTime(ms) : new Date(ms).toLocaleString('vi-VN');
-}
-
-// Bảng "Máy ảo đang hoạt động": đổi cột trạng thái (cột 7) sang badge EC2, mỗi lần app.js vẽ lại bảng.
-function restyleOverviewTable() {
-  const body = document.getElementById('overviewInstanceTableBody');
-  if (!body) return;
-  body.querySelectorAll('tr').forEach(tr => {
-    const cell = tr.children[6];
-    if (!cell || cell.dataset.ec2) return;
-    const raw = cell.textContent.trim();
-    if (!raw) return;
-    cell.innerHTML = ovStateTag(raw);
-    cell.dataset.ec2 = '1';
-  });
 }
 
 async function loadMigrationSummary() {
@@ -78,8 +63,8 @@ async function loadMigrationSummary() {
   const latest = document.getElementById('migSumLatest');
   if (!s.latest) {
     latest.innerHTML = tr(
-      'Chưa có lần chuyển vùng nào. Mở một máy ảo và bấm <strong>⚡ Fast Migrate X-Region</strong>.',
-      'No cross-region migrations yet. Open an instance and click <strong>⚡ Fast Migrate X-Region</strong>.'
+      'Chưa có lần chuyển vùng nào. Mở một máy ảo, tab Chuyển vùng và bấm <strong>Fast Migrate</strong>.',
+      'No cross-region migrations yet. Open an instance, Migration tab, and choose <strong>Fast Migrate</strong>.'
     );
   } else {
     const l = s.latest;
@@ -99,12 +84,12 @@ async function loadMigrationSummary() {
   const locked = document.getElementById('migSumLocked');
   if (!s.locked.length) {
     locked.className = 'muted';
-    locked.innerHTML = `<span class="lock-free">🔓 ${tr('Không có máy nào đang khóa.', 'No instances currently locked.')}</span>`;
+    locked.innerHTML = `<span class="lock-free">${ICON('ui-unlock', 'ico-sm')} ${tr('Không có máy nào đang khóa.', 'No instances currently locked.')}</span>`;
   } else {
     locked.className = '';
     locked.innerHTML = `<ul class="mig-sum-locks">${s.locked.map(i => `
       <li>
-        <a class="link-accent" href="/instance-detail.html?id=${encodeURIComponent(i.instanceId)}#migration">🔒 ${ovEsc(i.instanceName || i.instanceId)}</a>
+        <a class="link-accent" href="/instance-detail.html?id=${encodeURIComponent(i.instanceId)}#migration">${ICON('ui-lock', 'ico-sm')} ${ovEsc(i.instanceName || i.instanceId)}</a>
         <span class="muted">${ovEsc(i.instanceId)} · ${ovRegionTag(i.currentRegion)}</span>
         <span class="${i.stale ? 'sync-bad' : 'muted'}">${i.stale ? tr('khóa treo, sẽ tự nhả ở lần chuyển tiếp theo', 'stale lock, will auto-release on next migration') : (i.lockAcquiredAt ? tr('khóa ', 'locked ') + ovAgo(i.lockAcquiredAt, now) : '')}</span>
       </li>`).join('')}</ul>`;
@@ -116,8 +101,5 @@ async function loadMigrationSummary() {
 }
 
 function initOverviewExtras() {
-  const body = document.getElementById('overviewInstanceTableBody');
-  if (body) new MutationObserver(restyleOverviewTable).observe(body, { childList: true });
-  restyleOverviewTable();
   loadMigrationSummary();
 }
