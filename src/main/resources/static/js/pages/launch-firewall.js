@@ -15,6 +15,7 @@ registerI18n({
   lfwColSource: ['Nguồn (CIDR)', 'Source (CIDR)'],
   lfwColDest: ['Đích (CIDR)', 'Destination (CIDR)'],
   lfwColDesc: ['Mô tả', 'Description'],
+  lfwColDel: ['Xóa', 'Remove'],
   lfwWarn: ['Có rule mở cổng khác HTTP/HTTPS cho 0.0.0.0/0 (toàn Internet). Nên giới hạn nguồn, ví dụ trong VPC 10.0.0.0/16.', 'A rule opens a non-HTTP/HTTPS port to 0.0.0.0/0 (the whole Internet). Consider restricting the source, e.g. the VPC 10.0.0.0/16.']
 });
 
