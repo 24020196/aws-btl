@@ -383,10 +383,28 @@ async function handleBulkAction(action) {
   };
   const actionLabel = actionNameMap[action] || action;
 
-  if (action === 'TERMINATE') {
-    const msg = t(`Bạn có chắc chắn muốn XÓA vĩnh viễn ${ids.length} máy ảo đã chọn? Hành động này không thể hoàn tác!`,
-                  `Are you sure you want to TERMINATE ${ids.length} selected instance(s)? This action cannot be undone!`);
-    if (!confirm(msg)) return;
+  // Xác nhận bằng hộp thoại chung confirmDialog() (js/core/ui.js), giống trang chi tiết máy ảo
+  if (action === 'TERMINATE' || action === 'STOP') {
+    const picked = ids.map(id => (typeof cachedInstances !== 'undefined' && cachedInstances.find(i => i.id === id)) || { id, name: id });
+    const list = picked.map(i => `<strong>${uiEsc(i.name)}</strong> (<code>${uiEsc(i.id)}</code>)`).join(', ');
+    const single = picked.length === 1;
+    const ok = action === 'TERMINATE'
+      ? await confirmDialog({
+          title: single ? t('Xóa (terminate) máy ảo?', 'Terminate instance?') : t(`Xóa (terminate) ${picked.length} máy ảo?`, `Terminate ${picked.length} instances?`),
+          message: t(`${list} sẽ bị xóa vĩnh viễn. Ổ EBS gốc bị xóa, Elastic IP được trả lại và bản ghi Route 53 ngừng trỏ tới máy. Không thể hoàn tác.`,
+                     `${list} will be permanently deleted. The root EBS volume is deleted, the Elastic IP is released and the Route 53 record stops pointing to it. This cannot be undone.`),
+          confirmText: tk('actTerminate'),
+          danger: true,
+          requireText: single ? picked[0].name : 'terminate'
+        })
+      : await confirmDialog({
+          title: single ? t('Dừng máy ảo?', 'Stop instance?') : t(`Dừng ${picked.length} máy ảo?`, `Stop ${picked.length} instances?`),
+          message: t(`Dịch vụ trên ${list} sẽ gián đoạn tới khi bật lại. Dữ liệu trên ổ EBS được giữ nguyên.`,
+                     `Services on ${list} are unavailable until started again. Data on the EBS volume is kept.`),
+          confirmText: tk('actStop'),
+          danger: true
+        });
+    if (!ok) return;
   }
 
   showToast(t(`Đang gửi yêu cầu ${actionLabel} cho ${ids.length} máy ảo...`, `Submitting ${actionLabel} for ${ids.length} instance(s)...`), 'info');
