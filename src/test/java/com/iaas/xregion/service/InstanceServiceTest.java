@@ -28,6 +28,7 @@ import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -247,6 +248,9 @@ class InstanceServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(InstanceStatus.STOPPING.name());
+        verify(instancesTable).updateItem(any(UpdateItemEnhancedRequest.class));
+        verify(instancesTable, never()).putItem(any(InstanceEntity.class));
+        verify(novaTable, never()).putItem(any(NovaEntity.class));
     }
 
     @Test
@@ -285,6 +289,102 @@ class InstanceServiceTest {
         InstanceResponse response = instanceService.mapToResponse(inst);
         assertThat(response.getStatus()).isEqualTo(InstanceStatus.PENDING.name());
         assertThat(response.getActiveNovaId()).isNull();
+    }
+
+    @Test
+    void terminatedWithoutActiveNovaIdRemainsTerminated() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-terminated")
+                .activeNovaId("")
+                .currentStatus("TERMINATED")
+                .build();
+
+        assertThat(instanceService.mapToResponse(inst).getStatus()).isEqualTo("TERMINATED");
+    }
+
+    @Test
+    void shelvedNovaMapsToStoppedAndStartRemainsPending() {
+        InstanceEntity inst = InstanceEntity.builder().instanceId("i-shelved")
+                .activeNovaId("nova-shelved").currentStatus("STOPPED").build();
+        when(novaTable.getItem(any(Key.class))).thenReturn(
+                NovaEntity.builder().novaId("nova-shelved").status("SHELVED_OFFLOADED").build());
+        assertThat(instanceService.mapToResponse(inst).getStatus()).isEqualTo("STOPPED");
+        inst.setCurrentStatus("PENDING");
+        assertThat(instanceService.mapToResponse(inst).getStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void launchEventFailureMarksRecordFailedAndRaises() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("Launch failure");
+        req.setRegion("ap-southeast-2");
+        req.setFlavor("m1.medium");
+        doThrow(new EventBridgeGatewayClient.EventRejectedException("FailedEntryCount=1"))
+                .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
+                        anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
+                        anyString(), anyString());
+
+        assertThatThrownBy(() -> instanceService.launchInstance(req))
+                .isInstanceOf(AppException.class)
+                .hasMessageContaining("Không gửi được yêu cầu tạo máy ảo");
+        verify(instancesTable).putItem(any(InstanceEntity.class));
+        verify(instancesTable).updateItem(any(UpdateItemEnhancedRequest.class));
+    }
+
+    @Test
+    void ambiguousLaunchDeliveryDoesNotMarkInstanceFailed() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("Unconfirmed launch");
+        req.setRegion("ap-southeast-2");
+        req.setFlavor("m1.medium");
+        doThrow(new IllegalStateException("Connection reset after send"))
+                .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
+                        anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
+                        anyString(), anyString());
+        assertThatThrownBy(() -> instanceService.launchInstance(req)).isInstanceOf(AppException.class);
+        verify(instancesTable, never()).updateItem(any(UpdateItemEnhancedRequest.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void lifecycleUpdateOnlyWritesStatusAndTimestamp() {
+        InstanceEntity inst = InstanceEntity.builder().instanceId("i-partial")
+                .username("testuser").userId("usr-testuser").dns("app.example")
+                .activeNovaId("nova-partial").currentStatus("RUNNING").build();
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        InstanceActionRequest req = new InstanceActionRequest();
+        req.setAction("STOP");
+        instanceService.executeAction("i-partial", req);
+        org.mockito.ArgumentCaptor<UpdateItemEnhancedRequest<InstanceEntity>> captor =
+                org.mockito.ArgumentCaptor.forClass(UpdateItemEnhancedRequest.class);
+        verify(instancesTable).updateItem(captor.capture());
+        UpdateItemEnhancedRequest<InstanceEntity> update = captor.getValue();
+        assertThat(update.ignoreNulls()).isTrue();
+        assertThat(update.item().getCurrentStatus()).isEqualTo("STOPPING");
+        assertThat(update.item().getUserId()).isNull();
+        assertThat(update.item().getDns()).isNull();
+        assertThat(update.item().getActiveNovaId()).isNull();
+        assertThat(update.conditionExpression().expression()).contains("current_status = :expected");
+    }
+
+    @Test
+    void actionEventFailureRaisesWithoutMarkingFinalState() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-failed-event")
+                .username("testuser")
+                .currentStatus("RUNNING")
+                .build();
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        doThrow(new IllegalStateException("FailedEntryCount=1"))
+                .when(eventBridgeGatewayClient).sendInstanceLifecycleEvent(
+                        anyString(), anyString(), anyString(), any(), anyString(), any(), anyString());
+        InstanceActionRequest req = new InstanceActionRequest();
+        req.setAction("STOP");
+
+        assertThatThrownBy(() -> instanceService.executeAction("i-failed-event", req))
+                .isInstanceOf(AppException.class);
+        assertThat(inst.getCurrentStatus()).isEqualTo("STOPPING");
+        verify(novaTable, never()).putItem(any(NovaEntity.class));
     }
 
     @Test

@@ -13,7 +13,6 @@ import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
 import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Entity.InstanceStatus;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -21,13 +20,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,43 +39,20 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final AuthService authService;
-    private final ScheduledExecutorService stateTransitionExecutor = Executors.newScheduledThreadPool(4);
     private final Map<String, Integer> instanceEbsSizeMap = new ConcurrentHashMap<>();
 
-    @PreDestroy
-    public void cleanup() {
-        stateTransitionExecutor.shutdown();
-    }
-
-    private void scheduleStateTransition(String instanceId, InstanceStatus expectedIntermediate,
-            InstanceStatus targetStatus, long delayMs) {
-        stateTransitionExecutor.schedule(() -> {
-            try {
-                InstanceEntity fresh = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
-                if (fresh != null && expectedIntermediate.name().equalsIgnoreCase(fresh.getCurrentStatus())) {
-                    fresh.setCurrentStatus(targetStatus.name());
-                    fresh.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                    instancesTable.putItem(fresh);
-
-                    if (novaTable != null && fresh.getActiveNovaId() != null) {
-                        try {
-                            NovaEntity activeNova = novaTable.getItem(Key.builder().partitionValue(fresh.getActiveNovaId()).build());
-                            if (activeNova != null) {
-                                activeNova.setStatus(targetStatus.name());
-                                novaTable.putItem(activeNova);
-                            }
-                        } catch (Exception ex) {
-                            log.warn("Async state transition could not update active Nova [{}]: {}", fresh.getActiveNovaId(), ex.getMessage());
-                        }
-                    }
-
-                    log.info("Async state transition complete: [{}] {} -> {}", instanceId, expectedIntermediate,
-                            targetStatus);
-                }
-            } catch (Exception e) {
-                log.error("Async state transition failed for [{}]: {}", instanceId, e.getMessage());
-            }
-        }, delayMs, TimeUnit.MILLISECONDS);
+    private void updateInstanceState(String id, String status, String expectedStatus) {
+        Expression.Builder condition = Expression.builder().expression("attribute_exists(instance_id)");
+        if (expectedStatus != null) {
+            condition.expression("attribute_exists(instance_id) AND current_status = :expected")
+                    .putExpressionValue(":expected", AttributeValue.builder().s(expectedStatus).build());
+        }
+        instancesTable.updateItem(UpdateItemEnhancedRequest.builder(InstanceEntity.class)
+                .item(InstanceEntity.builder().instanceId(id).currentStatus(status)
+                        .lastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds()).build())
+                .ignoreNulls(true)
+                .conditionExpression(condition.build())
+                .build());
     }
 
     private String getCurrentUsername() {
@@ -110,6 +86,11 @@ public class InstanceService {
 
     private void autoLinkNovaIfAvailable(InstanceEntity entity) {
         if (entity == null || entity.getActiveNovaId() != null || novaTable == null) {
+            return;
+        }
+        if ("FAILED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "TERMINATED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "DELETED".equalsIgnoreCase(entity.getCurrentStatus())) {
             return;
         }
         try {
@@ -251,7 +232,14 @@ public class InstanceService {
                     keyId,
                     currentUser);
         } catch (Exception e) {
-            log.warn("Không thể gửi sự kiện LAUNCH qua API Gateway EventBridge: {}", e.getMessage());
+            if (e instanceof EventBridgeGatewayClient.EventRejectedException) {
+                try {
+                    updateInstanceState(id, InstanceStatus.FAILED.name(), InstanceStatus.PENDING.name());
+                } catch (Exception stateError) {
+                    e.addSuppressed(stateError);
+                }
+            }
+            throw new AppException("Không gửi được yêu cầu tạo máy ảo: " + e.getMessage(), e);
         }
 
         return mapToResponse(entity);
@@ -409,29 +397,26 @@ public class InstanceService {
             throw new ResourceNotFoundException("Instance not found: " + id);
         }
 
-        String action = request.getAction().toUpperCase();
+        String action = request.getAction().toUpperCase(Locale.ROOT);
+        String previousStatus = entity.getCurrentStatus();
 
         switch (action) {
             case "START":
                 entity.setCurrentStatus(InstanceStatus.PENDING.name());
                 entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                scheduleStateTransition(id, InstanceStatus.PENDING, InstanceStatus.RUNNING, 3500);
                 break;
             case "STOP":
                 entity.setCurrentStatus(InstanceStatus.STOPPING.name());
                 entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                scheduleStateTransition(id, InstanceStatus.STOPPING, InstanceStatus.STOPPED, 3500);
                 break;
             case "REBOOT":
                 entity.setCurrentStatus(InstanceStatus.REBOOTING.name());
                 entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                scheduleStateTransition(id, InstanceStatus.REBOOTING, InstanceStatus.RUNNING, 3500);
                 break;
             case "TERMINATE":
             case "DELETE":
                 entity.setCurrentStatus(InstanceStatus.SHUTTING_DOWN.name());
                 entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                scheduleStateTransition(id, InstanceStatus.SHUTTING_DOWN, InstanceStatus.TERMINATED, 3500);
                 break;
             case "CONSOLE":
                 return mapToResponse(entity);
@@ -439,17 +424,8 @@ public class InstanceService {
                 throw new IllegalArgumentException("Unknown lifecycle action: " + action);
         }
 
-        if (entity.getActiveNovaId() != null && novaTable != null) {
-            try {
-                NovaEntity activeNova = novaTable.getItem(Key.builder().partitionValue(entity.getActiveNovaId()).build());
-                if (activeNova != null) {
-                    activeNova.setStatus(entity.getCurrentStatus());
-                    novaTable.putItem(activeNova);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to update active Nova status in executeAction: {}", e.getMessage());
-            }
-        }
+        // Only the worker may confirm the final state after checking Nova.
+        updateInstanceState(id, entity.getCurrentStatus(), previousStatus);
 
         auditLogService.logAction(action + "_VM", "INSTANCE", id,
                 "Requested lifecycle action " + action + " for instance " + id);
@@ -459,7 +435,14 @@ public class InstanceService {
                     action, id, entity.getInstanceName(), entity.getFlavor(), entity.getCurrentRegion(),
                     entity.getKeyId(), currentUser);
         } catch (Exception e) {
-            log.warn("Không thể gửi sự kiện {} qua API Gateway EventBridge: {}", action, e.getMessage());
+            if (e instanceof EventBridgeGatewayClient.EventRejectedException && previousStatus != null) {
+                try {
+                    updateInstanceState(id, previousStatus, entity.getCurrentStatus());
+                } catch (Exception stateError) {
+                    e.addSuppressed(stateError);
+                }
+            }
+            throw new AppException("Không gửi được yêu cầu " + action + ": " + e.getMessage(), e);
         }
 
         return mapToResponse(entity);
@@ -483,13 +466,29 @@ public class InstanceService {
         String status;
         if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
             status = InstanceStatus.MIGRATING.name();
+        } else if ("TERMINATED".equalsIgnoreCase(entity.getCurrentStatus())
+                || "DELETED".equalsIgnoreCase(entity.getCurrentStatus())) {
+            status = InstanceStatus.TERMINATED.name();
+        } else if ("FAILED".equalsIgnoreCase(entity.getCurrentStatus())) {
+            status = InstanceStatus.FAILED.name();
+        } else if ("STOPPING".equalsIgnoreCase(entity.getCurrentStatus())
+                || "REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())
+                || "SHUTTING_DOWN".equalsIgnoreCase(entity.getCurrentStatus())) {
+            status = entity.getCurrentStatus().toUpperCase(Locale.ROOT);
+        } else if ("PENDING".equalsIgnoreCase(entity.getCurrentStatus()) && activeNova != null
+                && ("SHUTOFF".equalsIgnoreCase(activeNova.getStatus())
+                || "STOPPED".equalsIgnoreCase(activeNova.getStatus())
+                || "SHELVED".equalsIgnoreCase(activeNova.getStatus())
+                || "SHELVED_OFFLOADED".equalsIgnoreCase(activeNova.getStatus()))) {
+            status = InstanceStatus.PENDING.name();
         } else if (entity.getActiveNovaId() == null || entity.getActiveNovaId().trim().isEmpty()) {
             status = InstanceStatus.PENDING.name();
         } else {
             String rawStatus = activeNova != null ? activeNova.getStatus() : entity.getCurrentStatus();
             if ("ACTIVE".equalsIgnoreCase(rawStatus)) {
                 status = InstanceStatus.RUNNING.name();
-            } else if ("SHUTOFF".equalsIgnoreCase(rawStatus) || "STOPPED".equalsIgnoreCase(rawStatus)) {
+            } else if ("SHUTOFF".equalsIgnoreCase(rawStatus) || "STOPPED".equalsIgnoreCase(rawStatus)
+                    || "SHELVED".equalsIgnoreCase(rawStatus) || "SHELVED_OFFLOADED".equalsIgnoreCase(rawStatus)) {
                 status = InstanceStatus.STOPPED.name();
             } else if ("TERMINATED".equalsIgnoreCase(rawStatus) || "DELETED".equalsIgnoreCase(rawStatus)) {
                 status = InstanceStatus.TERMINATED.name();

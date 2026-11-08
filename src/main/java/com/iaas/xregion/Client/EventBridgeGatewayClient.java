@@ -21,6 +21,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EventBridgeGatewayClient {
 
+    public static class EventRejectedException extends RuntimeException {
+        public EventRejectedException(String message) {
+            super(message);
+        }
+    }
+
     private final RestClient eventBridgeRestClient;
 
     /**
@@ -46,12 +52,22 @@ public class EventBridgeGatewayClient {
                     .retrieve()
                     .body(EventBridgeEventResponse.class);
 
-            if (response != null) {
-                log.info("API Gateway trả về: FailedEntryCount={}, Entries={}",
-                        response.getFailedEntryCount(), response.getEntries());
+            if (response != null && (response.getFailedEntryCount() > 0
+                    || (response.getEntries() != null && response.getEntries().stream()
+                    .anyMatch(entry -> entry != null && entry.get("ErrorCode") != null)))) {
+                throw new EventRejectedException("EventBridge từ chối sự kiện: " + response);
             }
+            if (response == null || response.getEntries() == null
+                    || response.getEntries().isEmpty() || response.getEntries().stream()
+                    .anyMatch(entry -> entry == null || entry.get("ErrorCode") != null || entry.get("EventId") == null)) {
+                throw new IllegalStateException("EventBridge không xác nhận nhận sự kiện: " + response);
+            }
+            log.info("EventBridge nhận sự kiện: source=[{}], detailType=[{}]", source, detailType);
             return response;
         } catch (Exception e) {
+            if (e instanceof EventRejectedException rejected) {
+                throw rejected;
+            }
             log.error("Lỗi khi gửi sự kiện qua API Gateway EventBridge: {}", e.getMessage(), e);
             throw new RuntimeException("Gửi sự kiện qua API Gateway thất bại: " + e.getMessage(), e);
         }
