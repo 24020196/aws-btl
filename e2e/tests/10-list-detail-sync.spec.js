@@ -41,17 +41,14 @@ test.describe('Module 10: Đồng bộ trang Máy ảo và trang chi tiết', ()
     expect(listNames).toEqual(detailNames);
   });
 
-  test('Menu Hành động: hai trang có cùng các nhóm và mục con', async ({ page }) => {
+  test('Menu Hành động đã bỏ ở cả hai trang (PR #31)', async ({ page }) => {
     await loginPage(page, user);
     await page.goto('/instances.html');
     await selectRow(page, vm.id);
-    await page.click('#btnActionsMenu');
-    const listGroups = (await page.locator('#actionsDropdown .ec2-actions-group').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').trim());
-
+    await expect(page.locator('#btnActionsMenu')).toHaveCount(0);
     await page.goto(`/instance-detail.html?id=${vm.id}`);
-    await page.click('#ec2ActionsBtn');
-    const detailGroups = (await page.locator('#ec2ActionsList .ec2-actions-group').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').trim());
-    expect(listGroups).toEqual(detailGroups);
+    await expect(page.locator('#ec2InstanceState, .ec2-state').first()).toBeVisible();
+    await expect(page.locator('#ec2ActionsBtn')).toHaveCount(0);
   });
 
   test('Hộp Kết nối: cùng nội dung ở hai trang', async ({ page }) => {

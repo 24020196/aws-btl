@@ -65,27 +65,27 @@ test.describe('Module 04: Danh sách máy ảo', () => {
     await expect(page.locator('#instanceTableBody .row-checkbox')).toHaveCount(3);
   });
 
-  test('Chưa chọn máy: khóa Kết nối, Trạng thái, Hành động; chọn 1 máy thì mở cả ba', async ({ page }) => {
+  test('Chưa chọn máy: khóa Kết nối, Trạng thái, Security group; chọn 1 máy thì mở cả ba', async ({ page }) => {
     await page.goto('/instances.html');
     await expect(page.locator('#btnConnectInstance')).toBeDisabled();
     await expect(page.locator('#btnInstanceStateMenu')).toBeDisabled();
-    await expect(page.locator('#btnActionsMenu')).toBeDisabled();
+    await expect(page.locator('#btnEditSecurityGroup')).toBeDisabled();
 
     await row(page, a.id).locator('.row-checkbox').check();
     await expect(page.locator('#selectionBanner')).toHaveClass(/active/);
     await expect(page.locator('#selectionText')).toContainText('1');
     await expect(page.locator('#btnConnectInstance')).toBeEnabled();
     await expect(page.locator('#btnInstanceStateMenu')).toBeEnabled();
-    await expect(page.locator('#btnActionsMenu')).toBeEnabled();
+    await expect(page.locator('#btnEditSecurityGroup')).toBeEnabled();
   });
 
-  test('Chọn 2 máy: Kết nối / Hành động bị khóa, khung dưới chuyển sang tóm tắt hàng loạt', async ({ page }) => {
+  test('Chọn 2 máy: Kết nối / Security group bị khóa, khung dưới chuyển sang tóm tắt hàng loạt', async ({ page }) => {
     await page.goto('/instances.html');
     await row(page, a.id).locator('.row-checkbox').check();
     await row(page, b.id).locator('.row-checkbox').check();
     await expect(page.locator('#selectionText')).toContainText('2');
     await expect(page.locator('#btnConnectInstance')).toBeDisabled();
-    await expect(page.locator('#btnActionsMenu')).toBeDisabled();
+    await expect(page.locator('#btnEditSecurityGroup')).toBeDisabled();
     await expect(page.locator('#btnInstanceStateMenu')).toBeEnabled();
     await expect(page.locator('#instanceSplitPane')).toHaveClass(/active/);
     await expect(page.locator('#splitTabsBar')).toBeHidden();
@@ -219,16 +219,6 @@ test.describe('Module 04: Danh sách máy ảo', () => {
     expect(w.nativeDialogs).toEqual([]);
   });
 
-  test('Menu Hành động có link Chỉnh sửa và Fast Migrate trỏ đúng máy', async ({ page }) => {
-    await page.goto('/instances.html');
-    await row(page, c.id).locator('.row-checkbox').check();
-    await page.click('#btnActionsMenu');
-    const menu = page.locator('#actionsDropdown');
-    await expect(menu).toBeVisible();
-    await expect(menu.locator(`[href*="instance-edit.html?id=${c.id}"]`).first()).toBeAttached();
-    await expect(menu.locator(`[href*="${c.id}"][href*="#migration"]`).first()).toBeAttached();
-  });
-
   test('Nút Làm mới tải lại bảng, không lỗi JS', async ({ page }) => {
     const w = watchPage(page);
     await page.goto('/instances.html');
@@ -245,7 +235,7 @@ test.describe('Module 04: Danh sách máy ảo', () => {
     await loginPage(p2, user, 'en');
     await p2.goto('/instances.html');
     await row(p2, a.id).locator('td').nth(5).click();
-    await p2.click('#btnActionsMenu');
+    await p2.click('#btnInstanceStateMenu');
     const left = await vietnameseLines(p2.locator('body'), ['.toast-container']);
     expect(left).toEqual([]);
     await p2.close();
