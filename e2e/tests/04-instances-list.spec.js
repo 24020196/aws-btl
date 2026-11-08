@@ -95,6 +95,7 @@ test.describe('Module 04: Danh sách máy ảo', () => {
 
   test('Ô chọn tất cả: chọn hết rồi bỏ hết', async ({ page }) => {
     await page.goto('/instances.html');
+    await expect(page.locator('#instanceTableBody .row-checkbox')).toHaveCount(3);
     await page.check('#masterCheckbox');
     await expect(page.locator('#instanceTableBody .row-checkbox:checked')).toHaveCount(3);
     await expect(page.locator('#selectionText')).toContainText('3');

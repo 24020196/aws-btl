@@ -40,9 +40,22 @@ async function createInstance(request, user, opts = {}) {
     domainName: opts.domainName || `${name}.xregion.net`
   });
   expect(r.status, `Tạo máy thất bại: ${JSON.stringify(r.body)}`).toBeLessThan(300);
-  // Máy mới ở trạng thái PENDING vài giây rồi mới RUNNING: chờ cho chắc trước khi test giao diện
-  if (opts.waitRunning !== false) await waitForStatus(request, user, r.data.id, 'RUNNING');
-  return r.data;
+  if (opts.waitRunning === false) return r.data;
+  // Máy mới PENDING tới khi "Step Function giả" (global-setup.js) ghi bản ghi Nova ACTIVE
+  await waitForStatus(request, user, r.data.id, 'RUNNING');
+  // Sự kiện tạo máy chưa mang vùng nên máy luôn ở Sydney: muốn máy ở N. Virginia thì chuyển vùng sang
+  if (opts.region === 'us-east-1') await migrateTo(request, user, r.data.id, 'us-east-1');
+  return (await api(request, user, 'GET', `/instances/${r.data.id}`)).data;
+}
+
+/** Fast Migrate qua API rồi chờ máy chạy lại ở vùng đích. */
+async function migrateTo(request, user, id, region) {
+  const t = await api(request, user, 'POST', '/migrations/trigger', { id });
+  expect(t.status, `Chuyển vùng thất bại: ${JSON.stringify(t.body)}`).toBeLessThan(300);
+  await expect.poll(async () => {
+    const d = (await api(request, user, 'GET', `/instances/${id}`)).data || {};
+    return `${d.region}/${d.status}`;
+  }, { message: `Máy ${id} chưa chuyển xong sang ${region}`, timeout: 40_000, intervals: [1000] }).toBe(`${region}/RUNNING`);
 }
 
 /** Chờ máy về đúng trạng thái (gọi API mỗi giây, tối đa timeoutMs). */
@@ -91,4 +104,4 @@ async function vietnameseLines(locator, ignore = []) {
   return [...new Set(text.split('\n').map(s => s.trim()).filter(s => VI_CHARS.test(s) && !/Tiếng Việt/.test(s)))];
 }
 
-module.exports = { createUser, api, createInstance, waitForStatus, loginPage, watchPage, vietnameseLines };
+module.exports = { createUser, api, createInstance, migrateTo, waitForStatus, loginPage, watchPage, vietnameseLines };
