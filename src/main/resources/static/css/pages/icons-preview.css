@@ -1,0 +1,97 @@
+/* Chỉ trang icons-preview.html — xem trước thư viện icon dùng chung. */
+
+.ip-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 28px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.ip-logo { height: 32px; }
+
+.ip-title h1 { font-size: 18px; }
+.ip-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.ip-search {
+  margin-left: auto;
+  min-width: 260px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-main);
+}
+
+.ip-main { padding: 24px 28px 48px; }
+
+.ip-usage {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 28px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.ip-usage h2 { font-size: 14px; color: var(--text-main); margin-bottom: 8px; }
+.ip-usage pre {
+  background: var(--bg-primary);
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+}
+.ip-usage code { color: var(--accent-cyan); }
+
+.ip-group { margin-bottom: 28px; }
+.ip-group h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--text-main);
+}
+.ip-group h2 small { color: var(--text-muted); font-weight: 400; margin-left: 6px; }
+
+.ip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.ip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ip-item:hover { border-color: var(--accent-cyan); background: var(--bg-card-hover); }
+.ip-item .ico { width: 36px; height: 36px; }
+.ip-item-id { font-size: 12px; font-family: Consolas, monospace; color: var(--accent-cyan); }
+.ip-item-title { font-size: 11px; color: var(--text-muted); text-align: center; }
+
+.ip-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--accent-green);
+  color: #04150f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ip-error { color: var(--accent-red); }
+

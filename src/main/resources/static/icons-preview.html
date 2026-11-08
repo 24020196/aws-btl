@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Icon Library - XRegion-EC2 Cloud Console</title>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/base/icons.css">
+  <link rel="stylesheet" href="/css/pages/icons-preview.css">
+</head>
+
+<body>
+  <header class="ip-header">
+    <img src="/img/logo.svg" alt="XRegion EC2" class="ip-logo">
+    <div class="ip-title">
+      <h1>Thư viện icon dùng chung</h1>
+      <p>Nguồn: <code>/img/icons/sprite.svg</code> · Bấm vào icon để copy đoạn HTML</p>
+    </div>
+    <input id="ipSearch" class="ip-search" type="search" placeholder="Tìm icon (ec2, stop, ubuntu...)">
+  </header>
+
+  <main class="ip-main">
+    <section class="ip-usage">
+      <h2>Cách dùng</h2>
+      <pre><code>&lt;svg class="ico ico-lg" aria-hidden="true"&gt;&lt;use href="/img/icons/sprite.svg#svc-ec2"&gt;&lt;/use&gt;&lt;/svg&gt;</code></pre>
+      <p>Kích thước: <code>ico-xs</code> 12 · <code>ico-sm</code> 14 · <code>ico</code> 16 · <code>ico-lg</code> 20 ·
+        <code>ico-xl</code> 24 · <code>ico-2xl</code> 32 · <code>ico-3xl</code> 48.
+        Màu (chỉ cho <code>ui-*</code>): <code>ico-muted</code>, <code>ico-accent</code>, <code>ico-success</code>,
+        <code>ico-warning</code>, <code>ico-danger</code>. Quay: <code>ico-spin</code>.</p>
+    </section>
+
+    <div id="ipGroups"></div>
+  </main>
+
+  <div id="ipToast" class="ip-toast" hidden></div>
+
+  <script src="/js/pages/icons-preview.js"></script>
+</body>
+
+</html>
+

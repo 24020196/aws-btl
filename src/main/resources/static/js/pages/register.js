@@ -1,76 +1,38 @@
-// Chỉ dùng cho register.html (trước đây viết thẳng trong thẻ <script> cuối trang).
+// Chỉ dùng cho register.html
 
-const REG_I18N = {
-  vi: {
-    brandSubtitle: 'Hệ Thống Quản Trị Máy Ảo Đa Vùng',
-    regHeading: 'Đăng ký người dùng',
-    regSubheading: 'Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn',
-    labelFullName: 'Họ và tên',
-    labelUsername: 'Tên đăng nhập *',
-    labelPassword: 'Mật khẩu *',
-    labelConfirmPassword: 'Nhập lại mật khẩu *',
-    showPassword: 'Hiển thị mật khẩu',
-    labelRole: 'Vai trò người dùng',
-    createBtn: 'Đăng ký tài khoản',
-    creatingBtn: 'Đang tạo tài khoản...',
-    orDivider: 'Đã có tài khoản?',
-    signInExistingBtn: 'Quay lại đăng nhập',
-    promoHeadline: 'Không gian hạ tầng máy ảo độc lập cho từng tài khoản.',
-    promoSubtext: 'Sau khi tạo tài khoản, bạn có thể sử dụng đầy đủ các tính năng:',
-    feat1: '✓ Quản lý danh sách máy ảo riêng biệt theo tài khoản',
-    feat2: '✓ Tạo cặp khóa bảo mật SSH (tự động tải file .pem)',
-    feat3: '✓ Di chuyển máy ảo liên vùng không gián đoạn',
-    feat4: '✓ Cấp phát và quản lý mã API Token cá nhân',
-    footerPrivacy: 'Bảo mật',
-    footerTerms: 'Điều khoản sử dụng',
-    footerSwitchLang: '🌐 Switch to English',
-    errPassMismatch: 'Mật khẩu xác nhận không trùng khớp!',
-    regSuccessToast: 'Đăng ký tài khoản thành công! Đang chuyển sang trang Đăng nhập...',
-    regErrorPrefix: 'Lỗi đăng ký:'
-  },
-  en: {
-    brandSubtitle: 'Multi-Region Cloud Console',
-    regHeading: 'User sign up',
-    regSubheading: 'Create a new account to launch and manage your virtual machines',
-    labelFullName: 'Full Name',
-    labelUsername: 'Username *',
-    labelPassword: 'Password *',
-    labelConfirmPassword: 'Confirm password *',
-    showPassword: 'Show Password',
-    labelRole: 'User Role',
-    createBtn: 'Create account',
-    creatingBtn: 'Creating account...',
-    orDivider: 'Already have an account?',
-    signInExistingBtn: 'Back to sign in',
-    promoHeadline: 'Isolated virtual machine workspace for every account.',
-    promoSubtext: 'Once registered, you have full access to:',
-    feat1: '✓ Per-user isolated virtual machine instances',
-    feat2: '✓ SSH RSA 2048-bit key pair generation (.pem download)',
-    feat3: '✓ Seamless cross-region live migration',
-    feat4: '✓ Personal API Token management',
-    footerPrivacy: 'Privacy',
-    footerTerms: 'Terms of Use',
-    footerSwitchLang: '🌐 Chuyển sang Tiếng Việt',
-    errPassMismatch: 'Password confirmation does not match!',
-    regSuccessToast: 'Account created successfully! Redirecting to Sign in...',
-    regErrorPrefix: 'Registration error:'
-  }
-};
+registerI18n({
+  brandSubtitle: ['Hệ Thống Quản Trị Máy Ảo Đa Vùng', 'Multi-Region Cloud Console'],
+  regHeading: ['Đăng ký người dùng', 'User sign up'],
+  regSubheading: ['Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn', 'Create a new account to launch and manage your virtual machines'],
+  labelFullName: ['Họ và tên', 'Full Name'],
+  placeholderFullName: ['VD: Nguyễn Văn A', 'e.g. John Doe'],
+  labelUsername: ['Tên đăng nhập *', 'Username *'],
+  placeholderUsername: ['VD: alex_dev', 'e.g. alex_dev'],
+  labelPassword: ['Mật khẩu *', 'Password *'],
+  labelConfirmPassword: ['Nhập lại mật khẩu *', 'Confirm password *'],
+  showPassword: ['Hiển thị mật khẩu', 'Show Password'],
+  createBtn: ['Đăng ký tài khoản', 'Create account'],
+  creatingBtn: ['Đang tạo tài khoản...', 'Creating account...'],
+  orDivider: ['Đã có tài khoản?', 'Already have an account?'],
+  signInExistingBtn: ['Quay lại đăng nhập', 'Back to sign in'],
+  promoHeadline: ['Không gian hạ tầng máy ảo độc lập cho từng tài khoản.', 'Isolated virtual machine workspace for every account.'],
+  promoSubtext: ['Sau khi tạo tài khoản, bạn có thể sử dụng đầy đủ các tính năng:', 'Once registered, you have full access to:'],
+  feat1: ['Quản lý danh sách máy ảo riêng biệt theo tài khoản', 'Per-user isolated virtual machine instances'],
+  feat2: ['Tạo cặp khóa bảo mật SSH (tự động tải file .pem)', 'SSH RSA 2048-bit key pair generation (.pem download)'],
+  feat3: ['Di chuyển máy ảo liên vùng không gián đoạn', 'Seamless cross-region live migration'],
+  feat4: ['Cấp phát và quản lý mã API Token cá nhân', 'Personal API Token management'],
+  footerPrivacy: ['Bảo mật', 'Privacy'],
+  footerTerms: ['Điều khoản sử dụng', 'Terms of Use'],
+  footerSwitchLang: ['Switch to English', 'Chuyển sang Tiếng Việt'],
+  errPassMismatch: ['Mật khẩu xác nhận không trùng khớp!', 'Password confirmation does not match!'],
+  regSuccessToast: ['Đăng ký tài khoản thành công! Đang chuyển sang trang Đăng nhập...', 'Account created successfully! Redirecting to Sign in...'],
+  regErrorPrefix: ['Lỗi đăng ký:', 'Registration error:']
+});
 
-function changeXrRegisterLanguage(lang) {
-  const targetLang = REG_I18N[lang] ? lang : 'vi';
-  localStorage.setItem('xregion_lang', targetLang);
+onLangChange(lang => {
   const select = document.getElementById('xrLangSelect');
-  if (select) select.value = targetLang;
-
-  const dict = REG_I18N[targetLang];
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    if (dict[key]) {
-      el.innerHTML = dict[key];
-    }
-  });
-}
+  if (select) select.value = lang;
+});
 
 function toggleShowRegPasswords(show) {
   const p1 = document.getElementById('regPassword');
@@ -79,12 +41,8 @@ function toggleShowRegPasswords(show) {
   if (p2) p2.type = show ? 'text' : 'password';
 }
 
-changeXrRegisterLanguage(localStorage.getItem('xregion_lang') || 'vi');
-
 async function handleRegisterPageSubmit(e) {
   e.preventDefault();
-  const lang = localStorage.getItem('xregion_lang') || 'vi';
-  const dict = REG_I18N[lang] || REG_I18N.vi;
 
   const errBox = document.getElementById('registerErrorBox');
   errBox.style.display = 'none';
@@ -92,22 +50,23 @@ async function handleRegisterPageSubmit(e) {
   const pass = document.getElementById('regPassword').value;
   const confirmPass = document.getElementById('regConfirmPassword').value;
   if (pass !== confirmPass) {
-    errBox.innerHTML = `<strong>⚠️ ${dict.regErrorPrefix}</strong> ${dict.errPassMismatch}`;
+    const iconWarn = typeof ICON === 'function' ? ICON('ui-warning', 'ico-warning') : '';
+    errBox.innerHTML = `<strong>${iconWarn} ${tk('regErrorPrefix')}</strong> ${tk('errPassMismatch')}`;
     errBox.style.display = 'block';
     return;
   }
 
   const btn = document.getElementById('regBtn');
-  const origText = dict.createBtn;
+  const origText = tk('createBtn');
   btn.disabled = true;
-  btn.textContent = dict.creatingBtn;
+  btn.textContent = tk('creatingBtn');
 
   const username = document.getElementById('regUsername').value.trim();
   const payload = {
     fullName: document.getElementById('regFullName').value.trim(),
     username: username,
     password: pass,
-    role: document.getElementById('regRole').value
+    role: 'ROLE_USER'
   };
 
   try {
@@ -120,15 +79,16 @@ async function handleRegisterPageSubmit(e) {
 
     if (res.ok) {
       localStorage.setItem('xregion_last_username', username);
-      showToast(dict.regSuccessToast, 'success');
+      showToast(tk('regSuccessToast'), 'success');
       setTimeout(() => {
         window.location.replace('/login.html');
       }, 800);
     } else {
-      throw new Error(data.message || 'Đăng ký không thành công.');
+      throw new Error(data.message || t('Đăng ký không thành công.', 'Registration failed.'));
     }
   } catch (err) {
-    errBox.innerHTML = `<strong>⚠️ ${dict.regErrorPrefix}</strong> ${err.message}`;
+    const iconWarn = typeof ICON === 'function' ? ICON('ui-warning', 'ico-warning') : '';
+    errBox.innerHTML = `<strong>${iconWarn} ${tk('regErrorPrefix')}</strong> ${err.message}`;
     errBox.style.display = 'block';
     showToast(err.message, 'error');
   } finally {

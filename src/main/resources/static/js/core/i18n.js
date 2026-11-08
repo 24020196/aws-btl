@@ -216,13 +216,107 @@ I18N_PAIRS.forEach(([vi, en]) => {
   EN_TO_VI_DICT.set(en.trim(), vi);
 });
 
+// ============================================================
+// CHUẨN HÓA I18N MỚI: REGISTRY & DATA-I18N KEY
+// ============================================================
+const GLOBAL_I18N_REGISTRY = {};
+const LANG_CHANGE_LISTENERS = [];
+
+function registerI18n(dict) {
+  if (!dict || typeof dict !== 'object') return;
+  Object.keys(dict).forEach(k => {
+    GLOBAL_I18N_REGISTRY[k] = dict[k];
+  });
+  if (document.body) {
+    applyPageTranslations();
+  }
+}
+
+function tk(key, fallback = '') {
+  const isEn = getLang() === 'en';
+  const item = GLOBAL_I18N_REGISTRY[key];
+  if (!item) return fallback || key;
+  if (Array.isArray(item)) return isEn ? (item[1] ?? item[0] ?? key) : (item[0] ?? key);
+  if (typeof item === 'object') return isEn ? (item.en || item.vi || key) : (item.vi || item.en || key);
+  return item;
+}
+
+function onLangChange(fn) {
+  if (typeof fn === 'function') {
+    LANG_CHANGE_LISTENERS.push(fn);
+  }
+}
+
+// Đăng ký bộ từ điển dùng chung chuẩn AWS Console
+registerI18n({
+  navDashboard: ['Bảng điều khiển EC2', 'EC2 Dashboard'],
+  navInstances: ['Máy ảo', 'Instances'],
+  navLaunch: ['Khởi tạo máy ảo', 'Launch instance'],
+  navTokens: ['API Token', 'API Tokens'],
+  navSidebarTitle: ['Menu điều hướng', 'EC2 Navigation'],
+  navCollapseSidebar: ['Thu gọn / Mở rộng Sidebar', 'Collapse / Expand sidebar'],
+  navImages: ['Hình ảnh máy ảo', 'Images'],
+  navAmis: ['AMIs', 'AMIs'],
+  navStorage: ['Lưu trữ đàn hồi (EBS)', 'Elastic Block Store'],
+  navVolumes: ['Ổ đĩa (Volumes)', 'Volumes'],
+  navSnapshots: ['Bản sao nhanh (Snapshots)', 'Snapshots'],
+  navNetwork: ['Mạng & Bảo mật', 'Network & Security'],
+  navSecurityGroups: ['Nhóm bảo mật (Security Groups)', 'Security Groups'],
+  navElasticIps: ['IP đàn hồi (Elastic IPs)', 'Elastic IPs'],
+  navKeyPairs: ['Cặp khóa (Key Pairs)', 'Key Pairs'],
+  navMigration: ['Di chuyển liên vùng', 'Migration'],
+  navCrossRegion: ['Chuyển vùng liên vùng', 'Cross-Region Migration'],
+  navAccount: ['Tài khoản & Xác thực', 'Account & Access'],
+  navComingSoon: ['Sắp ra mắt', 'Coming soon'],
+
+  actInstanceState: ['Trạng thái máy ảo', 'Instance state'],
+  actActions: ['Hành động', 'Actions'],
+  actConnect: ['Kết nối', 'Connect'],
+  actStart: ['Khởi động', 'Start'],
+  actStop: ['Dừng', 'Stop'],
+  actReboot: ['Khởi động lại', 'Reboot'],
+  actTerminate: ['Xóa máy ảo', 'Terminate'],
+  actRefresh: ['Làm mới', 'Refresh'],
+  actViewDetails: ['Xem chi tiết', 'View details'],
+
+  stRunning: ['Đang chạy', 'Running'],
+  stStopped: ['Đã dừng', 'Stopped'],
+  stPending: ['Đang khởi tạo', 'Pending'],
+  stStopping: ['Đang dừng', 'Stopping'],
+  stRebooting: ['Đang khởi động lại', 'Rebooting'],
+  stShuttingDown: ['Đang xóa', 'Shutting-down'],
+  stTerminated: ['Đã xóa', 'Terminated'],
+  stMigrating: ['Đang chuyển vùng', 'Migrating'],
+
+  tabDetails: ['Chi tiết', 'Details'],
+  tabSecurity: ['Bảo mật', 'Security'],
+  tabNetworking: ['Mạng', 'Networking'],
+  tabStorage: ['Lưu trữ', 'Storage'],
+  tabMonitoring: ['Giám sát', 'Monitoring'],
+  tabMigration: ['Chuyển vùng', 'Migration'],
+
+  commonCopy: ['Sao chép', 'Copy'],
+  commonCopied: ['Đã sao chép!', 'Copied!'],
+  commonCancel: ['Hủy bỏ', 'Cancel'],
+  commonSave: ['Lưu thay đổi', 'Save changes'],
+  commonLoading: ['Đang tải…', 'Loading…'],
+  commonSignOut: ['Đăng xuất', 'Sign out'],
+  commonSignIn: ['Đăng nhập', 'Sign in'],
+  commonSignUp: ['Đăng ký', 'Sign up']
+});
+
 function setGlobalLang(lang) {
   const normalized = lang === 'en' ? 'en' : 'vi';
   localStorage.setItem('xregion_lang', normalized);
   renderUserBadge();
   applyPageTranslations();
 
-  // Refresh dynamic views on whichever page is currently open
+  // Gọi các listener đã đăng ký
+  LANG_CHANGE_LISTENERS.forEach(fn => {
+    try { fn(normalized); } catch (e) { console.error('onLangChange error:', e); }
+  });
+
+  // Refresh dynamic views on whichever page is currently open (Backward Compatibility)
   if (typeof refreshEditSectionLabels === 'function' && document.getElementById('editInstanceForm')) {
     refreshEditSectionLabels();
     if (typeof updateEditInstanceSummary === 'function') updateEditInstanceSummary();
@@ -250,13 +344,49 @@ function applyPageTranslations() {
   const isEn = getLang() === 'en';
   document.documentElement.lang = isEn ? 'en' : 'vi';
 
-  // 1. Translate all elements with explicit data-i18n-vi / data-i18n-en
+  // 1. Áp dụng chuẩn mới qua data-i18n (key-based)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (GLOBAL_I18N_REGISTRY[key] !== undefined) {
+      el.textContent = tk(key);
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (GLOBAL_I18N_REGISTRY[key] !== undefined) {
+      el.innerHTML = tk(key);
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (GLOBAL_I18N_REGISTRY[key] !== undefined) {
+      el.setAttribute('placeholder', tk(key));
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (GLOBAL_I18N_REGISTRY[key] !== undefined) {
+      el.setAttribute('title', tk(key));
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    const key = el.getAttribute('data-i18n-aria');
+    if (GLOBAL_I18N_REGISTRY[key] !== undefined) {
+      el.setAttribute('aria-label', tk(key));
+    }
+  });
+
+  // 2. LEGACY: Translate all elements with explicit data-i18n-vi / data-i18n-en
   document.querySelectorAll('[data-i18n-vi]').forEach(el => {
     const txt = isEn ? el.getAttribute('data-i18n-en') : el.getAttribute('data-i18n-vi');
     if (txt !== null) el.textContent = txt;
   });
 
-  // 2. Translate top sub-navigation links across all pages
+  // 3. LEGACY: Translate top sub-navigation links across pages not yet migrated to sidebar
   const navMap = [
     { href: '/index.html', vi: 'Trang Chủ Tổng Quan', en: 'Overview Dashboard' },
     { href: '/instances.html', vi: 'Danh Sách Máy Ảo', en: 'Instances' },
@@ -277,7 +407,7 @@ function applyPageTranslations() {
     });
   });
 
-  // 3. Walk DOM text nodes and translate matching phrases losslessly
+  // 4. LEGACY: Walk DOM text nodes and translate matching phrases losslessly
   if (document.body) {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
     let node;
@@ -294,7 +424,7 @@ function applyPageTranslations() {
       }
     }
 
-    // 4. Translate input placeholders
+    // Translate input placeholders
     document.querySelectorAll('input[placeholder]').forEach(inp => {
       const p = inp.getAttribute('placeholder').trim();
       if (isEn && VI_TO_EN_DICT.has(p)) {
@@ -314,24 +444,35 @@ function renderUserBadge() {
   const user = localStorage.getItem('xregion_user') || 'Admin';
   const lang = getLang();
 
+  const iconGlobe = typeof ICON === 'function' ? ICON('ui-globe', 'ico-sm') : '';
+  const iconUser = typeof ICON === 'function' ? ICON('ui-user', 'ico-sm') : '';
+  const iconLogout = typeof ICON === 'function' ? ICON('ui-logout', 'ico-sm') : '';
+
   const langSelectorHtml = `
-    <select class="header-lang-select" onchange="setGlobalLang(this.value)" aria-label="Language">
-      <option value="vi" ${lang === 'vi' ? 'selected' : ''}>🌐 Tiếng Việt (VN)</option>
-      <option value="en" ${lang === 'en' ? 'selected' : ''}>🌐 English (US)</option>
-    </select>
+    <div style="display: inline-flex; align-items: center; gap: 6px;">
+      ${iconGlobe}
+      <select class="header-lang-select" onchange="setGlobalLang(this.value)" aria-label="Language">
+        <option value="vi" ${lang === 'vi' ? 'selected' : ''}>Tiếng Việt (VN)</option>
+        <option value="en" ${lang === 'en' ? 'selected' : ''}>English (US)</option>
+      </select>
+    </div>
   `;
 
   if (token) {
     container.innerHTML = `
       ${langSelectorHtml}
-      <span style="font-weight: 600; color: #fff;">👤 ${user}</span>
-      <button class="btn btn-secondary btn-sm" onclick="logout()" style="padding: 4px 10px; font-size: 11px;">${t('Đăng xuất', 'Sign out')}</button>
+      <span style="font-weight: 600; color: #fff; display: inline-flex; align-items: center; gap: 6px;">
+        ${iconUser} <span>${user}</span>
+      </span>
+      <button class="btn btn-secondary btn-sm" onclick="logout()" style="padding: 4px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+        ${iconLogout} <span>${tk('commonSignOut', t('Đăng xuất', 'Sign out'))}</span>
+      </button>
     `;
   } else {
     container.innerHTML = `
       ${langSelectorHtml}
-      <a href="/login.html" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">${t('Đăng Nhập', 'Sign in')}</a>
-      <a href="/register.html" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none; margin-left: 6px;">${t('Đăng Ký', 'Sign up')}</a>
+      <a href="/login.html" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">${tk('commonSignIn', t('Đăng Nhập', 'Sign in'))}</a>
+      <a href="/register.html" class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none; margin-left: 6px;">${tk('commonSignUp', t('Đăng Ký', 'Sign up'))}</a>
     `;
   }
   applyPageTranslations();

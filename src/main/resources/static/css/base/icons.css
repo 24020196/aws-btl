@@ -1,0 +1,75 @@
+/* Dùng chung mọi trang — Thư viện icon (sprite: /img/icons/sprite.svg). Sửa file này phải báo cả nhóm.
+   Cách dùng:
+     <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-refresh"></use></svg>
+     <svg class="ico ico-xl"><use href="/img/icons/sprite.svg#svc-ec2"></use></svg>
+   Icon ui-* ăn theo màu chữ (color) của phần tử cha; icon svc-* / os-* có màu sẵn. */
+
+.ico {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: -0.2em;
+  color: inherit;
+}
+
+.ico-xs  { width: 12px; height: 12px; }
+.ico-sm  { width: 14px; height: 14px; }
+.ico-md  { width: 16px; height: 16px; }
+.ico-lg  { width: 20px; height: 20px; }
+.ico-xl  { width: 24px; height: 24px; }
+.ico-2xl { width: 32px; height: 32px; }
+.ico-3xl { width: 48px; height: 48px; }
+
+/* Màu nhanh cho icon ui-* */
+.ico-muted   { color: var(--text-muted); }
+.ico-accent  { color: var(--accent-cyan); }
+.ico-success { color: var(--accent-green); }
+.ico-warning { color: var(--accent-amber); }
+.ico-danger  { color: var(--accent-red); }
+
+/* Quay cho trạng thái chuyển tiếp (PENDING, STOPPING, REBOOTING...) */
+.ico-spin { animation: ico-spin 0.9s linear infinite; }
+@keyframes ico-spin { to { transform: rotate(360deg); } }
+
+/* Nút chỉ có icon */
+.ico-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ico-btn:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.06); }
+
+/* Icon + chữ trong nút / link */
+.ico-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ô dịch vụ kiểu "Resources" của EC2 Dashboard */
+.svc-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.svc-tile:hover { background: var(--bg-card-hover); border-color: var(--accent-cyan); }
+.svc-tile .ico { width: 32px; height: 32px; }
+.svc-tile-label { font-size: 13px; color: var(--text-muted); }
+.svc-tile-value { font-size: 18px; font-weight: 700; color: var(--accent-cyan); }
+

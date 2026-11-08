@@ -15,6 +15,11 @@ const FLAVOR_SPECS = {
 
 // Tab Routing
 
+// Helper render icon dùng chung từ SVG sprite (/img/icons/sprite.svg)
+function ICON(id, cls = '') {
+  return `<svg class="ico ${cls}" aria-hidden="true"><use href="/img/icons/sprite.svg#${id}"></use></svg>`;
+}
+
 // Modal Helpers
 function openModal(id) {
   const m = document.getElementById(id);
@@ -37,15 +42,15 @@ function showApiError(endpoint, errorMsg, httpStatus = null) {
   banner.innerHTML = `
     <div class="api-error-content">
       <div class="api-error-title">
-        <span>⚠️ LỖI GỌI API: <code>${endpoint}</code> ${statusText}</span>
+        <span>${ICON('ui-warning', 'ico-warning')} LỖI GỌI API: <code>${endpoint}</code> ${statusText}</span>
         <span style="font-size: 11px; font-weight: 400; color: #94a3b8; margin-left: 8px;">[${now}]</span>
       </div>
       <div class="api-error-message">${errorMsg || 'Không thể kết nối đến máy chủ Backend.'}</div>
       <div class="api-error-hint">
-        💡 <strong>Gợi ý:</strong> Kiểm tra file <code>.env</code> xem đã điền AWS Credentials (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>) chưa hoặc kiểm tra kết nối mạng DynamoDB.
+        ${ICON('ui-info', 'ico-accent')} <strong>Gợi ý:</strong> Kiểm tra file <code>.env</code> xem đã điền AWS Credentials (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>) chưa hoặc kiểm tra kết nối mạng DynamoDB.
       </div>
     </div>
-    <button class="api-error-close" onclick="clearApiError()" title="Đóng thông báo">✕</button>
+    <button class="api-error-close" onclick="clearApiError()" title="Đóng thông báo">${ICON('ui-close')}</button>
   `;
   banner.style.display = 'flex';
 }
@@ -62,7 +67,7 @@ function showToast(message, type = 'success') {
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  const icon = type === 'success' ? '✅' : '❌';
+  const icon = type === 'success' ? ICON('ui-check-circle', 'ico-success') : ICON('ui-error', 'ico-danger');
   toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
   container.appendChild(toast);
 

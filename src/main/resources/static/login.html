@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Đăng nhập — XRegion Cloud Console</title>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/pages/auth-shared.css">
   <link rel="stylesheet" href="/css/pages/login.css">
@@ -19,13 +20,13 @@
   <!-- Top Header: Brand + Language Selector -->
   <header class="xr-top-bar">
     <div class="xr-brand">
-      <div class="xr-brand-logo">XREGION</div>
+      <img src="/img/logo.svg" alt="XRegion EC2" style="height: 28px;">
       <span class="xr-brand-sub" data-i18n="brandSubtitle">Hệ Thống Quản Trị Máy Ảo Đa Vùng</span>
     </div>
 
     <div class="xr-lang-switch" title="Chọn ngôn ngữ / Select Language">
-      <span>🌐</span>
-      <select id="xrLangSelect" onchange="changeXrLanguage(this.value)">
+      <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-globe"></use></svg>
+      <select id="xrLangSelect" onchange="setGlobalLang(this.value)">
         <option value="vi">Tiếng Việt (VN)</option>
         <option value="en">English (US)</option>
       </select>
@@ -123,9 +124,9 @@
     <a href="javascript:void(0)" data-i18n="footerPrivacy">Bảo mật</a>
     <a href="javascript:void(0)" data-i18n="footerTerms">Điều khoản sử dụng</a>
     <a href="javascript:void(0)"
-      onclick="changeXrLanguage(document.getElementById('xrLangSelect').value === 'vi' ? 'en' : 'vi')"
+      onclick="setGlobalLang(getLang() === 'vi' ? 'en' : 'vi')"
       data-i18n="footerSwitchLang">
-      🌐 Switch to English
+      Switch to English
     </a>
   </footer>
 
