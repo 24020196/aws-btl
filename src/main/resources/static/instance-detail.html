@@ -157,10 +157,11 @@
 
         <div class="rules-head">
           <h3 class="rules-title">Inbound rules <span class="muted" id="inboundCount"></span></h3>
+          <input type="search" class="rules-filter" id="ruleFilter" placeholder="Lọc rule (cổng, nguồn, mô tả…)" aria-label="Lọc rule inbound và outbound" oninput="renderSecurityGroups()">
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Nguồn</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Nguồn</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
             <tbody id="inboundRulesBody"></tbody>
           </table>
         </div>
@@ -171,7 +172,7 @@
         </div>
         <div class="table-scroll">
           <table class="data-table rules-table">
-            <thead><tr><th>Security Group</th><th>Rule ID</th><th>Loại</th><th>Giao thức</th><th>Cổng</th><th>Đích</th><th>Mô tả</th><th class="rule-actions"></th></tr></thead>
+            <thead><tr><th>Rule ID</th><th>Loại</th><th>Port range</th><th>Giao thức</th><th>Đích</th><th>Security Group</th><th>Mô tả</th><th class="rule-actions">Thao tác</th></tr></thead>
             <tbody id="outboundRulesBody"></tbody>
           </table>
         </div>

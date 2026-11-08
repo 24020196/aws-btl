@@ -90,18 +90,19 @@ a.btn { text-decoration: none; }
 .det-panel.active { display: block; }
 
 /* Security groups */
-.sg-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.sg-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .sg-chip {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-secondary);
   font-size: 13px;
+  white-space: nowrap;
   max-width: 100%;
+  cursor: default;
 }
 .sg-chip code { color: var(--accent-cyan); font-size: 12px; }
 .tag-shared, .tag-open {
@@ -113,9 +114,22 @@ a.btn { text-decoration: none; }
 }
 .tag-shared { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
 .tag-open { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
-.rules-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 18px 0 8px; }
+.rules-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin: 18px 0 8px; }
 .rules-title { font-size: 14px; font-weight: 700; }
-.rules-table td { vertical-align: top; }
+.rules-filter {
+  width: min(320px, 100%);
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+}
+.rules-filter:focus { outline: 2px solid var(--accent-cyan); outline-offset: 1px; border-color: transparent; }
+.rules-table td { vertical-align: middle; }
+.rules-table td.nowrap { white-space: nowrap; }
+.rules-table td code { color: var(--accent-cyan); font-size: 12px; }
 .rules-table td .muted { font-size: 11px; margin-top: 2px; }
 .rules-table .rule-actions { text-align: right; white-space: nowrap; width: 1%; }
 .proto { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #1e293b; color: #cbd5e1; }
