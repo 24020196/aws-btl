@@ -16,12 +16,14 @@
 
 // Đăng ký từ điển i18n cho trang đăng nhập
 registerI18n({
+  loginTitle: ['Đăng nhập — XRegion Cloud Console', 'Sign in — XRegion Cloud Console'],
   brandSubtitle: ['Hệ Thống Quản Trị Máy Ảo Đa Vùng', 'Multi-Region Cloud Console'],
   signInHeading: ['Đăng nhập người dùng', 'User sign in'],
   signInDesc: ['Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn', 'Sign in to manage your virtual machines and cloud infrastructure'],
   troubleTitle: ['Tài khoản mặc định để thử nghiệm:', 'Default demo credentials:'],
   troubleAutoFill: ['Bấm vào đây để tự động điền admin / admin123', 'Click here to auto-fill admin / admin123'],
   labelUsername: ['Tên đăng nhập', 'Username'],
+  placeholderUsername: ['Nhập tên đăng nhập', 'Enter username'],
   rememberAccount: ['Ghi nhớ tài khoản này', 'Remember this account'],
   labelPassword: ['Mật khẩu', 'Password'],
   showPassword: ['Hiển thị mật khẩu', 'Show Password'],
@@ -43,10 +45,20 @@ registerI18n({
   loginErrorPrefix: ['Lỗi đăng nhập:', 'Sign-in error:']
 });
 
-onLangChange(lang => {
+function syncLoginPageLang(lang) {
+  const currentLang = lang || getLang();
   const select = document.getElementById('xrLangSelect');
-  if (select) select.value = lang;
+  if (select && select.value !== currentLang) select.value = currentLang;
+  document.title = tk('loginTitle');
+}
+
+onLangChange(lang => {
+  syncLoginPageLang(lang);
 });
+
+// Đồng bộ trạng thái ngôn ngữ ngay khi trang đăng nhập được nạp
+syncLoginPageLang();
+
 
 function toggleShowLoginPassword(show) {
   const passInput = document.getElementById('authPassword');
