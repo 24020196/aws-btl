@@ -368,3 +368,6 @@ a.btn { text-decoration: none; }
   border: 1px solid var(--border-color, rgba(255,255,255,.1)); background: rgba(15,23,42,.35); }
 .mig-fact .muted { font-size: 12px; line-height: 1.4; }
 @media (max-width: 640px) { .mig-facts { grid-template-columns: 1fr; } }
+
+.sim-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: #fbbf24; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.35); cursor: help; }
