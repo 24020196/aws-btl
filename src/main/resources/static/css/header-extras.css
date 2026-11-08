@@ -27,3 +27,13 @@
 .table-scroll { max-width: 100%; position: relative; }
 /* body là flex container: cho phép header/sub-nav co lại để thanh menu cuộn ngang thay vì kéo rộng cả trang */
 .header, .sub-nav, .main-content { min-width: 0; max-width: 100vw; }
+
+/* Điện thoại: header gọn trên một hàng, không kéo rộng trang (ẩn "Global", thu nhỏ ô ngôn ngữ / tên / Đăng xuất) */
+@media (max-width: 640px) {
+  .header { padding: 10px 12px; gap: 8px; }
+  .header-status { gap: 8px; min-width: 0; flex-shrink: 1; }
+  .health-pill { display: none; }
+  .user-badge { padding: 4px 6px; gap: 6px; min-width: 0; max-width: 100%; }
+  .user-badge .header-lang-select { max-width: 92px; padding: 4px 6px; }
+  .user-badge > span, .user-badge strong { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

@@ -23,6 +23,7 @@ registerI18n({
   launchDomainName: ['Tên miền Route 53 DNS', 'Route 53 DNS domain'],
   launchSummaryTitle: ['Tóm tắt cấu hình', 'Summary'],
   launchSumRegion: ['VÙNG MỤC TIÊU', 'TARGET REGION'],
+  launchPemHint: ['File khóa riêng tư (.pem) chỉ được tải xuống 1 lần duy nhất khi tạo mới.', 'The private key file (.pem) can only be downloaded once, when the key pair is created.'],
   launchSumAmi: ['HỆ ĐIỀU HÀNH (AMI)', 'SOFTWARE IMAGE (AMI)'],
   launchSumKey: ['KHÓA XÁC THỰC (KEY PAIR)', 'KEY PAIR'],
   launchSumSg: ['NHÓM BẢO MẬT (SECURITY GROUP)', 'FIREWALL (SECURITY GROUP)'],
@@ -198,6 +199,16 @@ function selectOs(imageId, osName) {
 // 5. Tải danh sách Images và Flavors động từ API
 const dynamicOsMap = {};
 
+// Nhãn dòng máy từ API /flavors chỉ có tiếng Việt: đổi sang tiếng Anh khi giao diện là EN
+function launchSeriesLabel(series) {
+  const s = series || t('Tiêu chuẩn', 'General purpose');
+  return getLang() === 'en' ? s.replace('Tiêu chuẩn', 'General purpose').replace('Hiệu năng cao', 'Compute optimized') : s;
+}
+
+if (typeof onLangChange === 'function') {
+  onLangChange(() => document.querySelectorAll('.launch-series').forEach(td => { td.textContent = launchSeriesLabel(td.dataset.series); }));
+}
+
 async function loadLaunchImagesAndFlavors() {
   const osGrid = document.getElementById('osOptionsGrid');
   const flavorSelect = document.getElementById('instFlavor');
@@ -209,7 +220,9 @@ async function loadLaunchImagesAndFlavors() {
       const images = await apiRequest('/images');
       if (images && images.length > 0) {
         images.forEach(img => {
-          dynamicOsMap[img.id] = `${img.name} (${img.distribution} ${img.version || ''})`.trim();
+          // API có thể không trả distribution/version: chỉ ghép phần có giá trị để không hiện "(undefined)"
+          const extra = [img.distribution, img.version].filter(Boolean).join(' ');
+          dynamicOsMap[img.id] = extra ? `${img.name} (${extra})` : img.name;
         });
 
         const iconForDistro = (distro) => {
@@ -282,7 +295,7 @@ async function loadLaunchImagesAndFlavors() {
             const seriesColor = f.name.startsWith('h1') ? '#a855f7' : '#38bdf8';
             return `
               <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isMedium ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
-                <td style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${f.series || t('Tiêu chuẩn', 'Standard')}</td>
+                <td class="launch-series" data-series="${f.series || ''}" style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${launchSeriesLabel(f.series)}</td>
                 <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isMedium ? '#38bdf8' : '#fff'};">
                   ${f.name} ${isMedium ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
                 </td>
@@ -313,7 +326,7 @@ function updatePageLaunchSummary() {
 
   const region = regionEl.value;
   const isRegionA = region.includes('southeast');
-  const regionLabel = isRegionA ? 'Region A (Sydney / Singapore)' : 'Region B (N. Virginia)';
+  const regionLabel = isRegionA ? 'Region A (Sydney)' : 'Region B (N. Virginia)';
 
   const osMap = {
     'img-u22': 'Ubuntu Server 22.04 LTS',
