@@ -10,7 +10,7 @@
       const token = localStorage.getItem('xregion_jwt');
       const expAt = Number(localStorage.getItem('xregion_jwt_expires_at') || 0);
       if (!token || (expAt > 0 && Date.now() >= expAt)) {
-        window.location.replace('/login.html');
+        window.location.replace('/login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
       }
     })();
   </script>
