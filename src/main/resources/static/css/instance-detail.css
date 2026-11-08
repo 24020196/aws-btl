@@ -134,7 +134,7 @@ a.btn { text-decoration: none; }
 }
 .rules-filter:focus { outline: 2px solid var(--accent-cyan); outline-offset: 1px; border-color: transparent; }
 .rules-table td { vertical-align: middle; }
-.rules-table td.nowrap { white-space: nowrap; }
+.rules-table td.nowrap, .data-table td.nowrap { white-space: nowrap; }
 .rules-table td code { color: var(--accent-cyan); font-size: 12px; }
 .rules-table td .muted { font-size: 11px; margin-top: 2px; }
 .rules-table .rule-actions { text-align: right; white-space: nowrap; width: 1%; }

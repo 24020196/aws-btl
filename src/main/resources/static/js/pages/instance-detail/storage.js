@@ -1,7 +1,7 @@
 // Trang chi tiết máy ảo (instance-detail.html) — Lực.
 // Các file trong js/pages/instance-detail/ dùng chung biến toàn cục `det` và các hàm tiện ích trong core.js.
 // Thứ tự nạp: core.js → migration.js → dialogs.js → security.js → storage.js → monitoring.js
-// Tab Lưu trữ: ổ gốc và các ổ đang gắn.
+// Tab Lưu trữ: ổ gốc, các ổ đang gắn và snapshot sinh ra khi chuyển vùng.
 
 // ---------------- Storage ----------------
 async function loadVolumes() {
@@ -29,4 +29,28 @@ async function loadVolumes() {
       <td>${esc(v.iops || '–')} / ${esc(v.throughput || '–')} MB/s</td>
       <td><span class="ec2-state ${String(v.status).toUpperCase() === 'IN_USE' || String(v.status).toLowerCase() === 'in-use' ? 'state-running' : 'state-pending'}">${esc(String(v.status || '').toLowerCase().replace('_', '-'))}</span></td>
     </tr>`).join(''));
+}
+
+// ---------------- Snapshots (GET /api/migrations/snapshots?instanceId=) ----------------
+async function loadSnapshots() {
+  let list;
+  try {
+    list = await apiRequest(`/migrations/snapshots?instanceId=${encodeURIComponent(det.id)}`);
+  } catch (err) {
+    setText('snapCount', '');
+    setHtml('snapshotsBody', `<tr><td colspan="6" class="empty-cell">${t('Không tải được danh sách snapshot.', 'Could not load snapshots.')}</td></tr>`);
+    return;
+  }
+  list = list || [];
+  setText('snapCount', `(${list.length})`);
+  setHtml('snapshotsBody', list.length
+    ? list.map(sn => `<tr>
+        <td class="mono nowrap">${esc(sn.snapshotId)}</td>
+        <td class="nowrap">${regionTag(sn.region)}</td>
+        <td class="mono nowrap">${esc(sn.sourceSnapshotId || "–")}</td>
+        <td>${esc(sn.description || '–')}</td>
+        <td><span class="ec2-state ${sn.state === 'completed' ? 'state-running' : 'state-error'}">${esc(sn.state)}</span></td>
+        <td class="nowrap">${esc(fmtTime(sn.startedAt))}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-cell">${t('Chưa có snapshot nào. Snapshot được tạo khi máy chuyển vùng.', 'No snapshots yet. Snapshots are created when the instance migrates.')}</td></tr>`);
 }

@@ -160,7 +160,7 @@ function switchDetailTab(tab) {
   if (location.hash !== '#' + tab) history.replaceState(null, '', location.pathname + location.search + '#' + tab);
   if (tab === 'monitoring' && det.inst) loadMetrics();
   scheduleMetricsRefresh(tab);
-  if (tab === 'storage' && det.inst) loadVolumes();
+  if (tab === 'storage' && det.inst) { loadVolumes(); loadSnapshots(); }
 }
 
 // ---------------- Init ----------------
@@ -185,7 +185,7 @@ async function initInstanceDetail() {
   await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
   const tabNow = (location.hash || '').replace('#', '');
   if (tabNow === 'monitoring') loadMetrics();
-  if (tabNow === 'storage') loadVolumes();
+  if (tabNow === 'storage') { loadVolumes(); loadSnapshots(); }
   await resumeRunningMigration();
   if (new URLSearchParams(window.location.search).get('action') === 'migrate') {
     switchDetailTab('migration');
@@ -319,7 +319,7 @@ async function refreshAll() {
       await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
       const tab = (location.hash || '').replace('#', '');
       if (tab === 'monitoring') loadMetrics();
-      if (tab === 'storage') loadVolumes();
+      if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
       showToast('Đã làm mới thông tin máy ảo', 'success');
     }
   } finally {

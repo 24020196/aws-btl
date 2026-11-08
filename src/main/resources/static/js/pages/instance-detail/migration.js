@@ -235,7 +235,7 @@ function startProgressPollingDetail() {
           showToast('Chuyển vùng thất bại, máy đã được giữ ở vùng nguồn', 'error');
         }
         await loadInstance();
-        await Promise.all([loadMigrationHistory(), loadSecurityAndNetwork()]);
+        await Promise.all([loadMigrationHistory(), loadSecurityAndNetwork(), loadSnapshots()]);
       }
     } catch (err) {
       clearInterval(det.pollTimer);

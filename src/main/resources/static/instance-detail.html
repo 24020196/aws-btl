@@ -234,6 +234,20 @@
           </table>
         </div>
       </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title ico-label"><svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-snapshot"></use></svg> <span>Snapshots</span> <span class="muted" id="snapCount"></span></div>
+            <div class="card-sub" data-i18n="detSnapSub">EBS snapshot tạo ở bước 2 của mỗi lần chuyển vùng, bản sao ở vùng đích tạo ở bước 3 (CopySnapshot).</div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Snapshot ID</th><th>Region</th><th data-i18n="detSnapSource">Snapshot nguồn</th><th data-i18n="detSnapDesc">Mô tả</th><th data-i18n="detSnapState">Trạng thái</th><th data-i18n="detSnapStarted">Thời điểm tạo</th></tr></thead>
+            <tbody id="snapshotsBody"><tr><td colspan="6" class="empty-cell">…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- TAB: Monitoring -->
