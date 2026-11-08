@@ -221,21 +221,21 @@ function renderLoadFailure(err) {
   box.className = 'card det-empty';
   box.setAttribute('role', 'alert');
   box.innerHTML = notFound
-    ? `<div class="det-empty-icon" aria-hidden="true">?</div>
+    ? `<div class="det-empty-icon" aria-hidden="true">${ICON('ui-search', 'ico-xl')}</div>
        <h1 class="det-empty-title">${det.id ? `Không tìm thấy máy ảo <code>${esc(det.id)}</code>` : 'Chưa chọn máy ảo'}</h1>
        <p class="det-empty-text">${det.id
          ? 'Máy ảo này không tồn tại, đã bị xóa (Terminated) hoặc thuộc tài khoản khác.'
          : 'Địa chỉ trang thiếu ID máy ảo. Hãy chọn một máy trong danh sách.'}</p>
        <div class="det-empty-actions">
-         <a href="/instances.html" class="btn btn-primary">← Về danh sách máy ảo</a>
-         <a href="/launch.html" class="btn btn-secondary">+ Khởi tạo máy ảo mới</a>
+         <a href="/instances.html" class="btn btn-primary ico-label">${ICON('ui-chevron-left', 'ico-sm')} Về danh sách máy ảo</a>
+         <a href="/launch.html" class="btn btn-secondary ico-label">${ICON('ui-plus', 'ico-sm')} Khởi tạo máy ảo mới</a>
        </div>`
-    : `<div class="det-empty-icon is-error" aria-hidden="true">!</div>
+    : `<div class="det-empty-icon is-error" aria-hidden="true">${ICON('ui-error', 'ico-xl')}</div>
        <h1 class="det-empty-title">Không tải được thông tin máy ảo</h1>
        <p class="det-empty-text">Máy chủ không phản hồi hoặc đang gặp lỗi. Chi tiết: <code>${esc(msg || 'không rõ')}</code></p>
        <div class="det-empty-actions">
-         <button type="button" class="btn btn-primary" onclick="location.reload()">⟳ Thử lại</button>
-         <a href="/instances.html" class="btn btn-secondary">← Về danh sách máy ảo</a>
+         <button type="button" class="btn btn-primary ico-label" onclick="location.reload()">${ICON('ui-refresh', 'ico-sm')} Thử lại</button>
+         <a href="/instances.html" class="btn btn-secondary ico-label">${ICON('ui-chevron-left', 'ico-sm')} Về danh sách máy ảo</a>
        </div>`;
   main.appendChild(box);
 }
@@ -279,7 +279,6 @@ function renderInstance() {
   setText('sumKey', inst.keyName || '–');
   setHtml('sumChecks', statusChecks(inst.status));
   setText('sumAmi', inst.imageName || inst.imageId || '–');
-  setText('sumLaunch', inst.createdAt ? fmtTime(inst.createdAt) : '–');
   setText('sumOwner', inst.username || inst.owner || '–');
 
   setText('detSeries', spec && spec.series ? spec.series : '');
@@ -305,9 +304,9 @@ function renderInstance() {
 
 function statusChecks(status) {
   const s = String(status || '').toUpperCase();
-  if (isRunningStatus(s)) return '<span class="check-ok">✓ 2/2 checks passed</span>';
-  if (s === 'MIGRATING' || isTransitional(s)) return '<span class="check-wait">⟳ Initializing</span>';
-  if (s === 'ERROR') return '<span class="check-bad">✕ 1/2 checks failed</span>';
+  if (isRunningStatus(s)) return `<span class="check-ok">${ICON('ui-check-circle', 'ico-sm')} 2/2 checks passed</span>`;
+  if (s === 'MIGRATING' || isTransitional(s)) return `<span class="check-wait">${ICON('ui-spinner', 'ico-sm ico-spin')} Initializing</span>`;
+  if (s === 'ERROR') return `<span class="check-bad">${ICON('ui-error', 'ico-sm')} 1/2 checks failed</span>`;
   return '<span class="muted">Không áp dụng</span>';
 }
 
@@ -378,25 +377,25 @@ function renderActions() {
   };
 
   setHtml('detailActionButtons', `
-    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">⟳</button>
-    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${t('Kết nối (Connect)', 'Connect')}</button>
+    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">${ICON('ui-refresh')}</button>
+    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal')} ${t('Kết nối (Connect)', 'Connect')}</button>
     <div class="state-menu" id="stateMenu">
       <button type="button" class="btn btn-secondary" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
-        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Trạng thái máy ảo ▾', 'Instance state ▾')}</button>
+        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power')} ${t('Trạng thái máy ảo', 'Instance state')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="state-menu-list" id="stateMenuList" role="menu" aria-labelledby="stateMenuBtn" hidden>
-        ${item('START', t('▶ Khởi động máy ảo (Start)', '▶ Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
-        ${item('STOP', t('⏸ Dừng máy ảo (Stop)', '⏸ Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
-        ${item('REBOOT', t('🔄 Khởi động lại (Reboot)', '🔄 Reboot instance'), !running || busy, '', !running ? t('Chỉ reboot được máy đang chạy', 'Instance must be running to reboot') : busyHint)}
+        ${item('START', ICON('ui-play') + ' ' + t('Khởi động máy ảo (Start)', 'Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
+        ${item('STOP', ICON('ui-stop') + ' ' + t('Dừng máy ảo (Stop)', 'Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
+        ${item('REBOOT', ICON('ui-reboot') + ' ' + t('Khởi động lại (Reboot)', 'Reboot instance'), !running || busy, '', !running ? t('Chỉ reboot được máy đang chạy', 'Instance must be running to reboot') : busyHint)}
         <div class="state-menu-sep" role="separator"></div>
-        ${item('TERMINATE', t('🗑 Xóa vĩnh viễn (Terminate)', '🗑 Terminate (delete) instance'), busy, 'danger', busyHint)}
+        ${item('TERMINATE', ICON('ui-trash') + ' ' + t('Xóa vĩnh viễn (Terminate)', 'Terminate (delete) instance'), busy, 'danger', busyHint)}
       </div>
     </div>
     <div class="ec2-actions-menu" id="ec2ActionsMenu">
       <button type="button" class="btn btn-secondary" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
-        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Hành động ▾', 'Actions ▾')}</button>
+        onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${t('Hành động', 'Actions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span><span>▸</span></button>
+          <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Quản lý vòng đời & Nhãn', 'Protection and lifecycle management')}</div>
             ${editLink('tags', 'Đổi tên máy ảo & nhãn (Tags)', 'Change instance name & tags', false)}
@@ -408,7 +407,7 @@ function renderActions() {
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Mạng (Networking)', 'Networking')}</span><span>▸</span></button>
+          <button type="button" class="ec2-actions-trigger"><span>${t('Mạng (Networking)', 'Networking')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Địa chỉ IP & Tên miền', 'IP & DNS configuration')}</div>
             ${editLink('elastic-ip', 'Quản lý địa chỉ Elastic IP', 'Manage Elastic IP address', false)}
@@ -417,7 +416,7 @@ function renderActions() {
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Bảo mật (Security)', 'Security')}</span><span>▸</span></button>
+          <button type="button" class="ec2-actions-trigger"><span>${t('Bảo mật (Security)', 'Security')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
             ${editLink('security-groups', 'Đổi nhóm bảo mật (Security groups)', 'Change security groups', false)}
@@ -425,7 +424,7 @@ function renderActions() {
           </div>
         </div>
         <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Lưu trữ (Storage)', 'Storage')}</span><span>▸</span></button>
+          <button type="button" class="ec2-actions-trigger"><span>${t('Lưu trữ (Storage)', 'Storage')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
           <div class="ec2-actions-submenu">
             <div class="ec2-actions-subhead">${t('Ổ đĩa EBS Elastic Volumes', 'EBS Elastic Volumes')}</div>
             ${editLink('storage', 'Mở rộng ổ cứng gốc EBS (gp3)', 'Modify EBS root volume (gp3)', false)}
@@ -433,7 +432,7 @@ function renderActions() {
         </div>
       </div>
     </div>
-    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">⚡ Fast Migrate X-Region</button>
+    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate')} Fast Migrate X-Region</button>
   `);
 
   setText('detActionHint', reason ? 'Fast Migrate tạm khóa: ' + reason : '');
@@ -441,7 +440,7 @@ function renderActions() {
   const tabBtn = document.getElementById('btnMigrateTab');
   if (tabBtn) {
     tabBtn.disabled = !!reason;
-    tabBtn.textContent = `⚡ Fast Migrate sang ${regionLabel(otherRegion(inst.region))}`;
+    tabBtn.innerHTML = `${ICON('ui-migrate')} Fast Migrate ${t('sang', 'to')} ${esc(regionLabel(otherRegion(inst.region)))}`;
   }
   setText('migBlockReason', reason || 'Sẵn sàng chuyển vùng.');
   document.getElementById('migBlockReason').classList.toggle('warn', !!reason);

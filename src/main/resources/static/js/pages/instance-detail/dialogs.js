@@ -42,7 +42,7 @@ function confirmDialog({ title, message, confirmText = 'Xác nhận', cancelText
     overlay.innerHTML = `
       <div class="modal-card confirm-card ${danger ? 'is-danger' : ''}">
         <div class="confirm-head">
-          <span class="confirm-icon" aria-hidden="true">${danger ? '!' : '?'}</span>
+          <span class="confirm-icon" aria-hidden="true">${ICON(danger ? 'ui-warning' : 'ui-info', 'ico-lg')}</span>
           <h2 class="modal-title" id="confirmTitle">${esc(title)}</h2>
         </div>
         <p class="modal-text" id="confirmMsg">${message}</p>

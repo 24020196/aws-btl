@@ -76,7 +76,7 @@
         <div class="summary-item"><div class="summary-label">Region</div><div class="summary-value" id="sumRegion">–</div></div>
         <div class="summary-item"><div class="summary-label">Availability Zone</div><div class="summary-value mono" id="sumAz">–</div></div>
         <div class="summary-item"><div class="summary-label">VPC ID</div><div class="summary-value mono" id="sumVpc">–</div></div>
-        <div class="summary-item"><div class="summary-label">Launch time</div><div class="summary-value" id="sumLaunch">–</div></div>
+        <div class="summary-item"><div class="summary-label">Platform</div><div class="summary-value" id="sumPlatform">Linux/UNIX</div></div>
         <div class="summary-item"><div class="summary-label">Owner</div><div class="summary-value" id="sumOwner">–</div></div>
         <div class="summary-item"><div class="summary-label">migration_lock</div><div class="summary-value" id="sumLock">–</div></div>
       </div>
@@ -286,7 +286,7 @@
           <div class="mig-hint" id="migRouteHint"></div>
         </div>
         <div class="mig-status-item mig-cta">
-          <button class="btn btn-primary" id="btnMigrateTab" onclick="openMigrateModal()">⚡ Fast Migrate X-Region</button>
+          <button class="btn btn-primary" id="btnMigrateTab" onclick="openMigrateModal()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> <span>Fast Migrate X-Region</span></button>
           <div class="mig-hint" id="migBlockReason"></div>
         </div>
       </div>
@@ -344,7 +344,7 @@
       </ul>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('migrateModal')">Hủy</button>
-        <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()">⚡ Bắt đầu chuyển vùng</button>
+        <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> Bắt đầu chuyển vùng</button>
       </div>
     </div>
   </div>
@@ -467,7 +467,7 @@
       <div class="mig-log-route" id="migLogRoute"></div>
       <div class="mig-log-stats" id="migLogStats"></div>
       <ol class="mig-log-steps" id="migLogSteps"></ol>
-      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn" data-copy="migLogTerminal" aria-label="Sao chép log">⧉ Sao chép</button></div>
+      <div class="terminal-head"><span>Log đã lưu trong XRegion-Migrations</span><button class="copy-btn" data-copy="migLogTerminal" aria-label="Sao chép log"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg> Sao chép</button></div>
       <div class="terminal-window mig-log-terminal" id="migLogTerminal" role="log"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('migLogModal')">Đóng</button>
@@ -484,9 +484,9 @@
         <li>Trên Linux/macOS, giới hạn quyền đọc file khóa: <code id="connChmod">--</code></li>
         <li>Kết nối bằng Elastic IP:</li>
       </ol>
-      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH">⧉</button></div>
+      <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
       <p class="modal-text" style="margin-top: 12px;">Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:</p>
-      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns" aria-label="Sao chép lệnh SSH theo tên miền">⧉</button></div>
+      <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" data-copy="connCmdDns" aria-label="Sao chép lệnh SSH theo tên miền"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
       <p class="muted" style="margin-top: 12px;" id="connNote"></p>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal('connectModal')">Đóng</button>

@@ -20,15 +20,16 @@ async function loadMigrationHistory() {
 function renderLockAndCooldown() {
   const h = det.history || {};
   const locked = !!h.migrationLock || det.running;
-  setHtml('migLock', locked
-    ? '<span class="lock-badge locked">🔒 LOCKED</span>'
-    : '<span class="lock-badge">🔓 Unlocked</span>');
+  const lockHtml = locked
+    ? `<span class="lock-badge locked">${ICON('ui-lock', 'ico-sm')} LOCKED</span>`
+    : `<span class="lock-badge">${ICON('ui-unlock', 'ico-sm')} Unlocked</span>`;
+  setHtml('migLock', lockHtml);
   setText('migLockHint', locked && h.lockStale && !det.running
     ? `Khóa từ ${fmtTime(h.lockAcquiredAt)} nhưng không còn tiến trình nào chạy (khóa treo). Bấm Fast Migrate để tự giải phóng và chuyển lại.`
     : locked
     ? `Khóa từ ${fmtTime(h.lockAcquiredAt)}. Lần chuyển khác sẽ bị từ chối.`
     : 'Ghi có điều kiện trên DynamoDB, chỉ một lần chuyển chạy tại một thời điểm.');
-  setHtml('sumLock', locked ? '<span class="lock-badge locked">🔒 LOCKED</span>' : '<span class="lock-badge">🔓 Unlocked</span>');
+  setHtml('sumLock', lockHtml);
 
   const region = (det.inst && det.inst.region) || h.currentRegion;
   setHtml('migRoute', `${regionTag(region)} <span class="muted">→</span> ${regionTag(otherRegion(region))}`);
@@ -113,7 +114,7 @@ function openMigrationLog(idx) {
     const time = line ? (line.match(/^\[([^\]]+)\]/) || [])[1] : '';
     const state = doneSteps.has(n) ? 'done' : (failed && n === lastDone + 1 ? 'fail' : 'skip');
     return `<li class="mig-log-step ${state}">
-      <span class="mig-log-dot" aria-hidden="true">${state === 'done' ? '✓' : state === 'fail' ? '✕' : n}</span>
+      <span class="mig-log-dot" aria-hidden="true">${state === 'done' ? ICON('ui-check', 'ico-sm') : state === 'fail' ? ICON('ui-close', 'ico-sm') : n}</span>
       <div><strong>${n}. ${name}</strong>${time ? ` <span class="muted mono">${esc(time)}</span>` : ''}
       <div class="muted">${line ? esc(line.replace(/^\[[^\]]+\]\s*Step \d\/6:\s*/, '')) : state === 'fail' ? esc(r.errorMessage || 'Thất bại ở bước này') : 'Không chạy tới bước này'}</div></div>
     </li>`;
@@ -261,10 +262,10 @@ function renderPipeline(p) {
     li.className = 'det-step';
     if (done || n < step) {
       li.classList.add('done');
-      dot.textContent = '✓';
+      dot.innerHTML = ICON('ui-check-circle');
     } else if (n === step) {
       li.classList.add(failed ? 'failed' : 'active');
-      dot.textContent = failed ? '✕' : String(n);
+      dot.innerHTML = failed ? ICON('ui-error') : ICON('ui-spinner', 'ico-spin');
     } else {
       dot.textContent = String(n);
     }
