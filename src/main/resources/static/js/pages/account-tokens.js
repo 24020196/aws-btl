@@ -189,9 +189,14 @@ function copyTokenText(tokenVal) {
 }
 
 async function revokeToken(tokenId) {
-  if (!confirm(`Bạn có chắc chắn muốn thu hồi Token [${tokenId}]? Các ứng dụng sử dụng token này sẽ bị từ chối truy cập ngay lập tức.`)) {
-    return;
-  }
+  const ok = await confirmDialog({
+    title: t('Thu hồi API token?', 'Revoke API token?'),
+    message: t(`Token <code>${uiEsc(tokenId)}</code> sẽ bị thu hồi. Các ứng dụng đang dùng token này bị từ chối truy cập ngay lập tức.`,
+               `Token <code>${uiEsc(tokenId)}</code> will be revoked. Apps using it are denied access immediately.`),
+    confirmText: t('Thu hồi', 'Revoke'),
+    danger: true
+  });
+  if (!ok) return;
 
   try {
     const token = localStorage.getItem('xregion_jwt');

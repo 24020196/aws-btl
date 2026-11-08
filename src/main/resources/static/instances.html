@@ -108,26 +108,26 @@
                 <svg class="ico ico-sm" aria-hidden="true">
                   <use href="/img/icons/sprite.svg#ui-play"></use>
                 </svg>
-                <span data-i18n="actStart">Start instance</span>
+                <span data-i18n="instMenuStart">Start instance</span>
               </button>
               <button class="toolbar-dropdown-item" onclick="handleBulkAction('STOP')">
                 <svg class="ico ico-sm" aria-hidden="true">
                   <use href="/img/icons/sprite.svg#ui-stop"></use>
                 </svg>
-                <span data-i18n="actStop">Stop instance</span>
+                <span data-i18n="instMenuStop">Stop instance</span>
               </button>
               <button class="toolbar-dropdown-item" onclick="handleBulkAction('REBOOT')">
                 <svg class="ico ico-sm" aria-hidden="true">
                   <use href="/img/icons/sprite.svg#ui-reboot"></use>
                 </svg>
-                <span data-i18n="actReboot">Reboot instance</span>
+                <span data-i18n="instMenuReboot">Reboot instance</span>
               </button>
               <div class="toolbar-dropdown-divider"></div>
               <button class="toolbar-dropdown-item" style="color: #f87171;" onclick="handleBulkAction('TERMINATE')">
                 <svg class="ico ico-sm" aria-hidden="true">
                   <use href="/img/icons/sprite.svg#ui-trash"></use>
                 </svg>
-                <span data-i18n="actTerminate">Terminate instance</span>
+                <span data-i18n="instMenuTerminate">Terminate instance</span>
               </button>
             </div>
           </div>
@@ -141,26 +141,8 @@
                 <use href="/img/icons/sprite.svg#ui-chevron-down"></use>
               </svg>
             </button>
-            <div class="toolbar-dropdown-menu" id="actionsDropdown">
-              <button class="toolbar-dropdown-item" onclick="viewSelectedInstanceDetail()">
-                <svg class="ico ico-sm" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-info"></use>
-                </svg>
-                <span data-i18n="actViewDetails">View details</span>
-              </button>
-              <button class="toolbar-dropdown-item" onclick="editSelectedInstance()">
-                <svg class="ico ico-sm" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-edit"></use>
-                </svg>
-                <span data-i18n="instActionEdit">Edit instance settings</span>
-              </button>
-              <button class="toolbar-dropdown-item" onclick="migrateSelectedInstance()">
-                <svg class="ico ico-sm" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-migrate"></use>
-                </svg>
-                <span data-i18n="instActionMigrate">Fast Migrate X-Region</span>
-              </button>
-            </div>
+            <!-- Nội dung do ec2ActionsGroupsHtml() (instance-actions-menu.js) dựng khi mở, giống menu ở trang chi tiết -->
+            <div class="toolbar-dropdown-menu ec2-actions-dropdown" id="actionsDropdown" role="menu"></div>
           </div>
 
           <!-- Launch Instances Button -->
@@ -385,58 +367,21 @@
   </div>
 
   <!-- Connect SSH Modal -->
-    <div class="modal-overlay" id="connectModal" onclick="if (event.target === this) closeModal('connectModal')">
+    <!-- Hộp Kết nối: cùng nội dung với trang chi tiết (nội dung do openConnectModal() trong instances.js điền) -->
+    <div class="modal-overlay" id="connectModal" role="dialog" aria-modal="true" aria-labelledby="connectTitle" onclick="if (event.target === this) closeModal('connectModal')">
       <div class="modal-card" style="max-width: 600px;">
-        <div class="card-header">
-          <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
-            <svg class="ico ico-md" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#ui-terminal"></use>
-            </svg>
-            <span data-i18n="instConnectTitle">Connect to instance</span>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('connectModal')">
-            <svg class="ico ico-sm" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#ui-close"></use>
-            </svg>
-          </button>
-        </div>
-
-        <div style="padding: 18px 20px;">
-          <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 14px;">
-            <span data-i18n="instConnectHelp">Sử dụng SSH client từ máy tính cá nhân để kết nối tới máy ảo thông qua địa
-              chỉ Public IP và Key Pair:</span>
-          </div>
-
-          <div style="margin-bottom: 16px;">
-            <label class="form-label" data-i18n="instConnectCommand">Lệnh SSH:</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="connectSshCmd" readonly
-                style="font-family: monospace; font-size: 13px;">
-              <button class="btn btn-secondary btn-sm" onclick="copySshCommand()" title="Sao chép lệnh">
-                <svg class="ico ico-sm" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-copy"></use>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div
-            style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; font-size: 12.5px; line-height: 1.6; color: #cbd5e1;">
-            <strong style="color: #38bdf8;">Lưu ý bảo mật:</strong> Đảm bảo file khóa <code>.pem</code> đã được phân
-            quyền <code>chmod 400 key.pem</code> và nhóm bảo mật (Security Group) của máy ảo đã mở cổng 22 (SSH).
-          </div>
-
-          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('connectModal')"
-              data-i18n="actClose">Đóng</button>
-            <a href="#" id="connectWebTerminalBtn" class="btn btn-primary" target="_blank"
-              style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-              <svg class="ico ico-sm" aria-hidden="true">
-                <use href="/img/icons/sprite.svg#ui-terminal"></use>
-              </svg>
-              <span>Open Web Terminal</span>
-            </a>
-          </div>
+        <h2 class="modal-title" id="connectTitle"></h2>
+        <ol class="connect-steps">
+          <li><span id="connStep1a"></span> <code id="connKeyFile">--</code> <span id="connStep1b"></span></li>
+          <li><span id="connStep2"></span> <code id="connChmod">--</code></li>
+          <li id="connStep3"></li>
+        </ol>
+        <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" onclick="copyConnectCmd('connCmdIp')" aria-label="Copy"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+        <p class="modal-text" style="margin-top: 12px;" id="connDnsText"></p>
+        <div class="cmd-box"><code id="connCmdDns">--</code><button class="copy-btn" onclick="copyConnectCmd('connCmdDns')" aria-label="Copy"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+        <p class="muted" style="margin-top: 12px;" id="connNote"></p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal('connectModal')" id="connCloseBtn"></button>
         </div>
       </div>
     </div>
@@ -450,6 +395,7 @@
     <script src="/js/core/auth.js"></script>
     <script src="/js/core/i18n.js"></script>
     <script src="/js/core/sidebar.js"></script>
+    <script src="/js/pages/instance-actions-menu.js"></script>
     <script src="/js/pages/instances.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {

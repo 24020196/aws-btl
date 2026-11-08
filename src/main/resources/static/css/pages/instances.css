@@ -263,12 +263,11 @@
   gap: 3px;
 }
 
+/* Nhãn giống khối tóm tắt ở trang chi tiết: chữ thường, không giãn chữ */
 .split-kv-label {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted, #64748b);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .split-kv-value {
@@ -348,3 +347,7 @@
   margin: 4px 0;
 }
 
+
+/* Menu Hành động dùng chung với trang chi tiết (instance-actions-menu.js): cùng độ rộng với .ec2-actions-list */
+.toolbar-dropdown-menu.ec2-actions-dropdown { min-width: 230px; padding: 6px 0; }
+.ec2-actions-dropdown .ec2-actions-item { white-space: nowrap; display: flex; align-items: center; gap: 6px; }

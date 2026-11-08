@@ -40,18 +40,19 @@ function isTransitional(s) { return DET_TRANSITIONAL.includes(String(s || '').to
 function isGone(s) { return ['TERMINATED', 'TERMINATING', 'SHUTTING_DOWN'].includes(String(s || '').toUpperCase()); }
 
 // UI status from the API -> EC2 state shown on screen
+// Trạng thái máy → [class badge (status-badges.css), key i18n dùng chung st*]; trang chủ và trang danh sách dùng cùng kiểu
 const DET_STATES = {
-  ACTIVE:        { cls: 'state-running',       label: 'Running' },
-  RUNNING:       { cls: 'state-running',       label: 'Running' },
-  SHUTOFF:       { cls: 'state-stopped',       label: 'Stopped' },
-  STOPPED:       { cls: 'state-stopped',       label: 'Stopped' },
-  PENDING:       { cls: 'state-pending',       label: 'Pending' },
-  STOPPING:      { cls: 'state-stopping',      label: 'Stopping' },
-  SHUTTING_DOWN: { cls: 'state-shutting-down', label: 'Shutting-down' },
-  TERMINATING:   { cls: 'state-shutting-down', label: 'Terminating' },
-  REBOOTING:     { cls: 'state-rebooting',     label: 'Rebooting' },
-  MIGRATING:     { cls: 'state-migrating',     label: 'Migrating' },
-  TERMINATED:    { cls: 'state-terminated',    label: 'Terminated' },
+  ACTIVE:        { cls: 'state-running',       key: 'stRunning' },
+  RUNNING:       { cls: 'state-running',       key: 'stRunning' },
+  SHUTOFF:       { cls: 'state-stopped',       key: 'stStopped' },
+  STOPPED:       { cls: 'state-stopped',       key: 'stStopped' },
+  PENDING:       { cls: 'state-pending',       key: 'stPending' },
+  STOPPING:      { cls: 'state-stopping',      key: 'stStopping' },
+  SHUTTING_DOWN: { cls: 'state-shutting-down', key: 'stShuttingDown' },
+  TERMINATING:   { cls: 'state-shutting-down', key: 'stShuttingDown' },
+  REBOOTING:     { cls: 'state-rebooting',     key: 'stRebooting' },
+  MIGRATING:     { cls: 'state-migrating',     key: 'stMigrating' },
+  TERMINATED:    { cls: 'state-terminated',    key: 'stTerminated' },
   ERROR:         { cls: 'state-error',         label: 'Error' }
 };
 
@@ -109,8 +110,10 @@ function regionTag(code) {
 }
 
 function stateTag(status) {
-  const s = DET_STATES[String(status || '').toUpperCase()] || { cls: 'state-error', label: status || 'Unknown' };
-  return `<span class="ec2-state ${s.cls}">${esc(s.label)}</span>`;
+  const key = String(status || '').toUpperCase();
+  const s = DET_STATES[key] || { cls: 'state-error', label: status || 'Unknown' };
+  const spin = isTransitional(key) ? ICON('ui-spinner', 'ico-xs ico-spin') + ' ' : '';
+  return `<span class="ec2-state ${s.cls}">${spin}${esc(s.key ? tk(s.key) : s.label)}</span>`;
 }
 
 function setText(id, value) {
@@ -405,26 +408,13 @@ function renderActions() {
        onclick="closeStateMenu(); runDetailAction('${id}', '${action}')">${label}</button>`;
   const busyHint = t('Máy đang chuyển trạng thái hoặc đang chuyển vùng', 'Instance is transitioning or migrating');
 
-  const editLink = (section, labelVi, labelEn, requiresStop = false, immutableVi = '', immutableEn = '') => {
-    const label = t(labelVi, labelEn);
-    const url = `/instance-edit.html?id=${encodeURIComponent(inst.id)}&section=${section}`;
-    if (immutableVi) {
-      const msg = t(immutableVi, immutableEn || immutableVi);
-      return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(msg)}" title="${esc(msg)}">${label}</span>`;
-    }
-    if (requiresStop && (powered || busy)) {
-      const stopMsg = t('Cần dừng máy ảo trước khi dùng "' + labelVi + '"', `Stop the instance before using "${labelEn}"`);
-      return `<span role="menuitem" aria-disabled="true" class="ec2-actions-item is-disabled" data-tooltip="${esc(stopMsg)}" title="${esc(stopMsg)}">${label}</span>`;
-    }
-    return `<a role="menuitem" href="${url}" class="ec2-actions-item">${label}</a>`;
-  };
 
   setHtml('detailActionButtons', `
-    <button class="btn btn-secondary" id="btnRefresh" onclick="refreshAll()" title="${t('Làm mới', 'Refresh')}" aria-label="${t('Làm mới', 'Refresh')}">${ICON('ui-refresh')}</button>
-    <button class="btn btn-secondary" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal')} ${tk('actConnect')}</button>
+    <button class="btn btn-secondary btn-sm" id="btnRefresh" onclick="refreshAll()">${ICON('ui-refresh', 'ico-sm')} ${tk('actRefresh')}</button>
+    <button class="btn btn-secondary btn-sm" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal', 'ico-sm')} ${tk('actConnect')}</button>
     <div class="state-menu" id="stateMenu">
-      <button type="button" class="btn btn-secondary" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
-        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
+        onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power', 'ico-sm')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="state-menu-list" id="stateMenuList" role="menu" aria-labelledby="stateMenuBtn" hidden>
         ${item('START', ICON('ui-play') + ' ' + t('Khởi động máy ảo', 'Start instance'), powered || busy, '', powered ? t('Máy đang chạy', 'Instance is already running') : busyHint)}
         ${item('STOP', ICON('ui-stop') + ' ' + t('Dừng máy ảo', 'Stop instance'), !powered || busy, '', !powered ? t('Máy đã dừng', 'Instance is already stopped') : busyHint)}
@@ -434,47 +424,13 @@ function renderActions() {
       </div>
     </div>
     <div class="ec2-actions-menu" id="ec2ActionsMenu">
-      <button type="button" class="btn btn-secondary" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
+      <button type="button" class="btn btn-secondary btn-sm" id="ec2ActionsBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="ec2ActionsList"
         onclick="toggleEc2ActionsMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${tk('actActions')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
       <div class="ec2-actions-list" id="ec2ActionsList" role="menu" aria-labelledby="ec2ActionsBtn" hidden>
-        <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${t('Cài đặt máy ảo', 'Instance settings')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
-          <div class="ec2-actions-submenu">
-            <div class="ec2-actions-subhead">${t('Quản lý vòng đời & Nhãn', 'Protection and lifecycle management')}</div>
-            ${editLink('tags', 'Đổi tên máy ảo và tag', 'Change instance name & tags', false)}
-            ${editLink('cooldown', 'Đổi thời gian chờ Cooldown', 'Change migration cooldown', false)}
-            <div class="ec2-actions-sep"></div>
-            <div class="ec2-actions-subhead">${t('Cấu hình phần cứng', 'Instance configuration')}</div>
-            ${editLink('instance-type', 'Đổi loại máy ảo', 'Change instance type', true)}
-            ${editLink('cpu-options', 'Tùy chọn CPU', 'Change CPU options', true, 'Cần dừng máy ảo trước khi đổi tùy chọn CPU', 'Instance must be stopped to modify CPU options')}
-          </div>
-        </div>
-        <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${tk('tabNetworking')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
-          <div class="ec2-actions-submenu">
-            <div class="ec2-actions-subhead">${t('Địa chỉ IP & Tên miền', 'IP & DNS configuration')}</div>
-            ${editLink('elastic-ip', 'Quản lý địa chỉ Elastic IP', 'Manage Elastic IP address', false)}
-            ${editLink('dns', 'Cập nhật tên miền Route 53 DNS', 'Change Route 53 DNS record', false)}
-            ${editLink('vpc', 'Đổi mạng VPC / Subnet', 'Change VPC / Subnet', false, 'Không thể đổi trực tiếp VPC/Subnet. Vui lòng dùng Fast Migrate X-Region để chuyển vùng', 'VPC/Subnet cannot be changed directly. Use Fast Migrate X-Region instead')}
-          </div>
-        </div>
-        <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${tk('tabSecurity')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
-          <div class="ec2-actions-submenu">
-            <div class="ec2-actions-subhead">${t('Tường lửa & Khóa truy cập', 'Access & Firewall')}</div>
-            ${editLink('key-pair', 'Đổi Key pair SSH', 'Change SSH key pair', false)}
-          </div>
-        </div>
-        <div class="ec2-actions-group">
-          <button type="button" class="ec2-actions-trigger"><span>${tk('tabStorage')}</span>${ICON('ui-chevron-right', 'ico-sm')}</button>
-          <div class="ec2-actions-submenu">
-            <div class="ec2-actions-subhead">${t('Ổ đĩa EBS Elastic Volumes', 'EBS Elastic Volumes')}</div>
-            ${editLink('storage', 'Mở rộng ổ cứng gốc EBS (gp3)', 'Modify EBS root volume (gp3)', false)}
-          </div>
-        </div>
+        ${ec2ActionsGroupsHtml(inst)}
       </div>
     </div>
-    <button class="btn btn-primary" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate')} Fast Migrate X-Region</button>
+    <button class="btn btn-primary btn-sm" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region</button>
   `);
 
   setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');

@@ -28,7 +28,12 @@ registerI18n({
   instActionEdit: ['Chỉnh sửa cấu hình máy ảo', 'Edit instance settings'],
   instActionMigrate: ['Chuyển vùng tức thì (Fast Migrate)', 'Fast Migrate X-Region'],
   actClose: ['Đóng', 'Close'],
-  actViewDetails: ['Xem chi tiết', 'View full details']
+  actViewDetails: ['Xem chi tiết', 'View full details'],
+  // Cùng tên với menu "Trạng thái máy ảo" ở trang chi tiết
+  instMenuStart: ['Khởi động máy ảo', 'Start instance'],
+  instMenuStop: ['Dừng máy ảo', 'Stop instance'],
+  instMenuReboot: ['Khởi động lại máy ảo', 'Reboot instance'],
+  instMenuTerminate: ['Xóa máy ảo', 'Terminate instance']
 });
 
 let cachedInstances = [];
@@ -195,8 +200,6 @@ function filterInstancesUI() {
     tr.id = `row-${inst.id}`;
     if (isSelected) tr.classList.add('row-selected');
 
-    // Thêm icon spinner trước tên trạng thái nếu đang chuyển tiếp
-    const transitionSpinner = isTrans ? `<span style="margin-right: 4px;">${ICON('ui-spinner', 'ico-xs ico-spin')}</span>` : '';
 
     tr.innerHTML = `
       <td style="text-align: center;" onclick="event.stopPropagation()">
@@ -216,9 +219,7 @@ function filterInstancesUI() {
         </div>
       </td>
       <td>
-        <span class="badge ${cfg.cssClass}">
-          ${transitionSpinner}<span class="status-dot ${cfg.dotClass}"></span>${cfg.label}
-        </span>
+        ${instanceStateBadge(inst.status)}
       </td>
       <td><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace; text-transform: none; letter-spacing: 0;">${inst.flavor}</span></td>
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
@@ -244,6 +245,23 @@ function filterInstancesUI() {
 
   const selectedInFiltered = filtered.filter(i => selectedInstanceIds.has(i.id)).length;
   updateMasterCheckbox(selectedInFiltered, filtered.length);
+}
+
+// Badge trạng thái giống trang chi tiết và trang chủ: class ec2-state (status-badges.css) + nhãn i18n dùng chung st*
+const INSTANCE_STATE_UI = {
+  RUNNING: ['state-running', 'stRunning'], ACTIVE: ['state-running', 'stRunning'],
+  STOPPED: ['state-stopped', 'stStopped'], SHUTOFF: ['state-stopped', 'stStopped'],
+  PENDING: ['state-pending', 'stPending'], STOPPING: ['state-stopping', 'stStopping'],
+  REBOOTING: ['state-rebooting', 'stRebooting'], SHUTTING_DOWN: ['state-shutting-down', 'stShuttingDown'],
+  TERMINATING: ['state-shutting-down', 'stShuttingDown'], TERMINATED: ['state-terminated', 'stTerminated'],
+  MIGRATING: ['state-migrating', 'stMigrating']
+};
+
+function instanceStateBadge(status) {
+  const key = String(status || '').toUpperCase();
+  const [cls, label] = INSTANCE_STATE_UI[key] || ['state-error', ''];
+  const spin = getStatusBadgeConfig(status).isTransitioning ? ICON('ui-spinner', 'ico-xs ico-spin') + ' ' : '';
+  return `<span class="ec2-state ${cls}" style="white-space: nowrap;">${spin}${label ? tk(label) : (status || 'unknown')}</span>`;
 }
 
 function renderSecurityGroupBadge(sgString) {
@@ -354,13 +372,59 @@ function updateSelectionToolbar() {
 
   // Nút Instance State sáng khi chọn >= 1 máy ảo
   if (btnState) btnState.disabled = (count === 0);
+  updateStateMenuItems();
+}
+
+// Máy nào được Start / Stop / Reboot / Terminate (giống trang chi tiết: máy đang chạy thì khóa Start...)
+const ACTION_ALLOWED_FROM = {
+  START: ['STOPPED', 'SHUTOFF'],
+  STOP: ['RUNNING', 'ACTIVE'],
+  REBOOT: ['RUNNING', 'ACTIVE'],
+  TERMINATE: ['RUNNING', 'ACTIVE', 'STOPPED', 'SHUTOFF', 'ERROR']
+};
+
+function selectedInstancesFor(action) {
+  const allowed = ACTION_ALLOWED_FROM[action] || [];
+  return Array.from(selectedInstanceIds)
+    .map(id => cachedInstances.find(i => i.id === id))
+    .filter(i => i && allowed.includes(String(i.status || '').toUpperCase()));
+}
+
+function actionDisabledReason(action) {
+  if (selectedInstanceIds.size === 0) return t('Chọn ít nhất một máy ảo', 'Select at least one instance');
+  if (selectedInstancesFor(action).length > 0) return '';
+  return {
+    START: t('Các máy đã chọn đang chạy hoặc đang chuyển trạng thái', 'The selected instances are already running or changing state'),
+    STOP: t('Các máy đã chọn đã dừng hoặc đang chuyển trạng thái', 'The selected instances are already stopped or changing state'),
+    REBOOT: t('Chỉ reboot được máy đang chạy', 'Only running instances can be rebooted'),
+    TERMINATE: t('Các máy đã chọn đang chuyển trạng thái hoặc đã xóa', 'The selected instances are changing state or terminated')
+  }[action];
+}
+
+// Khóa / mở từng mục trong menu "Trạng thái máy ảo" và các nút trong khung chọn nhiều máy
+function updateStateMenuItems() {
+  document.querySelectorAll('#instanceStateDropdown [onclick^="handleBulkAction"], #splitBulkSummary [onclick^="handleBulkAction"]').forEach(btn => {
+    const action = (btn.getAttribute('onclick').match(/'([A-Z]+)'/) || [])[1];
+    const reason = actionDisabledReason(action);
+    btn.disabled = !!reason;
+    btn.title = reason || '';
+  });
 }
 
 // 7. Thao tác hàng loạt (Bulk Actions)
 async function handleBulkAction(action) {
   closeAllDropdowns();
-  const ids = Array.from(selectedInstanceIds);
-  if (ids.length === 0) return;
+  // Chỉ gửi lệnh cho máy đang ở trạng thái hợp lệ; máy khác bỏ qua và báo lại
+  const eligible = selectedInstancesFor(action);
+  const skipped = selectedInstanceIds.size - eligible.length;
+  if (eligible.length === 0) {
+    showToast(actionDisabledReason(action), 'error');
+    return;
+  }
+  if (skipped > 0) {
+    showToast(t(`Bỏ qua ${skipped} máy không ở trạng thái phù hợp`, `Skipping ${skipped} instance(s) in an incompatible state`), 'info');
+  }
+  const ids = eligible.map(i => i.id);
 
   const actionNameMap = {
     'START': t('Khởi động', 'Start'),
@@ -370,10 +434,28 @@ async function handleBulkAction(action) {
   };
   const actionLabel = actionNameMap[action] || action;
 
-  if (action === 'TERMINATE') {
-    const msg = t(`Bạn có chắc chắn muốn XÓA vĩnh viễn ${ids.length} máy ảo đã chọn? Hành động này không thể hoàn tác!`,
-                  `Are you sure you want to TERMINATE ${ids.length} selected instance(s)? This action cannot be undone!`);
-    if (!confirm(msg)) return;
+  // Xác nhận bằng hộp thoại chung confirmDialog() (js/core/ui.js), giống trang chi tiết máy ảo
+  if (action === 'TERMINATE' || action === 'STOP') {
+    const picked = ids.map(id => (typeof cachedInstances !== 'undefined' && cachedInstances.find(i => i.id === id)) || { id, name: id });
+    const list = picked.map(i => `<strong>${uiEsc(i.name)}</strong> (<code>${uiEsc(i.id)}</code>)`).join(', ');
+    const single = picked.length === 1;
+    const ok = action === 'TERMINATE'
+      ? await confirmDialog({
+          title: single ? t('Xóa (terminate) máy ảo?', 'Terminate instance?') : t(`Xóa (terminate) ${picked.length} máy ảo?`, `Terminate ${picked.length} instances?`),
+          message: t(`${list} sẽ bị xóa vĩnh viễn. Ổ EBS gốc bị xóa, Elastic IP được trả lại và bản ghi Route 53 ngừng trỏ tới máy. Không thể hoàn tác.`,
+                     `${list} will be permanently deleted. The root EBS volume is deleted, the Elastic IP is released and the Route 53 record stops pointing to it. This cannot be undone.`),
+          confirmText: tk('actTerminate'),
+          danger: true,
+          requireText: single ? picked[0].name : 'terminate'
+        })
+      : await confirmDialog({
+          title: single ? t('Dừng máy ảo?', 'Stop instance?') : t(`Dừng ${picked.length} máy ảo?`, `Stop ${picked.length} instances?`),
+          message: t(`Dịch vụ trên ${list} sẽ gián đoạn tới khi bật lại. Dữ liệu trên ổ EBS được giữ nguyên.`,
+                     `Services on ${list} are unavailable until started again. Data on the EBS volume is kept.`),
+          confirmText: tk('actStop'),
+          danger: true
+        });
+    if (!ok) return;
   }
 
   showToast(t(`Đang gửi yêu cầu ${actionLabel} cho ${ids.length} máy ảo...`, `Submitting ${actionLabel} for ${ids.length} instance(s)...`), 'info');
@@ -463,110 +545,79 @@ function updateSplitPane() {
   }
 }
 
+// Khung tóm tắt dưới bảng: cùng nhãn và cùng nguồn dữ liệu với trang chi tiết (instance-detail.html)
+function splitEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function splitKv(label, valueHtml) {
+  return `<div class="split-kv-item"><div class="split-kv-label">${label}</div><div class="split-kv-value">${valueHtml}</div></div>`;
+}
+
+function splitRegion(inst) {
+  const name = String(inst.regionName || '').replace(/\s*\(Region [AB]\)\s*/, '') || inst.region || '–';
+  return `${splitEsc(name)} <code style="color: var(--text-muted);">${splitEsc(inst.region || '')}</code>`;
+}
+
 function renderSplitDetailsTab(inst) {
   const grid = document.getElementById('splitDetailsGrid');
   if (!grid) return;
-  const cfg = getStatusBadgeConfig(inst.status);
-
-  grid.innerHTML = `
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Mã máy ảo (ID)', 'Instance ID')}</div>
-      <div class="split-kv-value"><code style="color: var(--accent-cyan); font-weight: 700;">${inst.id}</code></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Tên máy ảo', 'Instance name')}</div>
-      <div class="split-kv-value"><strong>${inst.name}</strong></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Trạng thái', 'Instance state')}</div>
-      <div class="split-kv-value"><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Loại cấu hình', 'Instance type')}</div>
-      <div class="split-kv-value"><span class="badge" style="background:#1e293b; color:#94a3b8; font-family:monospace; text-transform: none; letter-spacing: 0;">${inst.flavor}</span></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Vùng đám mây', 'Region')}</div>
-      <div class="split-kv-value">${inst.regionName || inst.region}</div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Hệ điều hành / AMI', 'AMI / OS')}</div>
-      <div class="split-kv-value">${inst.image || 'Ubuntu 22.04 LTS'}</div>
-    </div>
-  `;
+  const spec = (typeof FLAVOR_SPECS !== 'undefined' && FLAVOR_SPECS[inst.flavor]) || null;
+  grid.innerHTML = [
+    splitKv('Instance ID', `<code style="color: var(--accent-cyan); font-weight: 700;">${splitEsc(inst.id)}</code>`),
+    splitKv(t('Tên máy ảo', 'Instance name'), `<strong>${splitEsc(inst.name)}</strong>`),
+    splitKv(t('Trạng thái máy ảo', 'Instance state'), instanceStateBadge(inst.status)),
+    splitKv(t('Loại máy ảo', 'Instance type'), `<code>${splitEsc(inst.flavor || '–')}</code>${spec ? ` · ${spec.vcpu} vCPU` : ''}`),
+    splitKv('Region', splitRegion(inst)),
+    splitKv('AMI', splitEsc(inst.imageName || inst.image || '–'))
+  ].join('');
 }
 
 function renderSplitSecurityTab(inst) {
   const grid = document.getElementById('splitSecurityGrid');
   if (!grid) return;
-
-  grid.innerHTML = `
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Nhóm bảo mật (Security Group)', 'Security groups')}</div>
-      <div class="split-kv-value">${renderSecurityGroupBadge(inst.securityGroup)}</div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Cặp khóa SSH (Key pair)', 'Key pair name')}</div>
-      <div class="split-kv-value">
-        <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;">
-          ${ICON('svc-key-pair', 'ico-xs')}
-          <span>${inst.keyName || 'xregion-key'}</span>
-        </span>
-      </div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">${t('Tường lửa Inbound Rules', 'Firewall rules')}</div>
-      <div class="split-kv-value">${t('Cổng mở: SSH (22), HTTP (80), ICMP', 'Ports open: SSH (22), HTTP (80), ICMP')}</div>
-    </div>
-  `;
+  grid.innerHTML = [
+    splitKv('Security group', renderSecurityGroupBadge(inst.securityGroup)),
+    splitKv('Key pair', `<code>${splitEsc(inst.keyName || '–')}</code>`),
+    splitKv('Inbound rules', `<span id="splitInboundRules" class="muted">${t('Đang tải…', 'Loading…')}</span>`)
+  ].join('');
+  // Rule thật của Security Group riêng của máy (giống tab Security ở trang chi tiết)
+  apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(inst.id)}`).then(groups => {
+    const el = document.getElementById('splitInboundRules');
+    if (!el) return;
+    const rules = (groups || []).flatMap(g => g.inboundRules || []);
+    const port = r => (r.protocol === 'all' || r.protocol === 'icmp') ? 'All' : (r.fromPort === r.toPort ? r.fromPort : `${r.fromPort}-${r.toPort}`);
+    el.className = '';
+    el.innerHTML = rules.length
+      ? rules.map(r => `<code>${splitEsc(String(r.protocol).toUpperCase())} ${splitEsc(port(r))}</code> ${t('từ', 'from')} <code>${splitEsc(r.cidr)}</code>`).join('<br>')
+      : `<span class="muted">${t('Chưa có inbound rule nào', 'No inbound rules')}</span>`;
+  }).catch(() => {
+    const el = document.getElementById('splitInboundRules');
+    if (el) el.textContent = t('Không tải được rule', 'Could not load rules');
+  });
 }
 
 function renderSplitNetworkingTab(inst) {
   const grid = document.getElementById('splitNetworkingGrid');
   if (!grid) return;
-
-  grid.innerHTML = `
-    <div class="split-kv-item">
-      <div class="split-kv-label">Public IPv4 address</div>
-      <div class="split-kv-value"><code style="color: var(--accent-cyan);">${inst.publicIp || '--'}</code></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Private IPv4 address</div>
-      <div class="split-kv-value"><code>${inst.privateIp || '--'}</code></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Route 53 DNS Name</div>
-      <div class="split-kv-value"><code>${inst.dnsDomain || (inst.name.toLowerCase() + '.xregion.net')}</code></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Elastic IP Status</div>
-      <div class="split-kv-value"><span class="badge" style="background: #1e293b; color: #38bdf8;">${inst.publicIp ? 'Associated' : 'None'}</span></div>
-    </div>
-  `;
+  grid.innerHTML = [
+    splitKv('Public IPv4 (Elastic IP)', `<code style="color: var(--accent-cyan);">${splitEsc(inst.publicIp || '–')}</code>`),
+    splitKv('Private IPv4', `<code>${splitEsc(inst.privateIp || '–')}</code>`),
+    splitKv('Public DNS (Route 53)', `<code>${splitEsc(inst.dnsDomain || '–')}</code>`),
+    splitKv('Region', splitRegion(inst))
+  ].join('');
 }
 
 function renderSplitStorageTab(inst) {
   const grid = document.getElementById('splitStorageGrid');
   if (!grid) return;
-
-  grid.innerHTML = `
-    <div class="split-kv-item">
-      <div class="split-kv-label">Root Volume ID</div>
-      <div class="split-kv-value"><code>vol-${(inst.id || '').substring(0, 8)}</code></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Volume Type</div>
-      <div class="split-kv-value"><span class="badge" style="background: #1e293b; color: #34d399;">gp3 SSD</span></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Volume Size</div>
-      <div class="split-kv-value"><strong>${inst.ebsSizeGb || 10} GiB</strong></div>
-    </div>
-    <div class="split-kv-item">
-      <div class="split-kv-label">Delete on Termination</div>
-      <div class="split-kv-value">Yes</div>
-    </div>
-  `;
+  const spec = (typeof FLAVOR_SPECS !== 'undefined' && FLAVOR_SPECS[inst.flavor]) || null;
+  grid.innerHTML = [
+    splitKv(t('Tên thiết bị gốc', 'Root device name'), '<code>/dev/vda</code>'),
+    splitKv('Root EBS Volume', `<code>${splitEsc(inst.volumeId || inst.ebsVolumeId || `vol-${String(inst.id).replace('i-', '')}`)}</code>`),
+    splitKv(t('Loại ổ đĩa', 'Volume type'), 'gp3 SSD'),
+    splitKv(t('Dung lượng', 'Size'), `${splitEsc(inst.ebsSizeGb || (spec ? spec.defaultDisk : 10))} GB`)
+  ].join('');
 }
 
 function renderSplitBulkSummary(count) {
@@ -604,6 +655,7 @@ function renderSplitBulkSummary(count) {
       </button>
     </div>
   `;
+  updateStateMenuItems();
 }
 
 function closeSplitPane() {
@@ -643,6 +695,7 @@ function toggleStateDropdown(ev) {
   const drop = document.getElementById('instanceStateDropdown');
   const actDrop = document.getElementById('actionsDropdown');
   if (actDrop) actDrop.classList.remove('show');
+  updateStateMenuItems();
   if (drop) drop.classList.toggle('show');
 }
 
@@ -651,7 +704,17 @@ function toggleActionsDropdown(ev) {
   const drop = document.getElementById('actionsDropdown');
   const stateDrop = document.getElementById('instanceStateDropdown');
   if (stateDrop) stateDrop.classList.remove('show');
-  if (drop) drop.classList.toggle('show');
+  if (!drop) return;
+  // Cùng menu nhiều cấp với trang chi tiết (instance-actions-menu.js), thêm mục Fast Migrate vì trang này không có nút riêng
+  const inst = cachedInstances.find(i => i.id === Array.from(selectedInstanceIds)[0]);
+  if (inst && !drop.classList.contains('show')) {
+    drop.innerHTML = ec2ActionsGroupsHtml(inst) + `
+      <div class="ec2-actions-sep"></div>
+      <a role="menuitem" class="ec2-actions-item" href="/instance-detail.html?id=${encodeURIComponent(inst.id)}#migration">
+        ${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region
+      </a>`;
+  }
+  drop.classList.toggle('show');
 }
 
 function closeAllDropdowns() {
@@ -690,32 +753,58 @@ function migrateSelectedInstance() {
 }
 
 // 11. Connect SSH Modal
+// Hộp Kết nối giống trang chi tiết: cùng các bước, lệnh theo Elastic IP và theo tên miền Route 53, user theo image
+const CONNECT_SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
+
 function openConnectModal() {
   if (selectedInstanceIds.size !== 1) return;
   const id = Array.from(selectedInstanceIds)[0];
   const inst = cachedInstances.find(i => i.id === id);
   if (!inst) return;
 
-  const keyFile = `${inst.keyName || 'xregion-key'}.pem`;
-  const host = inst.publicIp || inst.privateIp || '10.0.1.10';
-  const cmd = `ssh -i "${keyFile}" ubuntu@${host}`;
+  const image = String(inst.imageName || inst.imageId || '').toLowerCase();
+  const hit = Object.keys(CONNECT_SSH_USERS).find(k => image.includes(k));
+  const user = hit ? CONNECT_SSH_USERS[hit] : 'ubuntu';
+  const key = (inst.keyName || 'my-key').replace(/\.pem$/i, '') + '.pem';
+  const host = inst.publicIp || inst.privateIp || '<elastic-ip>';
+  const set = (elId, text) => { const el = document.getElementById(elId); if (el) el.textContent = text; };
 
-  const input = document.getElementById('connectSshCmd');
-  if (input) input.value = cmd;
-
-  const webBtn = document.getElementById('connectWebTerminalBtn');
-  if (webBtn) {
-    webBtn.href = `/instance-detail.html?id=${encodeURIComponent(inst.id)}#details`;
-  }
-
+  set('connectTitle', t('Kết nối tới máy ảo', 'Connect to instance'));
+  set('connStep1a', t('Mở terminal ở thư mục chứa file khóa', 'Open a terminal in the folder with the key file'));
+  set('connStep1b', t('đã tải lúc tạo Key Pair.', 'downloaded when the key pair was created.'));
+  set('connStep2', t('Trên Linux/macOS, giới hạn quyền đọc file khóa:', 'On Linux/macOS, restrict the key file permissions:'));
+  set('connStep3', t('Kết nối bằng Elastic IP:', 'Connect with the Elastic IP:'));
+  set('connDnsText', t('Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:', 'Or use the Route 53 domain, which keeps working after a migration:'));
+  set('connCloseBtn', t('Đóng', 'Close'));
+  set('connKeyFile', key);
+  set('connChmod', `chmod 400 "${key}"`);
+  set('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
+  set('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
+  set('connNote', t(`User mặc định của ${inst.imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
+    `The default user of ${inst.imageName || 'this image'} is "${user}". A security group must allow inbound TCP 22 from your IP.`));
   openModal('connectModal');
 }
 
-function copySshCommand() {
-  const input = document.getElementById('connectSshCmd');
-  if (input) {
-    copyToClipboard(input.value, 'Lệnh SSH');
+// Sao chép (nút cạnh Instance ID, lệnh SSH). Trước đây hàm này chưa có nên bấm nút copy bị lỗi JS.
+function copyToClipboard(text, label) {
+  const done = () => showToast(t(`Đã sao chép ${label || ''}: `, `Copied ${label || ''}: `) + splitEsc(text), 'success');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => showToast(t('Trình duyệt chặn sao chép', 'The browser blocked copying'), 'error'));
+    return;
   }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { showToast(t('Trình duyệt chặn sao chép', 'The browser blocked copying'), 'error'); }
+  ta.remove();
+}
+
+function copyConnectCmd(elId) {
+  const el = document.getElementById(elId);
+  if (el && el.textContent.startsWith('ssh')) copyToClipboard(el.textContent, 'SSH');
 }
 
 // 12. Khởi tạo trang Instances
