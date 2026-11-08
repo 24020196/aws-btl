@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Overview - XRegion-EC2 Cloud Console</title>
+  <title>EC2 Dashboard - XRegion-EC2 Cloud Console</title>
   <script>
     (function () {
       const token = localStorage.getItem('xregion_jwt');
@@ -14,20 +14,16 @@
       }
     })();
   </script>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="icon"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230ea5e9'/%3E%3Cpath d='M9 12h11l-3-3M23 20H12l3 3' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 
 <body>
 
-  <!-- Top Global Header -->
   <header class="header">
     <div class="logo-container">
       <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
-        <div class="logo-badge">XREGION</div>
-        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+        <img src="/img/logo.svg" alt="XRegion EC2" style="height: 28px;">
       </a>
     </div>
 
@@ -36,256 +32,243 @@
         <div class="health-dot"></div>
         <span>Global</span>
       </div>
-
-      <div class="user-badge" id="userBadgeContainer">
-        <!-- Rendered by JS: Admin info or Login button -->
-      </div>
+      <div class="user-badge" id="userBadgeContainer"></div>
     </div>
   </header>
 
-  <!-- Sub Navigation Bar -->
-  <nav class="sub-nav">
-    <a href="/index.html" class="sub-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
-      </svg>
-      Trang Chủ Overview
-    </a>
-    <a href="/instances.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-        <rect x="9" y="9" width="6" height="6" />
-        <line x1="9" y1="1" x2="9" y2="4" />
-        <line x1="15" y1="1" x2="15" y2="4" />
-        <line x1="9" y1="20" x2="9" y2="23" />
-        <line x1="15" y1="20" x2="15" y2="23" />
-      </svg>
-      Danh Sách Máy Ảo (Instances)
-    </a>
-    <a href="/launch.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="16" />
-        <line x1="8" y1="12" x2="16" y2="12" />
-      </svg>
-      Khởi Tạo Máy Ảo (+ Launch VM)
-    </a>
-    <a href="/account-tokens.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-      </svg>
-      Tài Khoản & API Token
-    </a>
-  </nav>
+  <div class="app-shell">
+    <aside id="appSidebar" class="app-sidebar" data-active="dashboard"></aside>
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- On-screen API Error Banner -->
-    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+    <main class="app-main">
+      <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
-    <!-- Hero Card -->
-    <div class="hero-card">
-      <div>
-        <h1 class="hero-title">Tổng Quan Hạ Tầng Điện Toán Đa Vùng</h1>
-        <p class="hero-subtitle">
-          Quản lý vòng đời máy ảo NovaVM trên máy chủ Bare Metal, tự động sao chép ổ đĩa EBS gp3 và cắt chuyển định
-          tuyến Route 53 DNS xuyên vùng không gián đoạn.
-        </p>
-      </div>
-      <div style="display: flex; gap: 12px; z-index: 1;">
-        <a href="/launch.html" class="btn btn-primary" style="padding: 10px 18px; font-weight: 700;">+ Launch
-          Instance</a>
-        <a href="/instances.html" class="btn btn-secondary" style="padding: 10px 18px;">Quản Lý Máy Ảo →</a>
-      </div>
-    </div>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/index.html">EC2</a>
+        <span class="breadcrumb-sep"><svg class="ico ico-xs" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chevron-right"></use></svg></span>
+        <span data-i18n="dashCrumb">Bảng điều khiển</span>
+      </nav>
 
-    <!-- 4 Key Metric Cards -->
-    <div
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px;">
-      <div class="card" style="margin-bottom: 0; padding: 20px;">
-        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Total Compute Instances</div>
-        <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 10px;">
-          <span id="overviewTotalInstances" style="font-size: 32px; font-weight: 900; color: #fff;">--</span>
-          <span id="overviewRunningCount" style="font-size: 13px; color: #34d399;">-- Running</span>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom: 0; padding: 20px;">
-        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Connected AWS Regions</div>
-        <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 10px;">
-          <span style="font-size: 32px; font-weight: 900; color: var(--accent-cyan);">2</span>
-          <span style="font-size: 13px; color: var(--text-muted);">Sydney & Virginia</span>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom: 0; padding: 20px;">
-        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Total EBS Storage</div>
-        <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 10px;">
-          <span id="overviewStorageGb" style="font-size: 32px; font-weight: 900; color: #fbbf24;">--</span>
-          <span style="font-size: 13px; color: var(--text-muted);">GB gp3 SSD</span>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom: 0; padding: 20px;">
-        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Fleet Health Rate</div>
-        <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 10px;">
-          <span id="overviewFleetHealth" style="font-size: 32px; font-weight: 900; color: #34d399;">100%</span>
-          <span style="font-size: 13px; color: var(--text-muted);">Operational</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Multi-Region Infrastructure Status (Hình 2.1 & 2.7) -->
-    <div class="region-grid">
-      <!-- Region A Card -->
-      <div class="region-card">
-        <div class="region-card-header">
-          <div class="region-title">
-            <span style="color: var(--accent-cyan); font-weight: 900;">Region A</span>
-            <span>Sydney (ap-southeast-2)</span>
-          </div>
-          <span class="badge badge-active">Active Primary</span>
-        </div>
-        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
-          <div><span>• Mã vùng:</span> <code>ap-southeast-2</code></div>
-          <div>• Vai trò: Active Primary Production</div>
-          <div><span>• Định tuyến mạng: VPC Subnet</span> <code>10.0.1.0/24</code>, Elastic IP</div>
-        </div>
-        <div
-          style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 12px; color: var(--text-muted);">Máy ảo tại vùng:</span>
-          <strong id="regionAInstanceCount" style="color: var(--accent-cyan); font-size: 15px;">--</strong>
-        </div>
-      </div>
-
-      <!-- Region B Card -->
-      <div class="region-card">
-        <div class="region-card-header">
-          <div class="region-title">
-            <span style="color: #fbbf24; font-weight: 900;">Region B</span>
-            <span>N. Virginia (us-east-1)</span>
-          </div>
-          <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">Low Cost Standby</span>
-        </div>
-        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
-          <div><span>• Mã vùng:</span> <code>us-east-1</code></div>
-          <div>• Vai trò: Standby Secondary & Disaster Recovery</div>
-          <div><span>• Định tuyến mạng: VPC Subnet</span> <code>10.1.1.0/24</code>, Route 53 Cutover</div>
-        </div>
-        <div
-          style="margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 12px; color: var(--text-muted);">Máy ảo tại vùng:</span>
-          <strong id="regionBInstanceCount" style="color: #fbbf24; font-size: 15px;">--</strong>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cross-region migration summary -->
-    <section class="card mig-summary" aria-labelledby="migSumTitle">
-      <div class="card-header">
+      <div class="page-header">
         <div>
-          <div class="card-title" id="migSumTitle">Chuyển vùng xuyên vùng (Cross-Region Migration)</div>
-          <div class="card-sub">Tổng hợp từ bảng XRegion-Migrations cho các máy ảo của bạn. <span
-              id="migSumUpdated"></span></div>
+          <h1 class="page-title">
+            <svg class="ico ico-xl" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-ec2"></use></svg>
+            <span data-i18n="navDashboard">Bảng điều khiển EC2</span>
+          </h1>
+          <p class="page-subtitle" data-i18n="dashSubtitle">Máy ảo NovaVM trên EC2 Bare Metal ở 2 vùng, chuyển vùng bằng EBS snapshot và Route 53.</p>
         </div>
-        <a href="/instances.html" class="btn btn-secondary btn-sm">Chọn máy để chuyển vùng →</a>
-      </div>
-      <div class="mig-sum-grid">
-        <div class="mig-sum-tile">
-          <div class="mig-sum-label">Thành công</div>
-          <div class="mig-sum-value ok" id="migSumCompleted">–</div>
-          <div class="mig-sum-foot" id="migSumRate">&nbsp;</div>
-        </div>
-        <div class="mig-sum-tile">
-          <div class="mig-sum-label">Thất bại / rollback</div>
-          <div class="mig-sum-value bad" id="migSumFailed">–</div>
-          <div class="mig-sum-foot">Khóa được nhả tự động</div>
-        </div>
-        <div class="mig-sum-tile">
-          <div class="mig-sum-label">Đang chạy</div>
-          <div class="mig-sum-value run" id="migSumRunning">–</div>
-          <div class="mig-sum-foot" id="migSumLockedCount">&nbsp;</div>
-        </div>
-        <div class="mig-sum-tile">
-          <div class="mig-sum-label">Downtime TB (RTO)</div>
-          <div class="mig-sum-value" id="migSumRto">–</div>
-          <div class="mig-sum-foot">Từ lúc dừng VM nguồn tới khi DNS đổi IP</div>
+        <div class="page-actions">
+          <button type="button" class="btn btn-secondary ico-label" onclick="refreshDashboard()">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-refresh"></use></svg>
+            <span data-i18n="actRefresh">Làm mới</span>
+          </button>
+          <a href="/launch.html" class="btn btn-primary ico-label">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-plus"></use></svg>
+            <span data-i18n="navLaunch">Khởi tạo máy ảo</span>
+          </a>
         </div>
       </div>
-      <div class="mig-sum-row">
-        <div class="mig-sum-block">
-          <div class="mig-sum-block-title">Lần chuyển vùng gần nhất</div>
-          <div id="migSumLatest" class="muted">Đang tải…</div>
-        </div>
-        <div class="mig-sum-block">
-          <div class="mig-sum-block-title">Máy đang giữ migration_lock</div>
-          <div id="migSumLocked" class="muted">Đang tải…</div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Active Instances Quick Preview -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <span>Máy Ảo Đang Hoạt Động (Active Instances)</span>
+      <!-- Resources (giống khối Resources của EC2 Dashboard) -->
+      <section class="card" aria-labelledby="dashResTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="dashResTitle" data-i18n="dashResources">Tài nguyên</h2>
+            <div class="card-sub" data-i18n="dashResourcesSub">Bạn đang dùng các tài nguyên sau ở Sydney (ap-southeast-2) và N. Virginia (us-east-1).</div>
+          </div>
         </div>
-        <a href="/instances.html" class="btn btn-secondary btn-sm">Xem Toàn Bộ Máy Ảo →</a>
-      </div>
-      <div class="table-scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>INSTANCE ID</th>
-              <th>TÊN MÁY ẢO</th>
-              <th>VÙNG HIỆN TẠI</th>
-              <th>FLAVOR</th>
-              <th>PUBLIC IP</th>
-              <th>DNS TÊN MIỀN</th>
-              <th>TRẠNG THÁI</th>
-              <th>CHI TIẾT</th>
-            </tr>
-          </thead>
-          <tbody id="overviewInstanceTableBody">
-            <tr>
-              <td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">Đang tải dữ liệu máy
-                ảo...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <div class="dash-res-grid">
+          <a class="svc-tile" href="/instances.html">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-instance"></use></svg>
+            <div><div class="svc-tile-label" data-i18n="dashResRunning">Máy ảo (đang chạy)</div><div class="svc-tile-value" id="resRunning">–</div></div>
+          </a>
+          <a class="svc-tile" href="/instances.html">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-instance"></use></svg>
+            <div><div class="svc-tile-label" data-i18n="dashResInstances">Máy ảo (tất cả)</div><div class="svc-tile-value" id="resInstances">–</div></div>
+          </a>
+          <div class="svc-tile">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-ebs"></use></svg>
+            <div><div class="svc-tile-label">Volumes</div><div class="svc-tile-value" id="resVolumes">–</div><div class="svc-tile-foot" id="resVolumesGb"></div></div>
+          </div>
+          <div class="svc-tile">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-snapshot"></use></svg>
+            <div><div class="svc-tile-label">Snapshots</div><div class="svc-tile-value" id="resSnapshots">–</div><div class="svc-tile-foot" data-i18n="dashResSnapshotsFoot">tạo khi chuyển vùng</div></div>
+          </div>
+          <a class="svc-tile" href="/launch.html">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-key-pair"></use></svg>
+            <div><div class="svc-tile-label">Key pairs</div><div class="svc-tile-value" id="resKeys">–</div></div>
+          </a>
+          <div class="svc-tile">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-security-group"></use></svg>
+            <div><div class="svc-tile-label">Security groups</div><div class="svc-tile-value" id="resSgs">–</div></div>
+          </div>
+          <div class="svc-tile">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-elastic-ip"></use></svg>
+            <div><div class="svc-tile-label">Elastic IPs</div><div class="svc-tile-value" id="resEips">–</div></div>
+          </div>
+          <div class="svc-tile">
+            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
+            <div><div class="svc-tile-label">Regions</div><div class="svc-tile-value">2</div></div>
+          </div>
+        </div>
+      </section>
 
-    <!-- Recent System Audit Logs -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Nhật Ký Thao Tác Hệ Thống (Recent Audit Logs)</div>
+      <!-- Tình trạng 2 vùng (giống khối Service health của EC2 Dashboard) -->
+      <div class="region-grid">
+        <section class="region-card">
+          <div class="region-card-header">
+            <div class="region-title">
+              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
+              <span>Sydney</span> <code>ap-southeast-2</code>
+            </div>
+            <span class="badge badge-active" data-i18n="dashRegionPrimary">Vùng chính</span>
+          </div>
+          <dl class="region-facts">
+            <dt>Region</dt><dd>Region A</dd>
+            <dt>VPC subnet</dt><dd><code>10.0.1.0/24</code></dd>
+            <dt data-i18n="dashRegionRole">Vai trò</dt><dd data-i18n="dashRegionRoleA">Chạy production</dd>
+            <dt data-i18n="dashRegionInstances">Máy ảo tại vùng</dt><dd><strong id="regionAInstanceCount">–</strong></dd>
+          </dl>
+          <div class="region-health">
+            <svg class="ico ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check-circle"></use></svg>
+            <span data-i18n="dashRegionOk">Dịch vụ hoạt động bình thường</span>
+          </div>
+        </section>
+
+        <section class="region-card">
+          <div class="region-card-header">
+            <div class="region-title">
+              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
+              <span>N. Virginia</span> <code>us-east-1</code>
+            </div>
+            <span class="badge badge-standby" data-i18n="dashRegionStandby">Vùng dự phòng</span>
+          </div>
+          <dl class="region-facts">
+            <dt>Region</dt><dd>Region B</dd>
+            <dt>VPC subnet</dt><dd><code>10.1.1.0/24</code></dd>
+            <dt data-i18n="dashRegionRole">Vai trò</dt><dd data-i18n="dashRegionRoleB">Dự phòng, khôi phục sau sự cố</dd>
+            <dt data-i18n="dashRegionInstances">Máy ảo tại vùng</dt><dd><strong id="regionBInstanceCount">–</strong></dd>
+          </dl>
+          <div class="region-health">
+            <svg class="ico ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check-circle"></use></svg>
+            <span data-i18n="dashRegionOk">Dịch vụ hoạt động bình thường</span>
+          </div>
+        </section>
       </div>
-      <div class="table-scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>THỜI GIAN</th>
-              <th>NGƯỜI THỰC HIỆN</th>
-              <th>HÀNH ĐỘNG</th>
-              <th>ĐỐI TƯỢNG</th>
-              <th>CHI TIẾT NHẬT KÝ</th>
-            </tr>
-          </thead>
-          <tbody id="overviewAuditLogsBody">
-            <tr>
-              <td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Đang tải nhật ký...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+
+      <!-- Tóm tắt chuyển vùng -->
+      <section class="card mig-summary" aria-labelledby="migSumTitle">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title ico-label" id="migSumTitle">
+              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-migration"></use></svg>
+              <span data-i18n="dashMigTitle">Chuyển vùng</span>
+            </h2>
+            <div class="card-sub"><span data-i18n="dashMigSub">Tổng hợp từ bảng XRegion-Migrations cho các máy ảo của bạn.</span> <span id="migSumUpdated"></span></div>
+          </div>
+          <a href="/instances.html" class="btn btn-secondary btn-sm ico-label">
+            <span data-i18n="dashMigPick">Chọn máy để chuyển vùng</span>
+            <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chevron-right"></use></svg>
+          </a>
+        </div>
+        <div class="mig-sum-grid">
+          <div class="mig-sum-tile">
+            <div class="mig-sum-label" data-i18n="dashMigOk">Thành công</div>
+            <div class="mig-sum-value ok" id="migSumCompleted">–</div>
+            <div class="mig-sum-foot" id="migSumRate">&nbsp;</div>
+          </div>
+          <div class="mig-sum-tile">
+            <div class="mig-sum-label" data-i18n="dashMigFail">Thất bại / rollback</div>
+            <div class="mig-sum-value bad" id="migSumFailed">–</div>
+            <div class="mig-sum-foot" data-i18n="dashMigFailFoot">Khóa được nhả tự động</div>
+          </div>
+          <div class="mig-sum-tile">
+            <div class="mig-sum-label" data-i18n="dashMigRun">Đang chạy</div>
+            <div class="mig-sum-value run" id="migSumRunning">–</div>
+            <div class="mig-sum-foot" id="migSumLockedCount">&nbsp;</div>
+          </div>
+          <div class="mig-sum-tile">
+            <div class="mig-sum-label" data-i18n="dashMigRto">Downtime trung bình (RTO)</div>
+            <div class="mig-sum-value" id="migSumRto">–</div>
+            <div class="mig-sum-foot" data-i18n="dashMigRtoFoot">Từ lúc dừng VM nguồn tới khi DNS đổi IP</div>
+          </div>
+        </div>
+        <div class="mig-sum-row">
+          <div class="mig-sum-block">
+            <div class="mig-sum-block-title ico-label">
+              <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-history"></use></svg>
+              <span data-i18n="dashMigLatest">Lần chuyển vùng gần nhất</span>
+            </div>
+            <div id="migSumLatest" class="muted">…</div>
+          </div>
+          <div class="mig-sum-block">
+            <div class="mig-sum-block-title ico-label">
+              <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-lock"></use></svg>
+              <span data-i18n="dashMigLocked">Máy đang giữ migration_lock</span>
+            </div>
+            <div id="migSumLocked" class="muted">…</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Máy ảo -->
+      <section class="card" aria-labelledby="dashInstTitle">
+        <div class="card-header">
+          <h2 class="card-title ico-label" id="dashInstTitle">
+            <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-instance"></use></svg>
+            <span data-i18n="navInstances">Máy ảo</span>
+          </h2>
+          <a href="/instances.html" class="btn btn-secondary btn-sm ico-label">
+            <span data-i18n="dashViewAll">Xem tất cả</span>
+            <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chevron-right"></use></svg>
+          </a>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Instance ID</th>
+                <th data-i18n="dashColName">Tên</th>
+                <th>Region</th>
+                <th data-i18n="dashColType">Loại máy</th>
+                <th>Public IPv4</th>
+                <th>DNS</th>
+                <th data-i18n="dashColState">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="overviewInstanceTableBody">
+              <tr><td colspan="7" class="empty-cell">…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Nhật ký thao tác -->
+      <section class="card" aria-labelledby="dashLogTitle">
+        <div class="card-header">
+          <h2 class="card-title ico-label" id="dashLogTitle">
+            <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-cloudtrail"></use></svg>
+            <span data-i18n="dashLogs">Nhật ký thao tác gần đây</span>
+          </h2>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="dashColTime">Thời gian</th>
+                <th data-i18n="dashColUser">Người thực hiện</th>
+                <th data-i18n="dashColAction">Hành động</th>
+                <th data-i18n="dashColResource">Đối tượng</th>
+                <th data-i18n="dashColDetail">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody id="overviewAuditLogsBody">
+              <tr><td colspan="5" class="empty-cell">…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <div class="toast-container" id="toastContainer"></div>
 
@@ -294,6 +277,7 @@
   <script src="/js/core/session.js"></script>
   <script src="/js/core/auth.js"></script>
   <script src="/js/core/i18n.js"></script>
+  <script src="/js/core/sidebar.js"></script>
   <script src="/js/pages/overview.js"></script>
   <script src="/js/pages/overview-migration.js"></script>
   <script>

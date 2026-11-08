@@ -101,6 +101,15 @@ public class MigrationService {
     }
 
     public MigrationResponse triggerMigration(String targetId) {
+        return triggerMigration(targetId, "vi");
+    }
+
+    /** Chọn câu thông báo theo ngôn ngữ giao diện (?lang=en|vi), mặc định tiếng Việt. */
+    private static String msg(String lang, String vi, String en) {
+        return "en".equalsIgnoreCase(lang) ? en : vi;
+    }
+
+    public MigrationResponse triggerMigration(String targetId, String lang) {
         String instanceId = targetId;
         if (targetId.startsWith("sc-") || targetId.startsWith("mig_")) {
             // Find instance from existing migrations
@@ -114,17 +123,20 @@ public class MigrationService {
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
         if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
-            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+            throw new ResourceNotFoundException(msg(lang, "Không tìm thấy máy ảo " + instanceId + ".", "Instance not found: " + instanceId));
         }
 
         // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp (PENDING, STOPPING, SHUTTING_DOWN...)
         String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
         if ("TERMINATED".equals(status) || "TERMINATING".equals(status)) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đã bị xóa (" + status + "), không thể chuyển vùng.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đã bị xóa (" + status + "), không thể chuyển vùng.",
+                    "Instance [" + instanceId + "] is " + status + " and cannot be migrated."));
         }
         if (TRANSITIONAL_STATES.contains(status)) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đang ở trạng thái " + status
-                    + ". Hãy đợi máy chuyển sang RUNNING hoặc STOPPED rồi mới chuyển vùng.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đang ở trạng thái " + status + ". Hãy đợi máy chuyển sang RUNNING hoặc STOPPED rồi mới chuyển vùng.",
+                    "Instance [" + instanceId + "] is " + status + ". Wait until it is RUNNING or STOPPED before migrating."));
         }
 
         // 1. ATOMIC CONDITIONAL WRITE ON AWS CLOUD DYNAMODB
@@ -132,15 +144,18 @@ public class MigrationService {
             if (isLockStale(instance)) {
                 releaseStaleLock(instance);
             } else {
-                throw new ConflictException("Máy ảo [" + instanceId + "] đang có một lần chuyển vùng chạy (migration_lock đang khóa). "
-                        + "Mở trang chi tiết máy ảo, tab Chuyển vùng, để xem tiến trình.");
+                throw new ConflictException(msg(lang,
+                        "Máy ảo [" + instanceId + "] đang có một lần chuyển vùng chạy (migration_lock đang khóa). Mở trang chi tiết máy ảo, tab Chuyển vùng, để xem tiến trình.",
+                        "A migration is already running for instance [" + instanceId + "] (migration_lock is held). Open the instance's Migration tab to follow it."));
             }
         }
 
         // Kiểm tra thời gian Cooldown nếu máy ảo đã từng thực hiện chuyển vùng trước đó
         long remainingCooldown = getRemainingCooldownSeconds(instance, findMigrations(instanceId));
         if (remainingCooldown > 0) {
-            throw new ConflictException("Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.");
+            throw new ConflictException(msg(lang,
+                    "Máy ảo [" + instanceId + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm " + remainingCooldown + " giây.",
+                    "Instance [" + instanceId + "] is in its cooldown period. Try again in " + remainingCooldown + " seconds."));
         }
 
         long startEpochSec = TimeSyncUtil.nowEpochSeconds();
@@ -161,7 +176,10 @@ public class MigrationService {
             instancesTable.updateItem(lockReq);
             log.info("Acquired atomic migration lock on AWS DynamoDB for instance {} at epochSec={}", instanceId, startEpochSec);
         } catch (Exception e) {
-            throw new ConflictException("Concurrent lock acquisition failed for instance " + instanceId + ": " + e.getMessage());
+            log.warn("Concurrent lock acquisition failed for instance {}: {}", instanceId, e.getMessage());
+            throw new ConflictException(msg(lang,
+                    "Không giữ được migration_lock cho máy ảo " + instanceId + " (có yêu cầu khác vừa chuyển vùng máy này).",
+                    "Could not acquire migration_lock for instance " + instanceId + " (another request just started a migration)."));
         }
 
         String migrationId = "mig_" + startEpochSec;
@@ -227,14 +245,22 @@ public class MigrationService {
 
             // STEP 2: Create EBS Snapshot
             Thread.sleep(2000);
-            updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(), "EBS gp3 Snapshot created successfully.");
+            String snapshotId = newSnapshotId();
+            String volumeId = instance.getVolumeId() != null && !instance.getVolumeId().isBlank() ? instance.getVolumeId() : null;
+            updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(),
+                    "EBS gp3 snapshot " + snapshotId + (volumeId != null ? " of " + volumeId : "") + " created in " + migrationRecord.getSourceRegion() + ".");
+            migrationRecord.setSnapshotId(snapshotId);
+            migrationRecord.setVolumeId(volumeId);
             migrationRecord.setCopyProgress(40);
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
 
             // STEP 3: Cross-Region Transfer
             Thread.sleep(3000);
-            updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(), "Transferred snapshot across regions to " + dstRegion);
+            String destSnapshotId = newSnapshotId();
+            updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(),
+                    "Copied " + snapshotId + " to " + dstRegion + " as " + destSnapshotId + ".");
+            migrationRecord.setDestSnapshotId(destSnapshotId);
             migrationRecord.setCopyProgress(65);
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
@@ -311,6 +337,60 @@ public class MigrationService {
             migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
             migrationsTable.putItem(migrationRecord);
         }
+    }
+
+    private static String newSnapshotId() {
+        return "snap-" + UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+    }
+
+    /** Một dòng snapshot cho API (giống cột của bảng Snapshots trên AWS). */
+    private Map<String, Object> snapshotRow(String snapshotId, String region, MigrationEntity m, InstanceEntity inst, String description, String sourceSnapshotId) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        boolean failed = "FAILED".equalsIgnoreCase(m.getStatus());
+        row.put("snapshotId", snapshotId);
+        row.put("region", region);
+        row.put("volumeId", m.getVolumeId());
+        row.put("instanceId", m.getInstanceId());
+        row.put("instanceName", inst != null && inst.getInstanceName() != null ? inst.getInstanceName() : m.getInstanceId());
+        row.put("migrationId", m.getMigrationId());
+        row.put("sourceSnapshotId", sourceSnapshotId);
+        row.put("description", description);
+        row.put("state", failed ? "error" : "completed");
+        row.put("startedAt", m.getStartedAt() != null && m.getStartedAt() > 0 ? TimeSyncUtil.toEpochMillis(m.getStartedAt()) : 0L);
+        return row;
+    }
+
+    private List<Map<String, Object>> snapshotsOf(List<MigrationEntity> migrations, Map<String, InstanceEntity> instances) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        migrations.stream()
+                .sorted(Comparator.comparing((MigrationEntity m) -> m.getStartedAt() != null ? TimeSyncUtil.toEpochSeconds(m.getStartedAt()) : 0L).reversed())
+                .forEach(m -> {
+                    InstanceEntity inst = instances.get(m.getInstanceId());
+                    if (m.getDestSnapshotId() != null) {
+                        rows.add(snapshotRow(m.getDestSnapshotId(), m.getDestRegion(), m, inst,
+                                "Copied for " + m.getMigrationId() + " from " + m.getSourceRegion(), m.getSnapshotId()));
+                    }
+                    if (m.getSnapshotId() != null) {
+                        rows.add(snapshotRow(m.getSnapshotId(), m.getSourceRegion(), m, inst,
+                                "Created for " + m.getMigrationId(), null));
+                    }
+                });
+        return rows;
+    }
+
+    /** Snapshot sinh ra từ các lần chuyển vùng; instanceId = null nghĩa là mọi máy của người dùng hiện tại. */
+    public List<Map<String, Object>> getSnapshots(String instanceId) {
+        String currentUser = getCurrentUsername();
+        Map<String, InstanceEntity> mine = instancesTable.scan().items().stream()
+                .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
+                .filter(i -> instanceId == null || instanceId.equals(i.getInstanceId()))
+                .collect(Collectors.toMap(InstanceEntity::getInstanceId, i -> i, (a, b) -> a, LinkedHashMap::new));
+        if (instanceId != null && mine.isEmpty()) {
+            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+        }
+        List<MigrationEntity> all = new ArrayList<>();
+        mine.keySet().forEach(id -> all.addAll(findMigrations(id)));
+        return snapshotsOf(all, mine);
     }
 
     private void updateStep(MigrationResponse run, int stepNum, int percent, String stepName, String logMsg) {
@@ -494,6 +574,8 @@ public class MigrationService {
                 .collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("snapshotCount", all.stream()
+                .mapToLong(m -> (m.getSnapshotId() != null ? 1 : 0) + (m.getDestSnapshotId() != null ? 1 : 0)).sum());
         result.put("total", all.size());
         result.put("completed", completed);
         result.put("failed", failed);

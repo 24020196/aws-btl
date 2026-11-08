@@ -314,9 +314,8 @@ function updatePageLaunchSummary() {
     sumKey.textContent = val ? val : 'Mặc định (xregion-key)';
   }
   const sumSg = document.getElementById('sumSgText');
-  const sgEl = document.getElementById('instSecurityGroup');
-  if (sumSg && sgEl) {
-    sumSg.textContent = sgEl.value;
+  if (sumSg && typeof lfwSummaryText === 'function') {
+    sumSg.textContent = lfwSummaryText();
   }
 
   // Highlight selected row in specification matrix table
@@ -336,6 +335,13 @@ async function handleLaunchPageSubmit(e) {
   const errBox = document.getElementById('launchErrorBox');
   if (errBox) errBox.style.display = 'none';
 
+  // Bước 6: kiểm tra rule Security Group trước khi tạo máy (launch-firewall.js)
+  const fwError = typeof lfwValidate === 'function' ? lfwValidate() : '';
+  if (fwError) {
+    showToast(fwError, 'error');
+    return;
+  }
+
   const btn = document.getElementById('btnLaunchInstance');
   const origText = btn ? btn.innerHTML : '🚀 Launch Instance';
   if (btn) {
@@ -349,7 +355,6 @@ async function handleLaunchPageSubmit(e) {
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
     keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
-    securityGroup: document.getElementById('instSecurityGroup')?.value || 'sg-default',
     ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
     domainName: document.getElementById('instDomain').value.trim()
   };
@@ -359,6 +364,11 @@ async function handleLaunchPageSubmit(e) {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+
+    // Ghi rule inbound/outbound vào Security Group riêng của máy vừa tạo
+    if (res && res.id && typeof lfwApplyToInstance === 'function') {
+      await lfwApplyToInstance(res.id);
+    }
 
     const form = document.getElementById('launchInstancePageForm');
     if (form) form.reset();

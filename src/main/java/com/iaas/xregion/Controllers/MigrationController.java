@@ -32,8 +32,9 @@ public class MigrationController {
     }
 
     @PostMapping("/trigger")
-    public ResponseEntity<ApiResponse<MigrationResponse>> triggerMigration(@Valid @RequestBody TriggerMigrationRequest request) {
-        MigrationResponse response = migrationService.triggerMigration(request.getId());
+    public ResponseEntity<ApiResponse<MigrationResponse>> triggerMigration(@Valid @RequestBody TriggerMigrationRequest request,
+                                                                            @RequestParam(defaultValue = "vi") String lang) {
+        MigrationResponse response = migrationService.triggerMigration(request.getId(), lang);
         return ResponseEntity.ok(ApiResponse.ok("Cross-region migration workflow started", response));
     }
 
@@ -47,6 +48,12 @@ public class MigrationController {
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSummary() {
         return ResponseEntity.ok(ApiResponse.ok(migrationService.getSummary()));
+    }
+
+    /** Snapshot EBS sinh ra khi chuyển vùng (bản gốc ở vùng nguồn + bản sao ở vùng đích). Lọc theo máy bằng ?instanceId=. */
+    @GetMapping("/snapshots")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSnapshots(@RequestParam(required = false) String instanceId) {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.getSnapshots(instanceId == null || instanceId.isBlank() ? null : instanceId)));
     }
 
     @GetMapping("/progress/{instanceId}")

@@ -1,105 +1,142 @@
-// Trang chủ (index.html): số liệu tổng quan, vùng, bảng máy ảo, nhật ký.
+// Trang chủ (index.html) — Lực. Bố cục "EC2 Dashboard": Resources, tình trạng 2 vùng, máy ảo, nhật ký.
+// Khung chuyển vùng nằm ở overview-migration.js.
 
-// ============================================================
-// PAGE INITIALIZERS: OVERVIEW, INSTANCES, DETAIL, LAUNCH
-// ============================================================
+registerI18n({
+  dashCrumb: ['Bảng điều khiển', 'Dashboard'],
+  dashSubtitle: ['Máy ảo NovaVM trên EC2 Bare Metal ở 2 vùng, chuyển vùng bằng EBS snapshot và Route 53.', 'NovaVM instances on EC2 Bare Metal in 2 regions, migrated with EBS snapshots and Route 53.'],
+  dashResources: ['Tài nguyên', 'Resources'],
+  dashResourcesSub: ['Bạn đang dùng các tài nguyên sau ở Sydney (ap-southeast-2) và N. Virginia (us-east-1).', 'You are using the following resources in Sydney (ap-southeast-2) and N. Virginia (us-east-1).'],
+  dashResRunning: ['Máy ảo (đang chạy)', 'Instances (running)'],
+  dashResInstances: ['Máy ảo (tất cả)', 'Instances (all)'],
+  dashResSnapshotsFoot: ['tạo khi chuyển vùng', 'created by migrations'],
+  dashRegionPrimary: ['Vùng chính', 'Primary'],
+  dashRegionStandby: ['Vùng dự phòng', 'Standby'],
+  dashRegionRole: ['Vai trò', 'Role'],
+  dashRegionRoleA: ['Chạy production', 'Production'],
+  dashRegionRoleB: ['Dự phòng, khôi phục sau sự cố', 'Standby, disaster recovery'],
+  dashRegionInstances: ['Máy ảo tại vùng', 'Instances in region'],
+  dashRegionOk: ['Dịch vụ hoạt động bình thường', 'This service is operating normally'],
+  dashViewAll: ['Xem tất cả', 'View all'],
+  dashColName: ['Tên', 'Name'],
+  dashColType: ['Loại máy', 'Instance type'],
+  dashColState: ['Trạng thái', 'Instance state'],
+  dashLogs: ['Nhật ký thao tác gần đây', 'Recent activity'],
+  dashColTime: ['Thời gian', 'Time'],
+  dashColUser: ['Người thực hiện', 'User'],
+  dashColAction: ['Hành động', 'Action'],
+  dashColResource: ['Đối tượng', 'Resource'],
+  dashColDetail: ['Chi tiết', 'Details']
+});
 
-// 1. OVERVIEW PAGE (index.html)
+// Trạng thái máy → [class badge trong status-badges.css, key i18n dùng chung st*]
+const DASH_STATE = {
+  ACTIVE: ['state-running', 'stRunning'], RUNNING: ['state-running', 'stRunning'],
+  SHUTOFF: ['state-stopped', 'stStopped'], STOPPED: ['state-stopped', 'stStopped'],
+  PENDING: ['state-pending', 'stPending'], BUILDING: ['state-pending', 'stPending'],
+  STOPPING: ['state-stopping', 'stStopping'], REBOOTING: ['state-rebooting', 'stRebooting'],
+  SHUTTING_DOWN: ['state-shutting-down', 'stShuttingDown'], TERMINATING: ['state-shutting-down', 'stShuttingDown'],
+  TERMINATED: ['state-terminated', 'stTerminated'], MIGRATING: ['state-migrating', 'stMigrating']
+};
+const DASH_TRANSITIONAL = ['PENDING', 'BUILDING', 'STOPPING', 'REBOOTING', 'SHUTTING_DOWN', 'TERMINATING', 'MIGRATING'];
+
+function dashEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function dashStateBadge(status) {
+  const key = String(status || '').toUpperCase();
+  const [cls, label] = DASH_STATE[key] || ['state-error', ''];
+  const spin = DASH_TRANSITIONAL.includes(key) ? ICON('ui-spinner', 'ico-xs ico-spin') + ' ' : '';
+  return `<span class="ec2-state ${cls}">${spin}${dashEsc(label ? tk(label) : key || '–')}</span>`;
+}
+
+function dashSet(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function dashIsGone(i) {
+  return ['TERMINATED', 'TERMINATING', 'SHUTTING_DOWN'].includes(String(i.status || '').toUpperCase());
+}
+
 async function initOverviewPage() {
   if (!requireAuthGuard()) return;
   renderUserBadge();
   clearApiError();
+  await Promise.all([loadDashInstances(), loadDashResources(), loadDashLogs()]);
+}
 
-  const elTotal = document.getElementById('overviewTotalInstances');
-  const elRun = document.getElementById('overviewRunningCount');
-  const elStorage = document.getElementById('overviewStorageGb');
-  const elRegA = document.getElementById('regionAInstanceCount');
-  const elRegB = document.getElementById('regionBInstanceCount');
-  const tbodyInst = document.getElementById('overviewInstanceTableBody');
-  const tbodyLogs = document.getElementById('overviewAuditLogsBody');
+function refreshDashboard() {
+  initOverviewPage();
+  if (typeof loadMigrationSummary === 'function') loadMigrationSummary();
+}
 
-  // Load Instances
+async function loadDashInstances() {
+  const tbody = document.getElementById('overviewInstanceTableBody');
   try {
-    const instances = await apiRequest('/instances');
-    const list = instances || [];
-    const total = list.length;
-    const running = list.filter(i => {
-      const s = (i.status || '').toUpperCase();
-      return s === 'RUNNING' || s === 'ACTIVE';
-    }).length;
-    const regA = list.filter(i => (i.region || '').includes('southeast')).length;
-    const regB = list.filter(i => (i.region || '').includes('us-east')).length;
+    const list = (await apiRequest('/instances')) || [];
+    const live = list.filter(i => !dashIsGone(i));
+    const running = live.filter(i => ['RUNNING', 'ACTIVE'].includes(String(i.status || '').toUpperCase())).length;
+    dashSet('resRunning', running);
+    dashSet('resInstances', live.length);
+    dashSet('resEips', live.filter(i => i.publicIp).length);
+    dashSet('regionAInstanceCount', live.filter(i => (i.region || '').includes('southeast')).length);
+    dashSet('regionBInstanceCount', live.filter(i => (i.region || '').includes('us-east')).length);
 
-    if (elTotal) elTotal.textContent = total;
-    if (elRun) elRun.textContent = t(`${running} Đang chạy`, `${running} Running`);
-    if (elRegA) elRegA.textContent = t(`${regA} máy ảo`, `${regA} instance${regA === 1 ? '' : 's'}`);
-    if (elRegB) elRegB.textContent = t(`${regB} máy ảo`, `${regB} instance${regB === 1 ? '' : 's'}`);
-
-    if (tbodyInst) {
-      if (list.length === 0) {
-        tbodyInst.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-muted);">${t('Chưa có máy ảo nào.', 'No instances found.')} <a href="/launch.html" style="color: var(--accent-cyan); font-weight: 700;">${t('+ Khởi tạo ngay', '+ Launch now')}</a></td></tr>`;
-      } else {
-        tbodyInst.innerHTML = '';
-        list.slice(0, 5).forEach(inst => {
-          const cfg = getStatusBadgeConfig(inst.status);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><a href="/instance-detail.html?id=${inst.id}" style="color:var(--accent-cyan); font-weight:700; text-decoration:none; font-family:monospace;">${inst.id}</a></td>
-            <td><strong>${inst.name}</strong></td>
-            <td>${inst.regionName || inst.region}</td>
-            <td><span class="badge" style="background:#1e293b; color:#94a3b8;">${inst.flavor}</span></td>
-            <td><code>${inst.publicIp || t('Chưa gán', 'None')}</code></td>
-            <td><span style="color:var(--accent-cyan);">${inst.dnsDomain || 'N/A'}</span></td>
-            <td><span class="badge ${cfg.cssClass}"><span class="status-dot ${cfg.dotClass}"></span>${cfg.label}</span></td>
-            <td><a href="/instance-detail.html?id=${inst.id}" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; text-decoration:none;">Xem Chi Tiết →</a></td>
-          `;
-          tbodyInst.appendChild(tr);
-        });
-      }
+    if (!tbody) return;
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-cell">${t('Chưa có máy ảo nào.', 'No instances yet.')}
+        <a class="link-accent" href="/launch.html">${dashEsc(tk('navLaunch'))}</a></td></tr>`;
+      return;
     }
+    tbody.innerHTML = list.slice(0, 5).map(inst => `
+      <tr>
+        <td><a class="link-accent mono" href="/instance-detail.html?id=${encodeURIComponent(inst.id)}">${dashEsc(inst.id)}</a></td>
+        <td><strong>${dashEsc(inst.name)}</strong></td>
+        <td class="mono">${dashEsc(inst.region || '–')}</td>
+        <td class="mono">${dashEsc(inst.flavor || '–')}</td>
+        <td class="mono">${dashEsc(inst.publicIp || '–')}</td>
+        <td>${dashEsc(inst.dnsDomain || '–')}</td>
+        <td>${dashStateBadge(inst.status)}</td>
+      </tr>`).join('');
   } catch (err) {
-    console.error('Failed to load overview instances:', err);
-    if (elTotal) elTotal.textContent = 'ERR';
-    if (elRun) elRun.textContent = 'Lỗi API';
-    if (tbodyInst) {
-      tbodyInst.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color: #f87171; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">❌ Không thể tải danh sách máy ảo từ API (GET /api/instances): ${err.message}</td></tr>`;
+    ['resRunning', 'resInstances', 'resEips', 'regionAInstanceCount', 'regionBInstanceCount'].forEach(id => dashSet(id, '–'));
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-cell dash-err">${ICON('ui-error', 'ico-sm')}
+        ${t('Không tải được danh sách máy ảo', 'Could not load instances')}: ${dashEsc(err.message)}</td></tr>`;
     }
   }
+}
 
-  // Load Volumes to calculate storage
-  try {
-    const volumes = await apiRequest('/volumes');
-    if (volumes && elStorage) {
-      const totalGb = volumes.reduce((sum, v) => sum + (v.sizeGb || 0), 0);
-      elStorage.textContent = totalGb;
-    }
-  } catch (err) {
-    if (elStorage) elStorage.textContent = '50';
-  }
+// Các ô Resources còn lại: API nào lỗi thì chỉ ô đó hiện "–".
+async function loadDashResources() {
+  const safe = p => apiRequest(p).catch(() => null);
+  const [volumes, keys, groups, mig] = await Promise.all([
+    safe('/volumes'), safe('/keys'), safe('/network/security-groups'), safe('/migrations/summary')
+  ]);
+  dashSet('resVolumes', volumes ? volumes.length : '–');
+  dashSet('resVolumesGb', volumes ? `${volumes.reduce((s, v) => s + (v.sizeGb || 0), 0)} GiB` : '');
+  dashSet('resKeys', keys ? keys.length : '–');
+  dashSet('resSgs', groups ? groups.length : '–');
+  dashSet('resSnapshots', mig && mig.snapshotCount != null ? mig.snapshotCount : '–');
+}
 
-  // Load Audit Logs
+async function loadDashLogs() {
+  const tbody = document.getElementById('overviewAuditLogsBody');
+  if (!tbody) return;
   try {
-    const logs = await apiRequest('/logs?limit=5');
-    if (tbodyLogs) {
-      if (!logs || logs.length === 0) {
-        tbodyLogs.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Chưa có nhật ký vận hành.</td></tr>';
-      } else {
-        tbodyLogs.innerHTML = '';
-        logs.slice(0, 5).forEach(l => {
-          const tr = document.createElement('tr');
-          const time = l.timestamp ? formatSyncedDateTime(l.timestamp) : 'N/A';
-          tr.innerHTML = `
-            <td style="color:var(--text-muted); font-size:12px;">${time}</td>
-            <td><strong>${l.username || 'admin'}</strong></td>
-            <td><span class="badge" style="background:#1e293b; color:var(--accent-cyan);">${l.action}</span></td>
-            <td><code>${l.resourceType}</code></td>
-            <td style="color:#cbd5e1;">${l.details}</td>
-          `;
-          tbodyLogs.appendChild(tr);
-        });
-      }
-    }
+    const logs = (await apiRequest('/logs?limit=5')) || [];
+    tbody.innerHTML = logs.length
+      ? logs.slice(0, 5).map(l => `
+        <tr>
+          <td class="muted nowrap">${l.timestamp ? dashEsc(formatSyncedDateTime(l.timestamp)) : '–'}</td>
+          <td><strong>${dashEsc(l.username || '–')}</strong></td>
+          <td><span class="proto">${dashEsc(l.action)}</span></td>
+          <td><code>${dashEsc(l.resourceType)}</code></td>
+          <td>${dashEsc(l.details)}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="5" class="empty-cell">${t('Chưa có nhật ký thao tác.', 'No activity yet.')}</td></tr>`;
   } catch (err) {
-    console.error('Failed to load logs for overview:', err);
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-cell">${t('Không tải được nhật ký.', 'Could not load activity.')}</td></tr>`;
   }
 }

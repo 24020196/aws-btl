@@ -32,6 +32,9 @@ public class MigrationEntity {
     private String errorMessage;
     private java.util.List<String> stepLogs;
     private Long downtimeSeconds;
+    private String snapshotId;
+    private String destSnapshotId;
+    private String volumeId;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -90,5 +93,23 @@ public class MigrationEntity {
     @DynamoDbAttribute("downtime_seconds")
     public Long getDowntimeSeconds() {
         return downtimeSeconds;
+    }
+
+    /** EBS snapshot tạo ở vùng nguồn (bước 2). */
+    @DynamoDbAttribute("snapshot_id")
+    public String getSnapshotId() {
+        return snapshotId;
+    }
+
+    /** Bản sao snapshot ở vùng đích (bước 3, CopySnapshot). */
+    @DynamoDbAttribute("dest_snapshot_id")
+    public String getDestSnapshotId() {
+        return destSnapshotId;
+    }
+
+    /** Volume nguồn được snapshot. */
+    @DynamoDbAttribute("volume_id")
+    public String getVolumeId() {
+        return volumeId;
     }
 }
