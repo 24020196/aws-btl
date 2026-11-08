@@ -1,18 +1,18 @@
-/* Trang khởi tạo máy ảo (launch.html): thẻ chọn OS, vùng, flavor. */
+/* Trang khởi tạo máy ảo (launch.html): thẻ chọn OS, vùng, flavor - Tạ Duy Anh */
 
 /* ============================================================
    CARD SELECTION OPTIONS (OS, Region, Flavor in Launch Form)
    ============================================================ */
 .option-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 8px;
 }
 
 .option-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border-color, #334155);
   border-radius: 8px;
   padding: 14px;
   cursor: pointer;
@@ -21,51 +21,30 @@
 }
 
 .option-card:hover {
-  border-color: var(--accent-blue);
-  background: rgba(30, 41, 59, 0.6);
+  border-color: var(--accent-cyan, #38bdf8);
+  background: rgba(30, 41, 59, 0.8);
 }
 
 .option-card.selected {
-  border-color: var(--accent-amber);
-  background: rgba(245, 158, 11, 0.08);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+  border-color: var(--accent-cyan, #38bdf8);
+  background: rgba(56, 189, 248, 0.08);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
 }
 
 .option-card input[type="radio"] {
   position: absolute;
   top: 12px;
   right: 12px;
-  accent-color: var(--accent-amber);
+  accent-color: var(--accent-cyan, #38bdf8);
 }
 
-.option-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
-  margin-bottom: 10px;
-}
+/* Responsive 2-Column Layout for Launch Page */
+@media (max-width: 992px) {
+  #launchInstancePageForm > div {
+    grid-template-columns: 1fr !important;
+  }
 
-.icon-ubuntu {
-  background: #e95420;
-  color: #fff;
-}
-
-.icon-debian {
-  background: #d70a53;
-  color: #fff;
-}
-
-.icon-rocky {
-  background: #10b981;
-  color: #fff;
-}
-
-.icon-alpine {
-  background: #0d597f;
-  color: #fff;
+  #launchInstancePageForm > div > div:last-child {
+    position: static !important;
+  }
 }

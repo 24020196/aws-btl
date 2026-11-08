@@ -299,17 +299,6 @@ a.btn { text-decoration: none; }
 @media (max-width: 1100px) { .mon-grid { grid-template-columns: 1fr; } }
 
 /* ---- confirm dialog ---- */
-.confirm-card { max-width: 460px; }
-.confirm-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.confirm-head .modal-title { margin: 0; }
-.confirm-icon { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: rgba(34,211,238,.12); color: var(--accent-cyan); border: 1px solid rgba(34,211,238,.35); }
-.confirm-card.is-danger .confirm-icon { background: rgba(248,113,113,.12); color: #f87171; border-color: rgba(248,113,113,.4); }
-.confirm-card.is-danger { border-top: 3px solid #ef4444; }
-.confirm-card .modal-text { line-height: 1.6; }
-.confirm-card .modal-text code, .confirm-require code { font-family: var(--font-mono, ui-monospace, monospace); background: rgba(148,163,184,.12); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
-.confirm-warn { display: inline-block; margin-top: 8px; color: #fbbf24; }
-.confirm-require { display: block; margin: 14px 0 6px; font-size: 13px; color: var(--text-secondary, #c3cbd6); }
-.confirm-card .form-input { width: 100%; }
 
 /* ---- instance state dropdown ---- */
 .state-menu { position: relative; display: inline-block; }

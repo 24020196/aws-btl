@@ -1,6 +1,7 @@
 // Chỉ dùng cho register.html
 
 registerI18n({
+  regTitle: ['Đăng ký tài khoản — XRegion Cloud Console', 'Sign up — XRegion Cloud Console'],
   brandSubtitle: ['Hệ Thống Quản Trị Máy Ảo Đa Vùng', 'Multi-Region Cloud Console'],
   regHeading: ['Đăng ký người dùng', 'User sign up'],
   regSubheading: ['Tạo tài khoản mới để khởi tạo và quản lý máy ảo của riêng bạn', 'Create a new account to launch and manage your virtual machines'],
@@ -29,10 +30,20 @@ registerI18n({
   regErrorPrefix: ['Lỗi đăng ký:', 'Registration error:']
 });
 
-onLangChange(lang => {
+function syncRegisterPageLang(lang) {
+  const currentLang = lang || getLang();
   const select = document.getElementById('xrLangSelect');
-  if (select) select.value = lang;
+  if (select && select.value !== currentLang) select.value = currentLang;
+  document.title = tk('regTitle');
+}
+
+onLangChange(lang => {
+  syncRegisterPageLang(lang);
 });
+
+// Đồng bộ trạng thái ngôn ngữ ngay khi trang đăng ký được nạp
+syncRegisterPageLang();
+
 
 function toggleShowRegPasswords(show) {
   const p1 = document.getElementById('regPassword');

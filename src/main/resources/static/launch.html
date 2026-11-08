@@ -1,25 +1,28 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Khởi Tạo Máy Ảo (Launch Instance) - XRegion-EC2</title>
+  <title>Launch an instance - XRegion-EC2 Cloud Console</title>
   <script>
     if (!localStorage.getItem('xregion_jwt')) {
       window.location.replace('/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search));
     }
   </script>
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/launch.css">
   <link rel="stylesheet" href="/css/pages/launch-firewall.css">
 </head>
+
 <body>
 
   <!-- Top Global Header -->
   <header class="header">
     <div class="logo-container">
       <a href="/index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
-        <div class="logo-badge">XREGION</div>
-        <div class="logo-title">XRegion-EC2 Cloud Console</div>
+        <img src="/img/logo.svg" alt="XRegion EC2" style="height: 28px;">
       </a>
     </div>
 
@@ -29,339 +32,504 @@
         <span>Global</span>
       </div>
 
-      <div class="user-badge" id="userBadgeContainer"></div>
+      <div class="user-badge" id="userBadgeContainer">
+        <!-- Rendered by i18n.js -->
+      </div>
     </div>
   </header>
 
-  <!-- Sub Navigation Bar -->
-  <nav class="sub-nav">
-    <a href="/index.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Trang Chủ Overview
-    </a>
-    <a href="/instances.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
-      Danh Sách Máy Ảo (Instances)
-    </a>
-    <a href="/launch.html" class="sub-nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Khởi Tạo Máy Ảo (+ Launch VM)
-    </a>
-    <a href="/account-tokens.html" class="sub-nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-      Tài Khoản & API Token
-    </a>
-  </nav>
+  <!-- App Shell with Sidebar -->
+  <div class="app-shell">
+    <aside id="appSidebar" class="app-sidebar" data-active="launch"></aside>
 
-  <!-- Main Content Area (Hình 2.3 2-Column Full Page Layout) -->
-  <main class="main-content">
-    <div class="breadcrumb">
-      <a href="/index.html">XRegion-EC2</a>
-      <span>/</span>
-      <a href="/instances.html">Instances</a>
-      <span>/</span>
-      <span>Launch Instance</span>
-    </div>
+    <!-- Main Content Area -->
+    <main class="app-main">
+      <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
 
-    <!-- On-screen API Error Banner -->
-    <div id="apiErrorBanner" class="api-error-banner" style="display: none;"></div>
+      <!-- Breadcrumb matching AWS EC2 Console (3 levels) -->
+      <nav class="breadcrumb">
+        <a href="/index.html">EC2</a>
+        <span class="breadcrumb-sep"><svg class="ico ico-xs" aria-hidden="true">
+            <use href="/img/icons/sprite.svg#ui-chevron-right"></use>
+          </svg></span>
+        <a href="/instances.html" data-i18n="navInstances">Instances</a>
+        <span class="breadcrumb-sep"><svg class="ico ico-xs" aria-hidden="true">
+            <use href="/img/icons/sprite.svg#ui-chevron-right"></use>
+          </svg></span>
+        <span data-i18n="launchBreadcrumb">Launch an instance</span>
+      </nav>
 
-    <div style="margin-bottom: 24px;">
-      <h1 style="font-size: 24px; font-weight: 800; color: #fff;">Launch New Instance</h1>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-        Cấu hình máy chủ ảo hóa liên vùng. Sau khi khởi tạo, dữ liệu có thể tự động sao chép và di chuyển giữa các vùng hạ tầng theo kịch bản.
-      </p>
-    </div>
+      <!-- Page Header -->
+      <div class="page-header" style="margin-bottom: 20px;">
+        <h1 class="page-title" style="margin: 0;">
+          <svg class="ico ico-lg" aria-hidden="true">
+            <use href="/img/icons/sprite.svg#svc-instance"></use>
+          </svg>
+          <span data-i18n="launchPageTitle">Launch an instance</span>
+        </h1>
+      </div>
 
-    <form id="launchInstancePageForm" autocomplete="off" onsubmit="handleLaunchPageSubmit(event)">
-      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; align-items: start;">
-        
-        <!-- Left Column: 5 Configuration Steps -->
-        <div>
-          <!-- Step 1: Name -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">1</span>
-              Tên Máy Ảo (Instance Name)
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên Máy Ảo *</label>
-              <input type="text" class="form-input" id="instName" required placeholder="vd: my-web-server" oninput="updatePageLaunchSummary()">
-            </div>
-          </div>
+      <form id="launchInstancePageForm" autocomplete="off" onsubmit="handleLaunchPageSubmit(event)">
+        <div
+          style="display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: 24px; align-items: start;">
 
-          <!-- Step 2: Initial Region Selection -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">2</span>
-              Vùng Cấp Phát (Target Region)
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <label class="option-card selected" id="optRegionA" onclick="selectRegion('ap-southeast-2')">
-                <input type="radio" name="regionRadio" value="ap-southeast-2" checked>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <strong style="color: #fff; font-size: 14px;">Region A (Sydney / Singapore)</strong>
-                  <span class="badge badge-active" style="font-size: 10px;">Primary</span>
-                </div>
-                <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>ap-southeast-2</code></div>
-              </label>
+          <!-- Left Column: EC2 Configuration Panels -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
 
-              <label class="option-card" id="optRegionB" onclick="selectRegion('us-east-1')">
-                <input type="radio" name="regionRadio" value="us-east-1">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <strong style="color: #fff; font-size: 14px;">Region B (N. Virginia)</strong>
-                  <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px;">Standby</span>
-                </div>
-                <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>us-east-1</code></div>
-              </label>
-            </div>
-            <input type="hidden" id="instRegion" value="ap-southeast-2">
-          </div>
-
-          <!-- Step 3: Application and OS Images -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">3</span>
-              Application and OS Images
-            </div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Chọn ảnh máy ảo hệ điều hành (Glance OS Image) lưu trữ trên cụm Bare Metal:</div>
-
-            <div class="option-grid" id="osOptionsGrid">
-              <div class="option-card selected" id="optOsUbuntu" onclick="selectOs('img-u22', 'Ubuntu Server 22.04 LTS')">
-                <input type="radio" name="osRadio" value="img-u22" checked>
-                <div class="option-icon icon-ubuntu">U</div>
-                <strong style="font-size: 13px; display: block; margin-bottom: 4px;">Ubuntu</strong>
-                <div style="font-size: 11px; color: var(--text-muted);">22.04 LTS (x86_64)</div>
+            <!-- Panel 1: Name and tags -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#ui-edit"></use>
+                </svg>
+                <span data-i18n="launchSecName">Name and tags</span>
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" data-i18n="launchInputName">Tên máy ảo (Instance name) *</label>
+                <input type="text" class="form-input" id="instName" required placeholder="vd: my-web-server"
+                  oninput="updatePageLaunchSummary()">
               </div>
             </div>
-            <input type="hidden" id="instImage" value="img-u22">
-          </div>
 
-          <!-- Step 4: Instance Specification / Flavor -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">4</span>
-              Gói Cấu Hình Máy Ảo (Flavor)
-            </div>
-            <div class="form-group">
-              <label class="form-label">Chọn Flavor:</label>
-              <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
-                <option value="m1.medium">Đang tải danh sách Flavor từ DynamoDB...</option>
-              </select>
-            </div>
-
-            <!-- Flavor Matrix Specification Table -->
-            <div style="margin-top: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-              <div style="padding: 8px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-                📋 Danh Sách Flavor Cho Phép
+            <!-- Panel 2: Target Region -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-region"></use>
+                </svg>
+                <span data-i18n="launchSecRegion">Target Region</span>
               </div>
-              <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <label class="option-card selected" id="optRegionA" onclick="selectRegion('ap-southeast-2')">
+                  <input type="radio" name="regionRadio" value="ap-southeast-2" checked>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong style="color: #fff; font-size: 14px;">Region A (Sydney)</strong>
+                    <span class="badge badge-active" style="font-size: 10px;">Primary</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>ap-southeast-2</code></div>
+                </label>
+
+                <label class="option-card" id="optRegionB" onclick="selectRegion('us-east-1')">
+                  <input type="radio" name="regionRadio" value="us-east-1">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong style="color: #fff; font-size: 14px;">Region B (N. Virginia)</strong>
+                    <span class="badge"
+                      style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px;">Standby</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>us-east-1</code></div>
+                </label>
+              </div>
+              <input type="hidden" id="instRegion" value="ap-southeast-2">
+            </div>
+
+            <!-- Panel 3: Application and OS Images (Amazon Machine Image - AMI) -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-ami"></use>
+                </svg>
+                <span data-i18n="launchSecAmi">Application and OS Images (Amazon Machine Image)</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="launchAmiHelp">
+                Chọn ảnh hệ điều hành (Glance OS Image / AMI) được lưu trữ trên cụm hạ tầng đám mây:
+              </div>
+
+              <div class="option-grid" id="osOptionsGrid">
+                <!-- Ubuntu Card -->
+                <div class="option-card selected" id="optOsUbuntu"
+                  onclick="selectOs('img-u22', 'Ubuntu Server 22.04 LTS')">
+                  <input type="radio" name="osRadio" value="img-u22" checked>
+                  <div style="margin-bottom: 6px;">
+                    <svg class="ico ico-2xl" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#os-ubuntu"></use>
+                    </svg>
+                  </div>
+                  <strong style="font-size: 13.5px; display: block; margin-bottom: 4px; color: #fff;">Ubuntu</strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">22.04 LTS (x86_64)</div>
+                </div>
+
+                <!-- Debian Card -->
+                <div class="option-card" id="optOsDebian"
+                  onclick="selectOs('img-deb12', 'Debian GNU/Linux 12 (Bookworm)')">
+                  <input type="radio" name="osRadio" value="img-deb12">
+                  <div style="margin-bottom: 6px;">
+                    <svg class="ico ico-2xl" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#os-debian"></use>
+                    </svg>
+                  </div>
+                  <strong style="font-size: 13.5px; display: block; margin-bottom: 4px; color: #fff;">Debian</strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">12 Bookworm (x86_64)</div>
+                </div>
+
+                <!-- Rocky Card -->
+                <div class="option-card" id="optOsRocky" onclick="selectOs('img-rocky9', 'Rocky Linux 9 (Enterprise)')">
+                  <input type="radio" name="osRadio" value="img-rocky9">
+                  <div style="margin-bottom: 6px;">
+                    <svg class="ico ico-2xl" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#os-rocky"></use>
+                    </svg>
+                  </div>
+                  <strong style="font-size: 13.5px; display: block; margin-bottom: 4px; color: #fff;">Rocky
+                    Linux</strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">9 Enterprise (x86_64)</div>
+                </div>
+
+                <!-- Alpine Card -->
+                <div class="option-card" id="optOsAlpine"
+                  onclick="selectOs('img-alp319', 'Alpine Linux 3.19 (Minimal)')">
+                  <input type="radio" name="osRadio" value="img-alp319">
+                  <div style="margin-bottom: 6px;">
+                    <svg class="ico ico-2xl" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#os-linux"></use>
+                    </svg>
+                  </div>
+                  <strong style="font-size: 13.5px; display: block; margin-bottom: 4px; color: #fff;">Alpine
+                    Linux</strong>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">3.19 Minimal Cloud</div>
+                </div>
+              </div>
+              <input type="hidden" id="instImage" value="img-u22">
+            </div>
+
+            <!-- Panel 4: Instance type (Flavor) -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-ec2"></use>
+                </svg>
+                <span data-i18n="launchSecType">Instance type</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="launchSelectFlavor">Chọn Flavor (vCPU & RAM):</label>
+                <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
+                  <option value="m1.medium">m1.medium (2 vCPUs • 4096 MB RAM • 10 GB Disk)</option>
+                </select>
+              </div>
+
+              <!-- Flavor Matrix Specification Table -->
+              <div
+                style="margin-top: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                <div
+                  style="padding: 8px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border-color); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                  <svg class="ico ico-xs" aria-hidden="true">
+                    <use href="/img/icons/sprite.svg#ui-info"></use>
+                  </svg>
+                  <span data-i18n="launchFlavorMatrixTitle">Danh sách Flavor cho phép</span>
+                </div>
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                    <thead>
+                      <tr style="background: rgba(0,0,0,0.25); color: var(--text-muted); font-size: 11px;">
+                        <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Dòng</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Tên Flavor</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">VCPUs</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">RAM (MB)</th>
+                        <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Root Disk (GB)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="flavorMatrixBody">
+                      <tr id="row-m1-medium"
+                        style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12);">
+                        <td style="padding: 8px 12px; color: #38bdf8;">Tiêu chuẩn (m1)</td>
+                        <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.medium
+                        </td>
+                        <td style="padding: 8px 12px;">2</td>
+                        <td style="padding: 8px 12px;">4096</td>
+                        <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 5: Key pair (login) -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-key-pair"></use>
+                </svg>
+                <span data-i18n="launchSecKey">Key pair (login)</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="launchKeyHelp">
+                Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file <code>.pem</code> phục vụ đăng
+                nhập:
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" data-i18n="launchSelectKey">Tên Key Pair *</label>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;"
+                    onchange="updatePageLaunchSummary()" required>
+                    <option value="">-- Chọn Key Pair có sẵn hoặc tạo mới --</option>
+                  </select>
+                  <button type="button" class="btn btn-secondary" onclick="loadKeyPairsDropdown()"
+                    title="Làm mới danh sách Key Pair" style="padding: 9px 12px;">
+                    <svg class="ico ico-sm" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#ui-refresh"></use>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()"
+                    style="padding: 9px 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
+                    <svg class="ico ico-sm" aria-hidden="true">
+                      <use href="/img/icons/sprite.svg#ui-plus"></use>
+                    </svg>
+                    <span data-i18n="launchBtnCreateKey">Tạo Key Pair mới</span>
+                  </button>
+                </div>
+                <div id="keyPairHintText" style="font-size: 11.5px; color: var(--text-muted); margin-top: 8px;">
+                  <span data-i18n="launchPemHint">File khóa riêng tư (.pem) chỉ được tải xuống 1 lần duy nhất khi tạo mới.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 6: Network settings & Firewall (Security Group) -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-security-group"></use>
+                </svg>
+                <span data-i18n="lfwTitle">Network settings & Firewall (Security Group)</span>
+              </div>
+              <p class="lfw-sub" data-i18n="lfwSub"
+                style="margin-bottom: 14px; font-size: 12.5px; color: var(--text-muted);">
+                Hệ thống tự động cấu hình Security Group riêng cho máy ảo. Chỉ lưu lượng khớp các quy tắc bên dưới mới
+                được phép truy cập.
+              </p>
+
+              <div class="lfw-head">
+                <h3 style="font-size: 13.5px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span data-i18n="lfwInbound">Inbound rules</span>
+                  <span class="muted" id="lfwInboundCount" style="font-size: 12px; color: var(--text-muted);"></span>
+                </h3>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('inbound')"
+                  data-i18n="lfwAddIn">+ Thêm inbound rule</button>
+              </div>
+              <div class="table-scroll">
+                <table class="data-table lfw-table">
                   <thead>
-                    <tr style="background: rgba(0,0,0,0.25); color: var(--text-muted); font-size: 11px;">
-                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Dòng</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Tên Flavor</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">VCPUs</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">RAM (MB)</th>
-                      <th style="padding: 8px 12px; border-bottom: 1px solid var(--border-color);">Root Disk (GB)</th>
+                    <tr>
+                      <th data-i18n="lfwColType">Loại</th>
+                      <th data-i18n="lfwColPort">Cổng</th>
+                      <th data-i18n="lfwColSource">Nguồn (CIDR)</th>
+                      <th data-i18n="lfwColDesc">Mô tả</th>
+                      <th><span class="sr-only" data-i18n="lfwColDel">Xóa</span></th>
                     </tr>
                   </thead>
-                  <tbody id="flavorMatrixBody">
-                    <tr id="row-m1-medium" style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12);">
-                      <td style="padding: 8px 12px; color: #38bdf8;">Tiêu chuẩn (m1)</td>
-                      <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.medium</td>
-                      <td style="padding: 8px 12px;">2</td>
-                      <td style="padding: 8px 12px;">4096</td>
-                      <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
-                    </tr>
-                  </tbody>
+                  <tbody id="lfwInboundBody"></tbody>
                 </table>
               </div>
-            </div>
-          </div>
-
-          <!-- Step 5: SSH Key Pair Authentication -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">5</span>
-              Khóa Xác Thực SSH (Key Pair - Login)
-            </div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-              Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file <code>.pem</code> phục vụ SSH vào máy ảo:
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên Key Pair *</label>
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <select class="form-select" id="instKeyPair" style="flex: 1; min-width: 220px;" onchange="updatePageLaunchSummary()" required>
-                  <option value="">-- Chọn Key Pair có sẵn hoặc tạo mới --</option>
-                </select>
-                <button type="button" class="btn btn-secondary" onclick="loadKeyPairsDropdown()" title="Làm mới danh sách Key Pair" style="padding: 10px 12px;">
-                  🔄
-                </button>
-                <button type="button" class="btn btn-primary" onclick="openCreateKeyModal()" style="padding: 10px 16px; white-space: nowrap;">
-                  🔑 + Tạo Key Pair Mới (.pem)
-                </button>
+              <div class="form-warn lfw-warn" id="lfwWarn" hidden data-i18n="lfwWarn">
+                Có rule mở cổng khác HTTP/HTTPS cho 0.0.0.0/0 (toàn Internet). Nên giới hạn nguồn, ví dụ trong VPC
+                10.0.0.0/16.
               </div>
-              <div id="keyPairHintText" style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
-                File khóa riêng tư (<code>.pem</code>) chỉ được tải xuống 1 lần duy nhất khi tạo Key Pair mới. Dùng lệnh: <code>ssh -i &lt;ten-key&gt;.pem ubuntu@&lt;ip-may-ao&gt;</code>
+
+              <div class="lfw-head" style="margin-top: 18px;">
+                <h3 style="font-size: 13.5px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span data-i18n="lfwOutbound">Outbound rules</span>
+                  <span class="muted" id="lfwOutboundCount" style="font-size: 12px; color: var(--text-muted);"></span>
+                </h3>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('outbound')"
+                  data-i18n="lfwAddOut">+ Thêm outbound rule</button>
               </div>
-            </div>
-          </div>
-
-          <!-- Step 6: Firewall (security group) — phần soạn rule ở js/pages/launch-firewall.js (Lực) -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">6</span>
-              <span data-i18n="lfwTitle">Firewall (Security group)</span>
-            </div>
-            <p class="lfw-sub" data-i18n="lfwSub">Hệ thống tạo một Security Group riêng cho máy này. Chỉ lưu lượng khớp rule bên dưới mới được đi qua; sau khi tạo vẫn sửa được ở tab Security của máy.</p>
-
-            <div class="lfw-head">
-              <h3><span data-i18n="lfwInbound">Inbound rules</span> <span class="muted" id="lfwInboundCount"></span></h3>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('inbound')" data-i18n="lfwAddIn">+ Thêm inbound rule</button>
-            </div>
-            <div class="table-scroll">
-              <table class="data-table lfw-table">
-                <thead><tr><th data-i18n="lfwColType">Loại</th><th data-i18n="lfwColPort">Cổng</th><th data-i18n="lfwColSource">Nguồn (CIDR)</th><th data-i18n="lfwColDesc">Mô tả</th><th><span class="sr-only">Xóa</span></th></tr></thead>
-                <tbody id="lfwInboundBody"></tbody>
-              </table>
-            </div>
-            <div class="form-warn lfw-warn" id="lfwWarn" hidden data-i18n="lfwWarn">Có rule mở cổng khác HTTP/HTTPS cho 0.0.0.0/0 (toàn Internet). Nên giới hạn nguồn, ví dụ trong VPC 10.0.0.0/16.</div>
-
-            <div class="lfw-head">
-              <h3><span data-i18n="lfwOutbound">Outbound rules</span> <span class="muted" id="lfwOutboundCount"></span></h3>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="lfwAdd('outbound')" data-i18n="lfwAddOut">+ Thêm outbound rule</button>
-            </div>
-            <div class="table-scroll">
-              <table class="data-table lfw-table">
-                <thead><tr><th data-i18n="lfwColType">Loại</th><th data-i18n="lfwColPort">Cổng</th><th data-i18n="lfwColDest">Đích (CIDR)</th><th data-i18n="lfwColDesc">Mô tả</th><th><span class="sr-only">Xóa</span></th></tr></thead>
-                <tbody id="lfwOutboundBody"></tbody>
-              </table>
-            </div>
-            <datalist id="lfwCidrList">
-              <option value="0.0.0.0/0"></option>
-              <option value="10.0.0.0/16"></option>
-              <option value="10.1.0.0/16"></option>
-            </datalist>
-          </div>
-
-          <!-- Step 7: Block Storage & DNS -->
-          <div class="card" style="padding: 22px;">
-            <div style="font-size: 15px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-              <span style="background: rgba(56, 189, 248, 0.15); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">7</span>
-              Ổ Đĩa Root EBS & Tên Miền DNS
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div class="form-group">
-                <label class="form-label">Loại Ổ Đĩa</label>
-                <input type="text" class="form-input" value="gp3 SSD" disabled>
+              <div class="table-scroll">
+                <table class="data-table lfw-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="lfwColType">Loại</th>
+                      <th data-i18n="lfwColPort">Cổng</th>
+                      <th data-i18n="lfwColDest">Đích (CIDR)</th>
+                      <th data-i18n="lfwColDesc">Mô tả</th>
+                      <th><span class="sr-only" data-i18n="lfwColDel">Xóa</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="lfwOutboundBody"></tbody>
+                </table>
               </div>
-              <div class="form-group">
-                <label class="form-label">Dung Lượng Root Disk (GB) *</label>
-                <input type="number" class="form-input" id="instEbsSize" value="10" min="10" max="1000" oninput="updatePageLaunchSummary()">
+              <datalist id="lfwCidrList">
+                <option value="0.0.0.0/0"></option>
+                <option value="10.0.0.0/16"></option>
+                <option value="10.1.0.0/16"></option>
+              </datalist>
+            </div>
+
+            <!-- Panel 7: Configure storage & DNS -->
+            <div class="card" style="margin-bottom: 0; padding: 22px;">
+              <div
+                style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-ebs"></use>
+                </svg>
+                <span data-i18n="launchSecStorage">Configure storage & DNS</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label" data-i18n="launchVolType">Loại Ổ Đĩa Root</label>
+                  <input type="text" class="form-input" value="gp3 SSD (General Purpose)" disabled>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" data-i18n="launchVolSize">Dung lượng Root Disk (GiB) *</label>
+                  <input type="number" class="form-input" id="instEbsSize" value="10" min="10" max="1000"
+                    oninput="updatePageLaunchSummary()">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" data-i18n="launchDomainName">Tên miền Route 53 DNS</label>
+                <input type="text" class="form-input" id="instDomain" placeholder="vd: my-app.xregion.net">
               </div>
             </div>
+          </div>
 
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">Tên Miền Route 53 DNS</label>
-              <input type="text" class="form-input" id="instDomain" placeholder="vd: my-app.xregion.net">
+          <!-- Right Column: Sticky Summary Panel -->
+          <div style="position: sticky; top: 80px;">
+            <div class="card"
+              style="padding: 22px; border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              <div
+                style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-md" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#svc-ec2"></use>
+                </svg>
+                <span data-i18n="launchSummaryTitle">Summary</span>
+              </div>
+
+              <!-- Error Alert in Summary Card -->
+              <div id="launchErrorBox"
+                style="display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 12px; line-height: 1.4;">
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <div
+                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
+                  data-i18n="launchSumRegion">TARGET REGION</div>
+                <div id="sumRegionText" style="font-size: 13.5px; font-weight: 700; color: #fff; margin-top: 3px;">
+                  Region A (Sydney)</div>
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <div
+                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
+                  data-i18n="launchSumAmi">SOFTWARE IMAGE (AMI)</div>
+                <div id="sumOsText" style="font-size: 13.5px; font-weight: 700; color: #fff; margin-top: 3px;">Ubuntu
+                  Server 22.04 LTS</div>
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <div
+                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
+                  data-i18n="launchSumKey">KEY PAIR</div>
+                <div id="sumKeyText" style="font-size: 13.5px; font-weight: 700; color: #34d399; margin-top: 3px;">
+                  xregion-key</div>
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <div
+                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
+                  data-i18n="launchSumSg">SECURITY GROUP</div>
+                <div id="sumSgText" style="font-size: 13.5px; font-weight: 700; color: #38bdf8; margin-top: 3px;">
+                  sg-default</div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <div
+                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
+                  data-i18n="launchSumSpecs">INSTANCE SPECIFICATIONS</div>
+                <div id="sumSpecsText"
+                  style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">2 vCPUs • 4096
+                  MB RAM • 10 GB Root Disk</div>
+              </div>
+
+              <button type="submit" id="btnLaunchInstance" class="btn btn-aws"
+                style="width: 100%; justify-content: center; padding: 12px; font-size: 14px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                <svg class="ico ico-sm" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#ui-plus"></use>
+                </svg>
+                <span data-i18n="launchBtnSubmit">Launch instance</span>
+              </button>
+              <a href="/instances.html" class="btn btn-secondary"
+                style="width: 100%; justify-content: center; padding: 10px; text-decoration: none;">
+                <span data-i18n="launchBtnCancel">Cancel</span>
+              </a>
             </div>
           </div>
-        </div>
 
-        <!-- Right Column: Sticky Summary -->
-        <div style="position: sticky; top: 80px;">
-          <div class="card" style="padding: 22px; border-color: var(--accent-cyan); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-              Tóm Tắt Cấu Hình
-            </div>
-
-            <!-- On-screen Error Alert in Summary Card -->
-            <div id="launchErrorBox" style="display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-size: 12px; line-height: 1.4;"></div>
-
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">VÙNG ĐÃ CHỌN</div>
-              <div id="sumRegionText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Region A (Singapore / Sydney)</div>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">HỆ ĐIỀU HÀNH (OS)</div>
-              <div id="sumOsText" style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 3px;">Ubuntu Server 22.04 LTS</div>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">KHÓA XÁC THỰC (KEY PAIR)</div>
-              <div id="sumKeyText" style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 3px;">xregion-key</div>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">SECURITY GROUP</div>
-              <div id="sumSgText" style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-top: 3px;">–</div>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">THÔNG SỐ PHẦN CỨNG</div>
-              <div id="sumSpecsText" style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">2 vCPUs • 4096 MB RAM • 10 GB Root Disk</div>
-            </div>
-
-            <button type="submit" id="btnLaunchInstance" class="btn btn-aws" style="width: 100%; justify-content: center; padding: 14px; font-size: 14px; font-weight: 800; margin-bottom: 10px;">
-              🚀 Khởi Tạo Máy Ảo
-            </button>
-            <a href="/instances.html" class="btn btn-secondary" style="width: 100%; justify-content: center; padding: 10px;">
-              Hủy bỏ (Cancel)
-            </a>
-          </div>
-        </div>
-
-      </div>
-    </form>
-  </main>
-
-  <!-- MODAL: CREATE KEY PAIR (EC2 STYLE) -->
-  <div class="modal-overlay" id="createKeyModal">
-    <div class="modal-card" style="max-width: 460px;">
-      <div class="card-header">
-        <div class="card-title">🔑 Tạo SSH Key Pair Mới</div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">✕</button>
-      </div>
-      <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
-        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
-          Hệ thống sẽ sinh cặp khóa <strong>RSA 2048-bit</strong> chuẩn PKCS#1. Khóa công khai (Public Key) được lưu trên tài khoản của bạn, còn khóa bí mật (file <code>.pem</code>) sẽ tự động tải xuống máy của bạn.
-        </div>
-        <div class="form-group">
-          <label class="form-label">Tên Key Pair (Key pair name) *</label>
-          <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: nmcuong, web-prod-key..." autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Loại Khóa (Key pair type)</label>
-          <input type="text" class="form-input" value="RSA (2048-bit) — Định dạng .pem (OpenSSH / EC2)" disabled>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')">Hủy</button>
-          <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary" style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700;">
-            ⬇ Tạo Key Pair & Tải .pem
-          </button>
         </div>
       </form>
-    </div>
+    </main>
   </div>
 
-  <div class="toast-container" id="toastContainer"></div>
+  <!-- Modal: Create Key Pair (EC2 Style) -->
+    <div class="modal-overlay" id="createKeyModal" onclick="if (event.target === this) closeModal('createKeyModal')">
+      <div class="modal-card" style="max-width: 480px;">
+        <div class="card-header">
+          <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+            <svg class="ico ico-md" aria-hidden="true">
+              <use href="/img/icons/sprite.svg#svc-key-pair"></use>
+            </svg>
+            <span data-i18n="launchModalKeyTitle">Tạo SSH Key Pair mới</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('createKeyModal')">
+            <svg class="ico ico-sm" aria-hidden="true">
+              <use href="/img/icons/sprite.svg#ui-close"></use>
+            </svg>
+          </button>
+        </div>
 
-  <script src="/js/core/ui.js"></script>
-  <script src="/js/core/api.js"></script>
-  <script src="/js/core/session.js"></script>
-  <script src="/js/core/auth.js"></script>
-  <script src="/js/core/i18n.js"></script>
-  <script src="/js/pages/launch.js"></script>
-  <script src="/js/pages/launch-firewall.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      initLaunchPage();
-    });
-  </script>
+        <form id="createKeyPairForm" onsubmit="submitCreateKeyModal(event)">
+          <div style="padding: 18px 20px;">
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;"
+              data-i18n="launchModalKeyHelp">
+              Hệ thống sẽ sinh cặp khóa RSA 2048-bit chuẩn PKCS#1. Khóa công khai lưu trên tài khoản đám mây, file khóa
+              bí mật (<code>.pem</code>) sẽ tự động tải xuống máy tính cá nhân.
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="launchModalKeyName">Tên Key Pair (Key pair name) *</label>
+              <input type="text" class="form-input" id="newKeyPairName" required placeholder="vd: my-ec2-key"
+                autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="launchModalKeyType">Loại khóa (Key pair type)</label>
+              <input type="text" class="form-input" value="RSA (2048-bit) — .pem (OpenSSH / EC2)" disabled>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" onclick="closeModal('createKeyModal')"
+                data-i18n="actClose">Hủy</button>
+              <button type="submit" id="btnSubmitCreateKey" class="btn btn-primary"
+                style="background: #f59e0b; color: #0a0f1d; border: none; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                <svg class="ico ico-sm" aria-hidden="true">
+                  <use href="/img/icons/sprite.svg#ui-copy"></use>
+                </svg>
+                <span data-i18n="launchModalKeySubmit">Tạo Key Pair & Tải .pem</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Standard App Scripts -->
+    <script src="/js/core/ui.js"></script>
+    <script src="/js/core/api.js"></script>
+    <script src="/js/core/session.js"></script>
+    <script src="/js/core/auth.js"></script>
+    <script src="/js/core/i18n.js"></script>
+    <script src="/js/core/sidebar.js"></script>
+    <script src="/js/pages/launch.js"></script>
+    <script src="/js/pages/launch-firewall.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        initLaunchPage();
+      });
+    </script>
 </body>
-</html>
 
+</html>

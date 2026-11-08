@@ -342,7 +342,15 @@ function setGlobalLang(lang) {
 
 function applyPageTranslations() {
   const isEn = getLang() === 'en';
-  document.documentElement.lang = isEn ? 'en' : 'vi';
+  const currentLang = isEn ? 'en' : 'vi';
+  document.documentElement.lang = currentLang;
+
+  // Đồng bộ trạng thái ô chọn ngôn ngữ trên toàn bộ trang (login, register, dashboard)
+  document.querySelectorAll('#xrLangSelect, .header-lang-select').forEach(sel => {
+    if (sel && sel.value !== currentLang) {
+      sel.value = currentLang;
+    }
+  });
 
   // 1. Áp dụng chuẩn mới qua data-i18n (key-based)
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -477,3 +485,13 @@ function renderUserBadge() {
   }
   applyPageTranslations();
 }
+
+// Tự động đồng bộ và áp dụng ngôn ngữ khi DOM sẵn sàng
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    applyPageTranslations();
+  });
+} else {
+  applyPageTranslations();
+}
+

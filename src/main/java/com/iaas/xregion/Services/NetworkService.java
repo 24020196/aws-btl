@@ -469,6 +469,10 @@ public class NetworkService {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> replaceInstanceRules(String instanceId, SecurityGroupRequest request) {
+        if (request.getGroupIds() != null) {
+            throw new AppException("Không còn đổi Security Group cho máy: mỗi máy có một nhóm riêng. "
+                    + "Gửi inboundRules/outboundRules để đặt lại rule của nhóm.");
+        }
         String user = getCurrentUsername();
         InstanceEntity inst = ownedInstance(instanceId, user);
         String groupId = ensureInstanceGroup(inst);
