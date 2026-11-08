@@ -385,3 +385,12 @@ a.btn { text-decoration: none; }
 
 .sim-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
   color: #fbbf24; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.35); cursor: help; }
+
+/* Khung 6 bước: nháy viền khi tự cuộn tới sau lúc bấm chuyển vùng */
+.pipe-card:focus { outline: none; }
+.pipe-card.pipe-flash { animation: pipe-flash 1.6s ease-out; }
+@keyframes pipe-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--accent-cyan); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .pipe-card.pipe-flash { animation: none; } }

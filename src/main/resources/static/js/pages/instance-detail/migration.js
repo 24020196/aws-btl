@@ -135,6 +135,25 @@ document.addEventListener('keydown', e => {
 });
 
 // ---------------- Migration: trigger + live pipeline ----------------
+// Sau khi bấm chuyển vùng: cuộn để khung 6 bước nằm giữa màn hình (nếu cao hơn màn hình thì đặt ngay dưới header).
+function focusPipelineCard() {
+  const card = document.getElementById('migPipelineCard');
+  if (!card) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  requestAnimationFrame(() => {
+    const header = document.querySelector('.header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+    const rect = card.getBoundingClientRect();
+    const free = window.innerHeight - headerH;
+    const offset = rect.height < free ? headerH + (free - rect.height) / 2 : headerH + 12;
+    window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - offset), behavior: smooth ? 'smooth' : 'auto' });
+    card.focus({ preventScroll: true });
+    card.classList.remove('pipe-flash');
+    void card.offsetWidth;
+    card.classList.add('pipe-flash');
+  });
+}
+
 function openMigrateModal() {
   const reason = migrationBlockReason();
   if (reason) {
@@ -165,7 +184,7 @@ async function confirmMigrate() {
     const res = await apiRequest('/migrations/trigger', { method: 'POST', body: JSON.stringify({ id: det.id }) });
     closeModal('migrateModal');
     switchDetailTab('migration');
-    showToast('Đã bắt đầu chuyển vùng, theo dõi tiến trình bên dưới', 'success');
+    showToast('Đã bắt đầu chuyển vùng, đang theo dõi 6 bước', 'success');
     det.running = true;
     det.inst.status = 'MIGRATING';
     det.history = Object.assign({}, det.history, { migrationLock: true, lockStale: false, lockAcquiredAt: res && res.startedAt ? res.startedAt : Date.now() });
@@ -173,6 +192,7 @@ async function confirmMigrate() {
     renderLockAndCooldown();
     renderPipeline(res);
     startProgressPollingDetail();
+    focusPipelineCard();
   } catch (err) {
     closeModal('migrateModal');
     showToast(`Không chuyển vùng được: ${esc(err.message)}`, 'error');
