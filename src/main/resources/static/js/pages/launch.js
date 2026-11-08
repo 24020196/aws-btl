@@ -1,7 +1,42 @@
-// Trang khởi tạo máy ảo (launch.html) và Key Pair.
-// instance-edit.html cũng nạp file này vì dùng chung phần Key Pair.
+// Trang khởi tạo máy ảo (launch.html) và Key Pair - Tạ Duy Anh
+// Chuẩn hóa giao diện AWS EC2 Console 2-column layout, loại bỏ hoàn toàn emoji, tích hợp icon sprite & i18n.
 
-// 4. LAUNCH INSTANCE PAGE (launch.html)
+// 1. Đăng ký từ điển song ngữ trang Launch
+registerI18n({
+  launchBreadcrumb: ['Khởi tạo máy ảo', 'Launch an instance'],
+  launchPageTitle: ['Khởi tạo máy ảo', 'Launch an instance'],
+  launchSecName: ['Tên và nhãn', 'Name and tags'],
+  launchInputName: ['Tên máy ảo (Instance name) *', 'Instance name *'],
+  launchSecRegion: ['Vùng mục tiêu', 'Target Region'],
+  launchSecAmi: ['Ảnh hệ điều hành (Amazon Machine Image)', 'Application and OS Images (Amazon Machine Image)'],
+  launchAmiHelp: ['Chọn ảnh hệ điều hành (Glance OS Image / AMI) được lưu trữ trên hạ tầng đám mây:', 'Select an operating system (Glance OS Image / AMI) hosted in the cloud:'],
+  launchSecType: ['Loại máy ảo (Instance type)', 'Instance type'],
+  launchSelectFlavor: ['Chọn Flavor (vCPU & RAM):', 'Select Flavor (vCPU & RAM):'],
+  launchFlavorMatrixTitle: ['Danh sách Flavor cho phép', 'Allowed Flavors'],
+  launchSecKey: ['Khóa xác thực (Key pair - login)', 'Key pair (login)'],
+  launchKeyHelp: ['Chọn khóa SSH đã tạo trước đó hoặc khởi tạo Key Pair mới để tải file .pem:', 'Select an existing SSH key pair or create a new one to download .pem file:'],
+  launchSelectKey: ['Tên Key Pair *', 'Key pair name *'],
+  launchBtnCreateKey: ['Tạo Key Pair mới', 'Create new key pair'],
+  launchSecStorage: ['Cấu hình lưu trữ & DNS', 'Configure storage & DNS'],
+  launchVolType: ['Loại ổ đĩa Root', 'Root Volume type'],
+  launchVolSize: ['Dung lượng Root Disk (GiB) *', 'Root Disk size (GiB) *'],
+  launchDomainName: ['Tên miền Route 53 DNS', 'Route 53 DNS domain'],
+  launchSummaryTitle: ['Tóm tắt cấu hình', 'Summary'],
+  launchSumRegion: ['VÙNG MỤC TIÊU', 'TARGET REGION'],
+  launchSumAmi: ['HỆ ĐIỀU HÀNH (AMI)', 'SOFTWARE IMAGE (AMI)'],
+  launchSumKey: ['KHÓA XÁC THỰC (KEY PAIR)', 'KEY PAIR'],
+  launchSumSg: ['NHÓM BẢO MẬT (SECURITY GROUP)', 'FIREWALL (SECURITY GROUP)'],
+  launchSumSpecs: ['THÔNG SỐ PHẦN CỨNG', 'INSTANCE SPECIFICATIONS'],
+  launchBtnSubmit: ['Khởi tạo máy ảo', 'Launch instance'],
+  launchBtnCancel: ['Hủy bỏ', 'Cancel'],
+  launchModalKeyTitle: ['Tạo SSH Key Pair mới', 'Create new SSH Key Pair'],
+  launchModalKeyHelp: ['Hệ thống sẽ sinh cặp khóa RSA 2048-bit chuẩn PKCS#1. Khóa công khai lưu trên tài khoản đám mây, file khóa bí mật (.pem) sẽ tự động tải xuống.', 'RSA 2048-bit PKCS#1 key pair will be generated. The public key is stored, and the private .pem key will download automatically.'],
+  launchModalKeyName: ['Tên Key Pair *', 'Key pair name *'],
+  launchModalKeyType: ['Loại khóa', 'Key pair type'],
+  launchModalKeySubmit: ['Tạo Key Pair & Tải .pem', 'Create Key Pair & Download .pem']
+});
+
+// 2. Khởi tạo trang Launch
 function initLaunchPage() {
   if (!requireAuthGuard()) return;
   if (sessionStorage.getItem('xregion_launch_completed') === 'true') {
@@ -29,6 +64,7 @@ function initLaunchPage() {
   updatePageLaunchSummary();
 }
 
+// 3. Tải danh sách Key Pair
 async function loadKeyPairsDropdown(selectedName = null) {
   const select = document.getElementById('instKeyPair');
   if (!select) return;
@@ -43,7 +79,7 @@ async function loadKeyPairsDropdown(selectedName = null) {
         select.value = keys[0].keyName;
       }
     } else {
-      select.innerHTML = `<option value="">-- Chưa có Key Pair nào (Bấm "+ Tạo Key Pair Mới" bên cạnh) --</option>`;
+      select.innerHTML = `<option value="">-- ` + t('Chưa có Key Pair nào (Bấm "+ Tạo Key Pair mới" bên cạnh)', 'No key pairs available (Click "+ Create new key pair" beside)') + ` --</option>`;
     }
     updatePageLaunchSummary();
   } catch (e) {
@@ -52,7 +88,7 @@ async function loadKeyPairsDropdown(selectedName = null) {
 }
 
 function openCreateKeyModal() {
-  const input = document.getElementById('newKeyPairName');
+  const input = document.getElementById('newKeyPairName') || document.getElementById('newKeyPairNameInput');
   if (input) input.value = '';
   openModal('createKeyModal');
   setTimeout(() => {
@@ -75,15 +111,15 @@ function downloadPemFile(filename, pemContent) {
 
 async function submitCreateKeyModal(e) {
   e.preventDefault();
-  const input = document.getElementById('newKeyPairName');
+  const input = document.getElementById('newKeyPairName') || document.getElementById('newKeyPairNameInput');
   const name = input ? input.value.trim() : '';
   if (!name) return;
 
   const btn = document.getElementById('btnSubmitCreateKey');
-  const origText = btn ? btn.innerHTML : '⬇ Tạo Key Pair & Tải .pem';
+  const origText = btn ? btn.innerHTML : tk('launchModalKeySubmit');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '⏳ Đang sinh khóa RSA 2048...';
+    btn.innerHTML = `${ICON('ui-spinner', 'ico-spin')} <span>${t('Đang sinh khóa RSA 2048...', 'Generating RSA 2048 key...')}</span>`;
   }
 
   try {
@@ -95,16 +131,16 @@ async function submitCreateKeyModal(e) {
     if (res && res.privateKey) {
       downloadPemFile(name, res.privateKey);
       closeModal('createKeyModal');
-      showToast(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem thành công!`, 'success');
+      showToast(t(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem thành công!`, `Created Key Pair [${name}] and downloaded ${name}.pem successfully!`), 'success');
       await loadKeyPairsDropdown(name);
       if (typeof updateEditInstanceSummary === 'function') {
         updateEditInstanceSummary();
       }
     } else {
-      showToast(`Tạo khóa thất bại: Không nhận được Private Key từ máy chủ. Vui lòng thử lại.`, 'error');
+      showToast(t('Tạo khóa thất bại: Không nhận được Private Key từ máy chủ.', 'Key creation failed: No private key received.'), 'error');
     }
   } catch (err) {
-    showToast(`Lỗi tạo Key Pair: ${err.message}`, 'error');
+    showToast(t(`Lỗi tạo Key Pair: ${err.message}`, `Key Pair creation failed: ${err.message}`), 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -113,15 +149,16 @@ async function submitCreateKeyModal(e) {
   }
 }
 
-async function promptCreateKey() {
-  openCreateKeyModal();
-}
-
+// 4. Chọn Region & OS
 function selectRegion(regionCode) {
-  document.getElementById('instRegion').value = regionCode;
-  document.getElementById('optRegionA').classList.toggle('selected', regionCode === 'ap-southeast-2');
-  document.getElementById('optRegionB').classList.toggle('selected', regionCode === 'us-east-1');
-  
+  const regInput = document.getElementById('instRegion');
+  if (regInput) regInput.value = regionCode;
+
+  const optA = document.getElementById('optRegionA');
+  const optB = document.getElementById('optRegionB');
+  if (optA) optA.classList.toggle('selected', regionCode === 'ap-southeast-2');
+  if (optB) optB.classList.toggle('selected', regionCode === 'us-east-1');
+
   const radioA = document.querySelector('input[name="regionRadio"][value="ap-southeast-2"]');
   const radioB = document.querySelector('input[name="regionRadio"][value="us-east-1"]');
   if (radioA) radioA.checked = (regionCode === 'ap-southeast-2');
@@ -130,21 +167,27 @@ function selectRegion(regionCode) {
   updatePageLaunchSummary();
 }
 
-let dynamicOsMap = {};
-
 function selectOs(imageId, osName) {
-  selectDynamicOs(imageId, osName);
-}
+  const imgInput = document.getElementById('instImage');
+  if (imgInput) imgInput.value = imageId;
 
-function selectDynamicOs(imageId, osName) {
-  const hiddenInput = document.getElementById('instImage');
-  if (hiddenInput) hiddenInput.value = imageId;
+  const osCards = ['optOsUbuntu', 'optOsDebian', 'optOsRocky', 'optOsAlpine'];
+  osCards.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('selected');
+  });
 
-  const cards = document.querySelectorAll('#osOptionsGrid .option-card');
-  cards.forEach(c => c.classList.remove('selected'));
-
-  const target = document.getElementById(`optOs_${String(imageId).replace(/[^a-zA-Z0-9_-]/g, '_')}`);
-  if (target) target.classList.add('selected');
+  const cardMap = {
+    'img-u22': 'optOsUbuntu',
+    'img-deb12': 'optOsDebian',
+    'img-rocky9': 'optOsRocky',
+    'img-alp319': 'optOsAlpine'
+  };
+  const activeCardId = cardMap[imageId];
+  if (activeCardId) {
+    const activeCard = document.getElementById(activeCardId);
+    if (activeCard) activeCard.classList.add('selected');
+  }
 
   const radio = document.querySelector(`input[name="osRadio"][value="${imageId}"]`);
   if (radio) radio.checked = true;
@@ -152,95 +195,79 @@ function selectDynamicOs(imageId, osName) {
   updatePageLaunchSummary();
 }
 
+// 5. Tải danh sách Images và Flavors động từ API
+const dynamicOsMap = {};
+
 async function loadLaunchImagesAndFlavors() {
-  // 1. Tải danh sách Glance Image từ DynamoDB qua API /api/images
   const osGrid = document.getElementById('osOptionsGrid');
+  const flavorSelect = document.getElementById('instFlavor');
+  const flavorMatrixBody = document.getElementById('flavorMatrixBody');
+
+  // Load OS Images
   if (osGrid) {
     try {
       const images = await apiRequest('/images');
       if (images && images.length > 0) {
-        osGrid.innerHTML = '';
-        dynamicOsMap = {};
-        images.forEach((img, index) => {
-          dynamicOsMap[img.id] = img.name;
-          const isSelected = index === 0;
-          if (isSelected) {
-            document.getElementById('instImage').value = img.id;
-          }
-          const lower = (img.name || '').toLowerCase();
-          let iconClass = 'icon-ubuntu';
-          let iconLetter = 'U';
-          if (lower.includes('alpine')) {
-            iconClass = 'icon-alpine';
-            iconLetter = 'A';
-          } else if (lower.includes('debian')) {
-            iconClass = 'icon-debian';
-            iconLetter = 'D';
-          } else if (lower.includes('rocky')) {
-            iconClass = 'icon-rocky';
-            iconLetter = 'R';
-          } else if (lower.includes('windows')) {
-            iconClass = 'icon-windows';
-            iconLetter = 'W';
-          }
-
-          const card = document.createElement('div');
-          card.className = `option-card ${isSelected ? 'selected' : ''}`;
-          card.id = `optOs_${String(img.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-          card.onclick = () => selectDynamicOs(img.id, img.name);
-          card.innerHTML = `
-            <input type="radio" name="osRadio" value="${img.id}" ${isSelected ? 'checked' : ''}>
-            <div class="option-icon ${iconClass}">${iconLetter}</div>
-            <strong style="font-size: 13px; display: block; margin-bottom: 4px;">${img.name}</strong>
-            <div style="font-size: 11px; color: var(--text-muted);">${img.osType || 'Linux'} • ${img.sizeGb || 10} GB Image</div>
-          `;
-          osGrid.appendChild(card);
+        images.forEach(img => {
+          dynamicOsMap[img.id] = `${img.name} (${img.distribution} ${img.version || ''})`.trim();
         });
+
+        const iconForDistro = (distro) => {
+          const d = (distro || '').toLowerCase();
+          if (d.includes('ubuntu')) return 'os-ubuntu';
+          if (d.includes('debian')) return 'os-debian';
+          if (d.includes('centos')) return 'os-centos';
+          if (d.includes('rocky')) return 'os-rocky';
+          if (d.includes('amazon') || d.includes('al2')) return 'os-amazon-linux';
+          if (d.includes('win')) return 'os-windows';
+          return 'os-linux';
+        };
+
+        const currentImgVal = document.getElementById('instImage')?.value || images[0].id;
+
+        osGrid.innerHTML = images.map((img, idx) => {
+          const isSelected = (img.id === currentImgVal) || (!currentImgVal && idx === 0);
+          const iconId = iconForDistro(img.distribution);
+          return `
+            <div class="option-card ${isSelected ? 'selected' : ''}" id="optOs-${img.id}" onclick="selectOs('${img.id}', '${img.name}')">
+              <input type="radio" name="osRadio" value="${img.id}" ${isSelected ? 'checked' : ''}>
+              <div style="margin-bottom: 6px;">
+                <svg class="ico ico-2xl" aria-hidden="true"><use href="/img/icons/sprite.svg#${iconId}"></use></svg>
+              </div>
+              <strong style="font-size: 13.5px; display: block; margin-bottom: 4px; color: #fff;">${img.distribution || img.name}</strong>
+              <div style="font-size: 11.5px; color: var(--text-muted);">${img.version || img.architecture || 'x86_64'}</div>
+            </div>
+          `;
+        }).join('');
+
+        if (!document.getElementById('instImage').value) {
+          document.getElementById('instImage').value = images[0].id;
+        }
       }
     } catch (e) {
-      console.warn('Không thể tải Glance Images từ DynamoDB:', e);
+      console.warn('Không thể tải Glance Images:', e);
     }
   }
 
-  // 2. Tải danh sách Nova Flavor từ DynamoDB qua API /api/flavors
-  const flavorSelect = document.getElementById('instFlavor');
-  const flavorMatrixBody = document.getElementById('flavorMatrixBody');
+  // Load Flavors
   if (flavorSelect) {
     try {
       const flavors = await apiRequest('/flavors');
       if (flavors && flavors.length > 0) {
-        // Cập nhật cấu hình FLAVOR_SPECS toàn cục
-        flavors.forEach(f => {
-          FLAVOR_SPECS[f.name] = {
-            vcpu: f.vcpus,
-            ramMb: f.ramMb,
-            ramDisplay: f.ramDisplay,
-            defaultDisk: f.diskGb
-          };
-        });
-
         const m1Flavors = flavors.filter(f => f.name.startsWith('m1'));
-        const h1Flavors = flavors.filter(f => f.name.startsWith('h1'));
-        const otherFlavors = flavors.filter(f => !f.name.startsWith('m1') && !f.name.startsWith('h1'));
+        const otherFlavors = flavors.filter(f => !f.name.startsWith('m1'));
 
         let selectHtml = '';
         if (m1Flavors.length > 0) {
-          selectHtml += `<optgroup label="── Dòng Tiêu Chuẩn (m1) ──">`;
+          selectHtml += `<optgroup label="── ` + t('Dòng Tiêu Chuẩn (General Purpose)', 'General Purpose (m1)') + ` ──">`;
           m1Flavors.forEach(f => {
-            const isDef = f.name === 'm1.medium';
-            selectHtml += `<option value="${f.name}" ${isDef ? 'selected' : ''}>${f.name} — ${f.vcpus} vCPU${f.vcpus > 1 ? 's' : ''} • ${f.ramDisplay} • ${f.diskGb} GB Root Disk ${isDef ? '[Mặc định]' : ''}</option>`;
-          });
-          selectHtml += `</optgroup>`;
-        }
-        if (h1Flavors.length > 0) {
-          selectHtml += `<optgroup label="── Dòng Hiệu Năng Cao (h1) ──">`;
-          h1Flavors.forEach(f => {
-            selectHtml += `<option value="${f.name}">${f.name} — ${f.vcpus} vCPUs • ${f.ramDisplay} • ${f.diskGb} GB Root Disk</option>`;
+            const isSel = f.name === 'm1.medium' ? 'selected' : '';
+            selectHtml += `<option value="${f.name}" ${isSel}>${f.name} — ${f.vcpus} vCPU • ${f.ramDisplay} • ${f.diskGb} GB Root Disk</option>`;
           });
           selectHtml += `</optgroup>`;
         }
         if (otherFlavors.length > 0) {
-          selectHtml += `<optgroup label="── Dòng Khác ──">`;
+          selectHtml += `<optgroup label="── ` + t('Dòng Nâng Cao (Compute / Memory)', 'Advanced Series') + ` ──">`;
           otherFlavors.forEach(f => {
             selectHtml += `<option value="${f.name}">${f.name} — ${f.vcpus} vCPU • ${f.ramDisplay} • ${f.diskGb} GB Root Disk</option>`;
           });
@@ -248,7 +275,6 @@ async function loadLaunchImagesAndFlavors() {
         }
         flavorSelect.innerHTML = selectHtml;
 
-        // Render bảng ma trận Flavor
         if (flavorMatrixBody) {
           flavorMatrixBody.innerHTML = flavors.map(f => {
             const rowId = `row-${f.name.replace('.', '-')}`;
@@ -256,8 +282,10 @@ async function loadLaunchImagesAndFlavors() {
             const seriesColor = f.name.startsWith('h1') ? '#a855f7' : '#38bdf8';
             return `
               <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isMedium ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
-                <td style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${f.series || 'Tiêu chuẩn'}</td>
-                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isMedium ? '#38bdf8' : '#fff'};">${f.name} ${isMedium ? '★' : ''}</td>
+                <td style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${f.series || t('Tiêu chuẩn', 'Standard')}</td>
+                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isMedium ? '#38bdf8' : '#fff'};">
+                  ${f.name} ${isMedium ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
+                </td>
                 <td style="padding: 8px 12px; font-weight: ${isMedium ? '700' : '400'}; color: #fff;">${f.vcpus}</td>
                 <td style="padding: 8px 12px; font-weight: ${isMedium ? '700' : '400'}; color: #fff;">${f.ramMb}</td>
                 <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">${f.diskGb}</td>
@@ -267,13 +295,14 @@ async function loadLaunchImagesAndFlavors() {
         }
       }
     } catch (e) {
-      console.warn('Không thể tải Nova Flavors từ DynamoDB:', e);
+      console.warn('Không thể tải Nova Flavors từ API:', e);
     }
   }
 
   updatePageLaunchSummary();
 }
 
+// 6. Cập nhật Sticky Summary Panel bên phải
 function updatePageLaunchSummary() {
   const regionEl = document.getElementById('instRegion');
   const imageEl = document.getElementById('instImage');
@@ -284,7 +313,7 @@ function updatePageLaunchSummary() {
 
   const region = regionEl.value;
   const isRegionA = region.includes('southeast');
-  const regionLabel = isRegionA ? 'Region A (Singapore / Sydney)' : 'Region B (N. Virginia)';
+  const regionLabel = isRegionA ? 'Region A (Sydney / Singapore)' : 'Region B (N. Virginia)';
 
   const osMap = {
     'img-u22': 'Ubuntu Server 22.04 LTS',
@@ -311,14 +340,14 @@ function updatePageLaunchSummary() {
   if (sumKey) {
     const kpEl = document.getElementById('instKeyPair');
     const val = kpEl ? kpEl.value.trim() : '';
-    sumKey.textContent = val ? val : 'Mặc định (xregion-key)';
+    sumKey.textContent = val ? val : t('Mặc định (xregion-key)', 'Default (xregion-key)');
   }
   const sumSg = document.getElementById('sumSgText');
   if (sumSg && typeof lfwSummaryText === 'function') {
     sumSg.textContent = lfwSummaryText();
   }
 
-  // Highlight selected row in specification matrix table
+  // Highlight dòng tương ứng trong bảng flavor
   const tableRows = document.querySelectorAll('#flavorMatrixBody tr');
   const targetRowId = `row-${flavorVal.replace('.', '-')}`;
   tableRows.forEach(row => {
@@ -330,12 +359,13 @@ function updatePageLaunchSummary() {
   });
 }
 
+// 7. Xử lý gửi Form tạo máy ảo
 async function handleLaunchPageSubmit(e) {
   e.preventDefault();
   const errBox = document.getElementById('launchErrorBox');
   if (errBox) errBox.style.display = 'none';
 
-  // Bước 6: kiểm tra rule Security Group trước khi tạo máy (launch-firewall.js)
+  // Kiểm tra rule firewall (launch-firewall.js)
   const fwError = typeof lfwValidate === 'function' ? lfwValidate() : '';
   if (fwError) {
     showToast(fwError, 'error');
@@ -343,10 +373,10 @@ async function handleLaunchPageSubmit(e) {
   }
 
   const btn = document.getElementById('btnLaunchInstance');
-  const origText = btn ? btn.innerHTML : '🚀 Launch Instance';
+  const origText = btn ? btn.innerHTML : tk('launchBtnSubmit');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '⏳ Đang cấp phát máy ảo EC2 & ổ đĩa EBS...';
+    btn.innerHTML = `${ICON('ui-spinner', 'ico-spin')} <span>${t('Đang cấp phát máy ảo...', 'Launching instance...')}</span>`;
   }
 
   const payload = {
@@ -365,7 +395,7 @@ async function handleLaunchPageSubmit(e) {
       body: JSON.stringify(payload)
     });
 
-    // Ghi rule inbound/outbound vào Security Group riêng của máy vừa tạo
+    // Áp dụng inbound/outbound rules vào Security Group riêng
     if (res && res.id && typeof lfwApplyToInstance === 'function') {
       await lfwApplyToInstance(res.id);
     }
@@ -374,20 +404,26 @@ async function handleLaunchPageSubmit(e) {
     if (form) form.reset();
     sessionStorage.setItem('xregion_launch_completed', 'true');
 
-    showToast(`Khởi tạo máy ảo [${payload.name}] (${res ? res.id : ''}) thành công!`, 'success');
+    showToast(t(`Khởi tạo máy ảo [${payload.name}] thành công!`, `Instance [${payload.name}] launched successfully!`), 'success');
     setTimeout(() => {
       window.location.replace('/instances.html');
     }, 800);
   } catch (err) {
     console.error('Launch failed:', err);
     if (errBox) {
-      errBox.innerHTML = `<strong>❌ Lỗi khởi tạo máy ảo (POST /api/instances):</strong><br>${err.message}`;
+      errBox.innerHTML = `<strong>${ICON('ui-error', 'ico-danger')} ${t('Lỗi khởi tạo máy ảo', 'Failed to launch instance')}:</strong><br>${err.message}`;
       errBox.style.display = 'block';
     }
-    showToast(`Lỗi khởi tạo: ${err.message}`, 'error');
+    showToast(t(`Lỗi khởi tạo: ${err.message}`, `Launch error: ${err.message}`), 'error');
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = origText;
     }
   }
 }
+
+// Global Window Exports
+window.openCreateKeyModal = openCreateKeyModal;
+window.submitCreateKeyModal = submitCreateKeyModal;
+window.loadKeyPairsDropdown = loadKeyPairsDropdown;
+window.downloadPemFile = downloadPemFile;
