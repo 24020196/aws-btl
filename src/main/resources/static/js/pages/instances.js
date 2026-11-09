@@ -19,6 +19,10 @@ registerI18n({
   instColPrivateIp: ['Private IP', 'Private IP'],
   instColSecurityGroup: ['Nhóm bảo mật', 'Security group'],
   instColKeyName: ['Cặp khóa', 'Key pair'],
+  instColDetail: ['Chi tiết', 'Details'],
+  instViewDetail: ['Xem chi tiết', 'View details'],
+  instMigrateBtn: ['Chuyển vùng', 'Migrate'],
+  instMigrateTitle: ['Fast Migrate X-Region: chuyển máy đang chọn sang vùng còn lại', 'Fast Migrate X-Region: move the selected instance to the other region'],
   instLoading: ['Đang tải danh sách máy ảo...', 'Loading instances...'],
   instEmpty: ['Không tìm thấy máy ảo nào phù hợp bộ lọc.', 'No instances matching filter.'],
   instSelectedCount: ['máy ảo đã chọn', 'instances selected'],
@@ -249,12 +253,17 @@ function filterInstancesUI() {
       <td><span style="font-size:12px; color:#cbd5e1;">${inst.regionName || inst.region}</span></td>
       <td><code style="color: var(--accent-cyan);">${inst.publicIp || '--'}</code></td>
       <td><code>${inst.privateIp || '--'}</code></td>
-      <td>${renderSecurityGroupBadge(inst.securityGroup, inst.id)}</td>
       <td>
         <span class="badge" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-family:monospace; display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; white-space: nowrap;">
           ${ICON('svc-key-pair', 'ico-xs')}
           <span>${inst.keyName || 'xregion-key'}</span>
         </span>
+      </td>
+      <td class="inst-detail-cell">
+        <a class="btn btn-secondary btn-sm inst-detail-btn" href="/instance-detail.html?id=${encodeURIComponent(inst.id)}"
+          onclick="event.stopPropagation()" title="${tk('instViewDetail')}">
+          <span>${tk('instViewDetail')}</span>${ICON('ui-chevron-right', 'ico-xs')}
+        </a>
       </td>
     `;
 
@@ -398,6 +407,19 @@ function updateSelectionToolbar() {
   // Nút Connect & Actions sáng khi chọn đúng 1 máy ảo
   if (btnConnect) btnConnect.disabled = (count !== 1);
   if (btnActions) btnActions.disabled = (count !== 1);
+
+  // Nút Chuyển vùng: đúng 1 máy, đang Running/Stopped và không bị migration_lock (giống điều kiện ở trang chi tiết)
+  const btnMigrate = document.getElementById('btnMigrateInstance');
+  if (btnMigrate) {
+    const one = count === 1 ? cachedInstances.find(i => i.id === Array.from(selectedInstanceIds)[0]) : null;
+    const st = one ? String(one.status || '').toUpperCase() : '';
+    let why = '';
+    if (count !== 1) why = t('Chọn đúng 1 máy ảo để chuyển vùng', 'Select exactly one instance to migrate');
+    else if (one && one.migrationLock) why = t('Máy đang có một lần chuyển vùng chạy', 'A migration is already running for this instance');
+    else if (!['RUNNING', 'ACTIVE', 'STOPPED', 'SHUTOFF'].includes(st)) why = t('Chỉ chuyển vùng được khi máy đang chạy hoặc đã dừng', 'Only running or stopped instances can be migrated');
+    btnMigrate.disabled = !!why;
+    btnMigrate.title = why || tk('instMigrateTitle');
+  }
 
   // Nút Instance State sáng khi chọn >= 1 máy ảo
   if (btnState) btnState.disabled = (count === 0);
