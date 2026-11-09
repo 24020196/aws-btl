@@ -351,3 +351,7 @@
 /* Menu Hành động dùng chung với trang chi tiết (instance-actions-menu.js): cùng độ rộng với .ec2-actions-list */
 .toolbar-dropdown-menu.ec2-actions-dropdown { min-width: 230px; padding: 6px 0; }
 .ec2-actions-dropdown .ec2-actions-item { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+
+/* Cột "Chi tiết" cuối bảng máy ảo */
+.inst-detail-cell { text-align: left; white-space: nowrap; }
+.inst-detail-btn { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }

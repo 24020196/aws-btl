@@ -142,6 +142,15 @@
             </div>
           </div>
 
+          <!-- Chuyển vùng máy đang chọn: mở trang chi tiết và hộp xác nhận Fast Migrate (?action=migrate) -->
+          <button class="btn btn-secondary btn-sm" id="btnMigrateInstance" onclick="migrateSelectedInstance()" disabled
+            title="Fast Migrate X-Region" data-i18n-title="instMigrateTitle">
+            <svg class="ico ico-sm" aria-hidden="true">
+              <use href="/img/icons/sprite.svg#ui-migrate"></use>
+            </svg>
+            <span data-i18n="instMigrateBtn">Chuyển vùng</span>
+          </button>
+
           <!-- Launch Instances Button -->
           <a href="/launch.html" class="btn btn-aws"
             style="padding: 6px 14px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
@@ -256,8 +265,8 @@
                 <th data-i18n="instColRegion">Region</th>
                 <th data-i18n="instColPublicIp">Public IPv4</th>
                 <th data-i18n="instColPrivateIp">Private IP</th>
-                <th data-i18n="instColSecurityGroup">Security group</th>
                 <th data-i18n="instColKeyName">Key pair</th>
+                <th data-i18n="instColDetail" class="inst-detail-cell">Details</th>
               </tr>
             </thead>
             <tbody id="instanceTableBody">
