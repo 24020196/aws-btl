@@ -116,7 +116,8 @@ class InstanceControllerTest {
         mockMvc.perform(post("/api/instances")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value("Instance launch request accepted"))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value("i-newly-created"))
                 .andExpect(jsonPath("$.data.status").value("PENDING"));

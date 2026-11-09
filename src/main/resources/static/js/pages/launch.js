@@ -225,10 +225,14 @@ async function loadLaunchImagesAndFlavors() {
           return 'os-linux';
         };
 
-        const currentImgVal = document.getElementById('instImage')?.value || images[0].id;
+        const instInput = document.getElementById('instImage');
+        const currentVal = instInput?.value;
+        const hasValidCurrent = currentVal && images.some(img => img.id === currentVal);
+        const targetImgVal = hasValidCurrent ? currentVal : images[0].id;
+        if (instInput) instInput.value = targetImgVal;
 
         osGrid.innerHTML = images.map((img, idx) => {
-          const isSelected = (img.id === currentImgVal) || (!currentImgVal && idx === 0);
+          const isSelected = (img.id === targetImgVal);
           const iconId = iconForDistro(img.distribution);
           return `
             <div class="option-card ${isSelected ? 'selected' : ''}" id="optOs-${img.id}" onclick="selectOs('${img.id}', '${img.name}')">
@@ -241,10 +245,6 @@ async function loadLaunchImagesAndFlavors() {
             </div>
           `;
         }).join('');
-
-        if (!document.getElementById('instImage').value) {
-          document.getElementById('instImage').value = images[0].id;
-        }
       }
     } catch (e) {
       console.warn('Không thể tải Glance Images:', e);
@@ -405,8 +405,9 @@ async function handleLaunchPageSubmit(e) {
     const form = document.getElementById('launchInstancePageForm');
     if (form) form.reset();
     sessionStorage.setItem('xregion_launch_completed', 'true');
+    if (res && res.id) sessionStorage.setItem('xregion_pending_launch', res.id);
 
-    showToast(t(`Khởi tạo máy ảo [${payload.name}] thành công!`, `Instance [${payload.name}] launched successfully!`), 'success');
+    showToast(t(`Đã tiếp nhận yêu cầu tạo [${payload.name}]. Theo dõi trạng thái trên danh sách máy ảo.`, `Launch requested for [${payload.name}]. Follow its status in the instance list.`), 'info');
     setTimeout(() => {
       window.location.replace('/instances.html');
     }, 800);

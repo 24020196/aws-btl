@@ -62,16 +62,6 @@ public class ImageService {
         // Bổ sung các custom snapshot được tạo trong phiên
         result.addAll(snapshotStore.values());
 
-        // Fallback mặc định nếu bảng trống
-        if (result.isEmpty()) {
-            result.add(ImageResponse.builder()
-                    .id("img-u22").name("Ubuntu 22.04 LTS (Jammy Jellyfish)").osType("Ubuntu")
-                    .glanceId("glance-ubuntu-22.04").sizeGb(20).visibility("PUBLIC").status("ACTIVE").createdAt(System.currentTimeMillis()).build());
-            result.add(ImageResponse.builder()
-                    .id("img-alp320").name("Alpine 3.20 Cloud").osType("Alpine")
-                    .glanceId("glance-alpine-3.20").sizeGb(5).visibility("PUBLIC").status("ACTIVE").createdAt(System.currentTimeMillis()).build());
-        }
-
         return result.stream()
                 .sorted(Comparator.comparing(ImageResponse::getName))
                 .collect(Collectors.toList());
