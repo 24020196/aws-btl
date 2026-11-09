@@ -491,6 +491,87 @@ a.btn { text-decoration: none; }
   }
 }
 
+/* ============================================================
+   LỊCH LUÂN PHIÊN 2 DÒNG X 2 CỘT (2 ROWS X 2 COLS GRID TABLE)
+   ============================================================ */
+.scen-grid-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.scen-grid-header {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scen-grid-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.scen-grid-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.scen-grid-region {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.scen-region-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.scen-region-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #38bdf8;
+}
+
+.scen-region-tag.auto-calc {
+  color: #a78bfa;
+}
+
+.scen-time-input {
+  width: 100%;
+}
+
+.input-readonly {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+
+@media (max-width: 520px) {
+  .scen-grid-header, .scen-grid-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
 .scen-summary-box {
   display: flex;
   align-items: center;
@@ -536,14 +617,64 @@ a.btn { text-decoration: none; }
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
-.scen-actions {
+/* Single Scenario Card Styling */
+.scen-view-box {
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.scen-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+@media (max-width: 768px) {
+  .scen-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .scen-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scen-info-item {
+  min-width: 0;
+}
+.scen-info-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+.scen-info-val {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  overflow-wrap: break-word;
+}
+
+.scen-action-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
 }
-.scen-actions .btn-sm {
-  padding: 3px 8px;
-  font-size: 12px;
+
+.scen-empty-box {
+  padding: 32px 16px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
 }
 
 /* ============================================================
