@@ -34,7 +34,7 @@ public class InstanceEntity {
     private Long lastMigrationTimestamp;
     private String dns;
 
-    // Transient fields (decoupled to XRegion-Nova)
+    // Requested launch context is persisted separately from confirmed Nova details.
     private String instanceName;
     private String username;
     private String currentRegion;
@@ -46,6 +46,30 @@ public class InstanceEntity {
     private String keyName;
     private String securityGroup;
     private String securityGroupId;
+    private String networkMode;
+    private String imageId;
+    private Integer requestedSizeGb;
+    private Integer confirmedSizeGb;
+
+    @DynamoDbAttribute("confirmed_size_gb")
+    public Integer getConfirmedSizeGb() { return confirmedSizeGb; }
+    private String failureReason;
+    private String failureMessage;
+
+    @DynamoDbAttribute("failure_reason")
+    public String getFailureReason() { return failureReason; }
+
+    @DynamoDbAttribute("failure_message")
+    public String getFailureMessage() { return failureMessage; }
+
+    @DynamoDbAttribute("requested_image_id")
+    public String getImageId() { return imageId; }
+
+    @DynamoDbAttribute("requested_size_gb")
+    public Integer getRequestedSizeGb() { return requestedSizeGb; }
+
+    @DynamoDbIgnore
+    public String getNetworkMode() { return networkMode; }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("instance_id")
@@ -106,9 +130,9 @@ public class InstanceEntity {
     // Decoupled / Transient Getters (Ignored in DynamoDB)
     // ==========================================
 
-    @DynamoDbIgnore
+    @DynamoDbAttribute("requested_name")
     public String getInstanceName() {
-        return instanceName != null ? instanceName : instanceId;
+        return instanceName;
     }
 
     @DynamoDbIgnore
@@ -117,12 +141,12 @@ public class InstanceEntity {
         return (userId != null && userId.startsWith("usr-")) ? userId.substring(4) : userId;
     }
 
-    @DynamoDbIgnore
+    @DynamoDbAttribute("requested_region")
     public String getCurrentRegion() {
-        return currentRegion != null ? currentRegion : "ap-southeast-2";
+        return currentRegion;
     }
 
-    @DynamoDbIgnore
+    @DynamoDbAttribute("requested_flavor")
     public String getFlavor() {
         return flavor;
     }
@@ -142,7 +166,7 @@ public class InstanceEntity {
         return volumeId;
     }
 
-    @DynamoDbIgnore
+    @DynamoDbAttribute("requested_key_id")
     public String getKeyId() {
         return keyId;
     }

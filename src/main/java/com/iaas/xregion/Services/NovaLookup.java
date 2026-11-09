@@ -59,6 +59,7 @@ public class NovaLookup {
         if (n.getElasticIp() != null) inst.setElasticIp(n.getElasticIp());
         if (n.getVolumeId() != null) inst.setVolumeId(n.getVolumeId());
         if (n.getKeyId() != null) inst.setKeyId(n.getKeyId());
+        inst.setNetworkMode(n.getNetworkMode());
         return inst;
     }
 

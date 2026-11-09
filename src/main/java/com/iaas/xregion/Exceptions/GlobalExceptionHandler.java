@@ -18,6 +18,12 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(LaunchUnavailableException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleLaunchUnavailable(LaunchUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.<Map<String, String>>builder()
+                .success(false).message(ex.getMessage()).data(Map.of("errorCode", "LaunchMaintenance"))
+                .timestamp(System.currentTimeMillis()).build());
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {

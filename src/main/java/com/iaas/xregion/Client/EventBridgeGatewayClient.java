@@ -103,14 +103,11 @@ public class EventBridgeGatewayClient {
         detail.put("instance_name", instanceName);
         detail.put("key_id", keyId);
         detail.put("size_gb", sizeGb);
-        detail.put("ebs_size_gb", sizeGb);
         detail.put("volume_type", volumeType != null ? volumeType : "gp3");
         detail.put("flavor", flavorName);
         detail.put("flavor_name", flavorName);
         detail.put("image_id", imageId);
-        detail.put("image_name", imageId);
         detail.put("username", username);
-        detail.put("user", username);
         detail.put("timestamp", System.currentTimeMillis());
 
         return sendEvent("xregion.backend.instance", "instance.launch", detail);

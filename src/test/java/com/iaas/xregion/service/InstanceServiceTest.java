@@ -55,6 +55,8 @@ class InstanceServiceTest {
 
     @Mock
     private AuthService authService;
+    @Mock
+    private com.iaas.xregion.Services.LaunchAdmissionService launchAdmissionService;
 
     private InstanceService instanceService;
 
@@ -62,12 +64,22 @@ class InstanceServiceTest {
     void setUp() {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("testuser", "pass", List.of()));
-        instanceService = new InstanceService(instancesTable, novaTable, auditLogService, eventBridgeGatewayClient, authService);
+        instanceService = new InstanceService(instancesTable, novaTable, auditLogService, eventBridgeGatewayClient, authService, launchAdmissionService);
     }
 
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void maintenanceDoesNotPersistOrPublish() {
+        LaunchInstanceRequest request = new LaunchInstanceRequest();
+        doThrow(new com.iaas.xregion.Exceptions.LaunchUnavailableException("maintenance"))
+                .when(launchAdmissionService).validate(request, "testuser");
+        assertThatThrownBy(() -> instanceService.launchInstance(request))
+                .isInstanceOf(com.iaas.xregion.Exceptions.LaunchUnavailableException.class);
+        verifyNoInteractions(instancesTable, eventBridgeGatewayClient, auditLogService, authService);
     }
 
     @Test
@@ -172,6 +184,12 @@ class InstanceServiceTest {
         assertThat(response.getStatus()).isEqualTo(InstanceStatus.PENDING.name());
         assertThat(response.getRegion()).isEqualTo("ap-southeast-2");
         assertThat(response.getFlavor()).isEqualTo("m1.medium");
+        assertThat(response.getImageId()).isEqualTo("img-ubuntu22");
+        assertThat(response.getImageName()).isNull();
+        assertThat(response.getPrivateIp()).isNull();
+        assertThat(response.getPublicIp()).isNull();
+        assertThat(response.getVolumeId()).isNull();
+        assertThat(response.getSecurityGroupId()).isNull();
         verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
         verify(auditLogService, times(1)).logAction(eq("LAUNCH_VM"), eq("INSTANCE"), anyString(), anyString());
         verify(eventBridgeGatewayClient, times(1)).sendInstanceLaunchEvent(
@@ -289,6 +307,23 @@ class InstanceServiceTest {
         InstanceResponse response = instanceService.mapToResponse(inst);
         assertThat(response.getStatus()).isEqualTo(InstanceStatus.PENDING.name());
         assertThat(response.getActiveNovaId()).isNull();
+    }
+
+    @Test
+    void requestedImageAndSizeSurvivePersistenceWithoutInventedAllocations() {
+        var schema = software.amazon.awssdk.enhanced.dynamodb.TableSchema.fromBean(InstanceEntity.class);
+        InstanceEntity pending = InstanceEntity.builder().instanceId("i-pending")
+                .instanceName("Requested VM").currentRegion("ap-southeast-2").flavor("m1.tiny")
+                .imageId("real-glance-id").requestedSizeGb(13).currentStatus("PENDING").build();
+        InstanceEntity restored = schema.mapToItem(schema.itemToMap(pending, true));
+        InstanceResponse response = instanceService.mapToResponse(restored);
+        assertThat(response.getImageId()).isEqualTo("real-glance-id");
+        assertThat(response.getEbsSizeGb()).isEqualTo(13);
+        assertThat(response.getName()).isEqualTo("Requested VM");
+        assertThat(response.getPrivateIp()).isNull();
+        assertThat(response.getPublicIp()).isNull();
+        assertThat(response.getVolumeId()).isNull();
+        assertThat(response.getSecurityGroupId()).isNull();
     }
 
     @Test

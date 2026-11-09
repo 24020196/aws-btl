@@ -34,6 +34,18 @@ public class NovaEntity {
     private String keyId;
     private String securityGroupId;
     private Long createdAt;
+    private String networkMode;
+    private String gatewayPrivateIp;
+    private String networkMappingId;
+
+    @DynamoDbAttribute("network_mode")
+    public String getNetworkMode() { return networkMode; }
+
+    @DynamoDbAttribute("gateway_private_ip")
+    public String getGatewayPrivateIp() { return gatewayPrivateIp; }
+
+    @DynamoDbAttribute("network_mapping_id")
+    public String getNetworkMappingId() { return networkMappingId; }
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("nova_id")

@@ -39,6 +39,7 @@ public class InstanceService {
     private final AuditLogService auditLogService;
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final AuthService authService;
+    private final LaunchAdmissionService launchAdmissionService;
     private final Map<String, Integer> instanceEbsSizeMap = new ConcurrentHashMap<>();
 
     private void updateInstanceState(String id, String status, String expectedStatus) {
@@ -159,13 +160,11 @@ public class InstanceService {
 
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
         String currentUser = getCurrentUsername();
+        launchAdmissionService.validate(request, currentUser);
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
         long nowSec = TimeSyncUtil.nowEpochSeconds();
 
         String region = request.getRegion();
-        String privateIp = region.contains("southeast") ? "10.0.1." + (100 + new Random().nextInt(150))
-                : "10.1.1." + (100 + new Random().nextInt(150));
-        String elasticIp = "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
         String keyId = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
@@ -180,8 +179,6 @@ public class InstanceService {
         String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
                 ? currentUserEntity.getUserId()
                 : ("usr-" + currentUser);
-        String volumeId = "vol-" + (id.length() > 8 ? id.substring(0, 8) : id);
-        String securityGroupId = id;
         int initialEbsGb = (request.getEbsSizeGb() > 0) ? request.getEbsSizeGb() : 10;
         instanceEbsSizeMap.put(id, initialEbsGb);
 
@@ -191,11 +188,9 @@ public class InstanceService {
                 .instanceName(request.getName().trim())
                 .currentRegion(region)
                 .flavor(request.getFlavor())
-                .privateIp(privateIp)
-                .elasticIp(elasticIp)
-                .volumeId(volumeId)
                 .keyId(keyId)
-                .securityGroupId(securityGroupId)
+                .imageId(request.getImageId())
+                .requestedSizeGb(initialEbsGb)
                 .userId(userId)
                 .currentStatus(InstanceStatus.PENDING.name())
                 .dns(dns)
@@ -513,10 +508,10 @@ public class InstanceService {
                 : (entity.getFlavor() != null ? entity.getFlavor() : "m1.medium");
         String privateIp = (activeNova != null && activeNova.getPrivateIp() != null)
                 ? activeNova.getPrivateIp()
-                : (entity.getPrivateIp() != null ? entity.getPrivateIp() : "10.0.1.10");
+                : entity.getPrivateIp();
         String elasticIp = (activeNova != null && activeNova.getElasticIp() != null)
                 ? activeNova.getElasticIp()
-                : (entity.getElasticIp() != null ? entity.getElasticIp() : "Chưa gán");
+                : entity.getElasticIp();
         String keyId = (activeNova != null && activeNova.getKeyId() != null)
                 ? activeNova.getKeyId()
                 : entity.getKeyId();
@@ -525,7 +520,7 @@ public class InstanceService {
                 : entity.getVolumeId();
         String sgId = (activeNova != null && activeNova.getSecurityGroupId() != null)
                 ? activeNova.getSecurityGroupId()
-                : (entity.getSecurityGroupId() != null ? entity.getSecurityGroupId() : entity.getInstanceId());
+                : entity.getSecurityGroupId();
 
         return InstanceResponse.builder()
                 .username(entity.getUsername())
@@ -538,6 +533,8 @@ public class InstanceService {
                 .regionName(regionType.getDisplayName())
                 .flavor(flavor)
                 .status(status)
+                .errorCode(entity.getFailureReason())
+                .errorMessage(entity.getFailureMessage())
                 .privateIp(privateIp)
                 .publicIp(elasticIp)
                 .securityGroup(entity.getSecurityGroup() != null ? entity.getSecurityGroup() : "sg-default")
@@ -545,15 +542,17 @@ public class InstanceService {
                         ? entity.getDns()
                         : (instName != null ? instName.toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net"
                                 : "app.xregion.net"))
-                .imageId("img-u22")
-                .imageName("Ubuntu 22.04 LTS (Jammy Jellyfish)")
+                .imageId(entity.getImageId())
+                .imageName(null)
                 .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
                 .createdAt(timestampMs)
                 .updatedAt(timestampMs)
                 .keyId(keyId)
                 .keyName(keyId != null ? keyId : "xregion-key")
                 .volumeId(volumeId)
-                .ebsSizeGb(instanceEbsSizeMap.getOrDefault(entity.getInstanceId(), 10))
+                .requestedSizeGb(entity.getRequestedSizeGb())
+                .ebsSizeGb(entity.getConfirmedSizeGb() != null ? entity.getConfirmedSizeGb() : entity.getRequestedSizeGb() != null ? entity.getRequestedSizeGb()
+                        : instanceEbsSizeMap.getOrDefault(entity.getInstanceId(), 10))
                 .securityGroupId(sgId)
                 .build();
     }

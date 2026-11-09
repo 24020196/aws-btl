@@ -33,7 +33,7 @@ public class InstanceController {
     @PostMapping
     public ResponseEntity<ApiResponse<InstanceResponse>> launchInstance(@Valid @RequestBody LaunchInstanceRequest request) {
         InstanceResponse response = instanceService.launchInstance(request);
-        return ResponseEntity.ok(ApiResponse.ok("Instance launched successfully", response));
+        return ResponseEntity.accepted().body(ApiResponse.ok("Instance launch request accepted", response));
     }
 
     @PutMapping("/{id}")

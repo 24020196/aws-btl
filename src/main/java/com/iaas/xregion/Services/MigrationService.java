@@ -129,6 +129,11 @@ public class MigrationService {
         }
 
         // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp (PENDING, STOPPING, SHUTTING_DOWN...)
+        if ("linux_nat_v1".equals(instance.getNetworkMode())) {
+            throw new ConflictException(msg(lang,
+                    "Chưa hỗ trợ chuyển vùng cho máy ảo dùng Linux NAT 1:1.",
+                    "Cross-region migration is not supported for Linux NAT 1:1 instances."));
+        }
         String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
         if ("TERMINATED".equals(status) || "TERMINATING".equals(status)) {
             throw new ConflictException(msg(lang,

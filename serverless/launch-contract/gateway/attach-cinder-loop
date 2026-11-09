@@ -1,0 +1,22 @@
+#!/bin/sh
+# Never detach, format, or recreate storage from this boot-time check.
+set -eu
+backing=/var/lib/cinder/cinder-volumes.img
+[ -f "$backing" ]
+# losetup can silently fall back to read-only. Require a writable open first.
+python3 -c 'import os,sys; fd=os.open(sys.argv[1], os.O_RDWR); os.close(fd)' "$backing"
+devices=$(losetup --associated "$backing" --noheadings --output NAME)
+count=$(printf '%s\n' "$devices" | awk 'NF {n++} END {print n+0}')
+if [ "$count" -eq 0 ]; then
+    device=$(losetup --find --show --nooverlap "$backing")
+elif [ "$count" -eq 1 ]; then
+    device=$devices
+else
+    echo 'Multiple loop devices use the Cinder backing file; refusing startup' >&2
+    exit 1
+fi
+[ "$(blockdev --getro "$device")" -eq 0 ] || {
+    echo 'Cinder loop device is read-only; offline repair required' >&2
+    exit 1
+}
+vgchange -ay cinder-volumes

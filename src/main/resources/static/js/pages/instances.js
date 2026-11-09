@@ -42,6 +42,20 @@ let selectedInstanceIds = new Set();
 let statePollingInterval = null;
 let currentSplitTab = 'tabDetails';
 
+function notifyLaunchStatus(instances) {
+  const id = sessionStorage.getItem('xregion_pending_launch');
+  const instance = id && instances.find(i => i.id === id);
+  if (!instance) return;
+  if (instance.status === 'RUNNING' && instance.activeNovaId) {
+    showToast(t(`Máy ảo [${instance.name}] đã sẵn sàng.`, `Instance [${instance.name}] is ready.`), 'success');
+    sessionStorage.removeItem('xregion_pending_launch');
+  } else if (instance.status === 'FAILED') {
+    showToast(t('Tạo máy ảo thất bại: ', 'Launch failed: ') +
+      (instance.errorMessage || instance.errorCode || instance.id), 'error');
+    sessionStorage.removeItem('xregion_pending_launch');
+  }
+}
+
 // 2. Cập nhật các thẻ KPI trên đầu trang
 function updateInstancesKPIs() {
   const elTotal = document.getElementById('statTotalInstances');
@@ -89,6 +103,7 @@ function checkAndTriggerStatePolling() {
         try {
           const instances = await apiRequest('/instances');
           cachedInstances = instances || [];
+          notifyLaunchStatus(cachedInstances);
           updateInstancesKPIs();
           filterInstancesUI();
 
@@ -130,6 +145,7 @@ async function loadInstances() {
     }
     const instances = await apiRequest('/instances');
     cachedInstances = instances || [];
+    notifyLaunchStatus(cachedInstances);
     // Loại bỏ các ID không còn tồn tại khỏi selectedInstanceIds
     const currentIds = new Set(cachedInstances.map(i => i.id));
     selectedInstanceIds.forEach(id => {
