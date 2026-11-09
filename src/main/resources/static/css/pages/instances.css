@@ -353,5 +353,5 @@
 .ec2-actions-dropdown .ec2-actions-item { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 
 /* Cột "Chi tiết" cuối bảng máy ảo */
-.inst-detail-cell { text-align: right; white-space: nowrap; }
+.inst-detail-cell { text-align: left; white-space: nowrap; }
 .inst-detail-btn { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
