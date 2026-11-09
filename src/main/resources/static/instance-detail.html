@@ -304,6 +304,52 @@
         </div>
       </div>
 
+      <!-- CARD: Kịch bản chuyển vùng (Migration Scenarios - Chức năng số 5) -->
+      <div class="card scenario-card" id="scenarioCard">
+        <div class="card-header">
+          <div>
+            <div class="card-title ico-label">
+              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-migration"></use></svg>
+              <span data-i18n="detScenTitle">Kịch bản chuyển vùng</span>
+              <span class="badge badge-flavor" id="scenarioCount">0</span>
+            </div>
+            <div class="card-sub" data-i18n="detScenSub">Thiết lập tự động chuyển vùng theo lịch định kỳ (Scheduled/Cron) hoặc thủ công (Manual) nhằm tối ưu chi phí &amp; hiệu năng.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm ico-label" id="btnOpenScenarioModal" onclick="openScenarioModal()">
+            <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-plus"></use></svg>
+            <span data-i18n="detScenAddBtn">Thêm kịch bản</span>
+          </button>
+        </div>
+
+        <!-- Banner chính sách an toàn & Khóa xung đột -->
+        <div class="scenario-safety-banner">
+          <svg class="ico ico-sm ico-warning" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-shield"></use></svg>
+          <div class="scenario-safety-text">
+            <strong data-i18n="detScenSafetyTitle">Chính sách bảo vệ an toàn chuyển vùng:</strong>
+            <span data-i18n="detScenSafetyDesc">Áp dụng khoảng chờ tối thiểu giữa hai lần chuyển (Cooldown) và khóa xung đột migration_lock (chặn chạy đồng thời 2 kịch bản trên cùng 1 máy ảo).</span>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table class="data-table" id="scenariosTable">
+            <thead>
+              <tr>
+                <th data-i18n="detScenColName">Tên kịch bản</th>
+                <th data-i18n="detScenColTrigger">Loại kích hoạt</th>
+                <th data-i18n="detScenColSchedule">Lịch trình / Cron</th>
+                <th data-i18n="detScenColDest">Vùng đích</th>
+                <th data-i18n="detScenColCooldown">Cooldown</th>
+                <th data-i18n="detScenColStatus">Trạng thái</th>
+                <th data-i18n="detScenColActions">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="scenariosBody">
+              <tr><td colspan="7" class="empty-cell" data-i18n="detScenEmpty">Chưa có kịch bản chuyển vùng nào cho máy ảo này.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card pipe-card" id="migPipelineCard" tabindex="-1" aria-label="Tiến trình chuyển vùng" data-i18n-aria="detPipeAria">
         <div class="card-header">
           <div>
@@ -359,6 +405,121 @@
         <button class="btn btn-secondary" onclick="closeModal('migrateModal')" data-i18n="detCancel">Hủy</button>
         <button class="btn btn-primary" id="btnConfirmMigrate" onclick="confirmMigrate()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> <span data-i18n="detMigStart">Bắt đầu chuyển vùng</span></button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Create / Edit Migration Scenario (Chức năng số 5) -->
+  <div class="modal-overlay" id="scenarioModal" role="dialog" aria-modal="true" aria-labelledby="scenarioModalTitle">
+    <div class="modal-card" style="max-width: 620px;">
+      <h2 class="modal-title ico-label" id="scenarioModalTitle">
+        <svg class="ico ico-md" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-migration"></use></svg>
+        <span data-i18n="modalScenTitle">Thiết lập kịch bản chuyển vùng</span>
+      </h2>
+      <p class="modal-text" data-i18n="modalScenDesc">Cấu hình máy ảo tự động chuyển vùng theo lịch định kỳ hoặc kích hoạt thủ công có ràng buộc an toàn.</p>
+
+      <form id="scenarioForm" onsubmit="submitScenario(event)">
+        <div class="form-row">
+          <label class="form-label" for="scenName" data-i18n="modalScenName">Tên kịch bản</label>
+          <input type="text" id="scenName" class="form-input" required placeholder="Ví dụ: Night-Shift Cost Optimization" data-i18n-placeholder="modalScenNamePh">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" data-i18n="modalScenTriggerType">Loại kích hoạt chuyển vùng</label>
+          <div class="scen-radio-group" role="radiogroup">
+            <label class="scen-radio-item">
+              <input type="radio" name="scenTriggerMode" value="SCHEDULED" checked onchange="onTriggerModeChange()">
+              <span data-i18n="modalScenScheduled">Theo lịch định kỳ (Scheduled)</span>
+            </label>
+            <label class="scen-radio-item">
+              <input type="radio" name="scenTriggerMode" value="MANUAL" onchange="onTriggerModeChange()">
+              <span data-i18n="modalScenManual">Kích hoạt thủ công (Manual)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Khối cấu hình Lịch định kỳ -->
+        <div id="scenScheduleSection" class="scen-schedule-box">
+          <div class="form-label" data-i18n="modalScenSchedulePreset">Lịch trình thực thi</div>
+          
+          <div class="scen-preset-list">
+            <label class="scen-preset-item">
+              <input type="radio" name="scenPreset" value="shift" checked onchange="onSchedulePresetChange()">
+              <span>
+                <strong data-i18n="modalScenPresetShift">Luân phiên Ngày / Đêm</strong>
+                <div class="scen-preset-hint" data-i18n="modalScenPresetShiftHint">Tự động chuyển đổi giữa 2 vùng theo 2 mốc giờ sáng và tối</div>
+              </span>
+            </label>
+
+            <!-- Khung chọn 2 mốc giờ Ngày / Đêm -->
+            <div id="scenShiftTimeRow" class="scen-time-grid" style="margin: 6px 0 10px 24px;">
+              <div>
+                <label class="form-label" for="scenDayTime" style="font-size: 11.5px;" data-i18n="modalScenDayTime">Giờ ban ngày (Châu Á)</label>
+                <input type="time" id="scenDayTime" class="form-input" value="07:00" onchange="syncScheduleFromInputs()">
+              </div>
+              <div>
+                <label class="form-label" for="scenNightTime" style="font-size: 11.5px;" data-i18n="modalScenNightTime">Giờ ban đêm (Mỹ)</label>
+                <input type="time" id="scenNightTime" class="form-input" value="19:00" onchange="syncScheduleFromInputs()">
+              </div>
+            </div>
+
+            <label class="scen-preset-item">
+              <input type="radio" name="scenPreset" value="daily" onchange="onSchedulePresetChange()">
+              <span>
+                <strong data-i18n="modalScenPresetDaily">Hàng ngày vào lúc cố định</strong>
+                <div class="scen-preset-hint" data-i18n="modalScenPresetDailyHint">Chuyển vùng định kỳ mỗi ngày một lần vào khung giờ chỉ định</div>
+              </span>
+            </label>
+
+            <!-- Khung chọn 1 mốc giờ Daily -->
+            <div id="scenDailyRow" class="form-row" style="display: none; margin: 6px 0 10px 24px;">
+              <label class="form-label" for="scenDailyTime" style="font-size: 11.5px;" data-i18n="modalScenDailyTimeLabel">Giờ chuyển hàng ngày (HH:mm)</label>
+              <input type="time" id="scenDailyTime" class="form-input" value="02:00" onchange="syncScheduleFromInputs()">
+            </div>
+          </div>
+
+          <!-- Dòng tóm tắt lịch trình tự nhiên -->
+          <div class="scen-summary-box">
+            <svg class="ico ico-sm ico-accent" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-clock"></use></svg>
+            <span id="scenScheduleSummary">Tự động chuyển lúc 07:00 và 19:00 mỗi ngày.</span>
+          </div>
+        </div>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label class="form-label" for="scenDestRegion" data-i18n="modalScenDestRegion">Vùng đích (Destination)</label>
+            <select id="scenDestRegion" class="form-select">
+              <option value="us-east-1">N. Virginia (us-east-1)</option>
+              <option value="ap-southeast-2">Sydney (ap-southeast-2)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="scenCooldown" data-i18n="modalScenCooldown">Khoảng chờ tối thiểu (phút)</label>
+            <input type="number" id="scenCooldown" class="form-input" min="5" max="1440" value="60">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" data-i18n="modalScenNotify">Kênh thông báo kết quả</label>
+          <div style="display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;">
+            <label class="check-row">
+              <input type="checkbox" id="scenNotifyDashboard" checked>
+              <span data-i18n="modalScenNotifyDash">Thông báo trực tiếp trên Dashboard</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" id="scenNotifyEmail" checked>
+              <span data-i18n="modalScenNotifyEmail">Gửi Email tới Quản trị viên</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('scenarioModal')" data-i18n="detCancel">Hủy</button>
+          <button type="submit" class="btn btn-primary ico-label" id="btnSaveScenario">
+            <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check-circle"></use></svg>
+            <span data-i18n="modalScenSaveBtn">Lưu &amp; Kích hoạt kịch bản</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

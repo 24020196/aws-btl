@@ -388,3 +388,194 @@ a.btn { text-decoration: none; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 @media (prefers-reduced-motion: reduce) { .pipe-card.pipe-flash { animation: none; } }
+
+/* ============================================================
+   MIGRATION SCENARIOS (Chức năng số 5: Kịch bản định kỳ & thủ công)
+   ============================================================ */
+.scenario-card { margin-top: 18px; }
+.scenario-safety-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: #fde68a;
+}
+.scenario-safety-text { line-height: 1.45; }
+.scenario-safety-text strong { color: #f59e0b; margin-right: 4px; }
+
+/* Trigger Mode Radio Group in Modal */
+.scen-radio-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.scen-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+}
+.scen-radio-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.scen-radio-item:has(input[type="radio"]:checked) {
+  border-color: var(--accent-cyan);
+  background: rgba(34, 211, 238, 0.08);
+  color: #fff;
+}
+.scen-radio-item input[type="radio"] {
+  accent-color: var(--accent-cyan);
+  margin: 0;
+}
+
+/* Schedule Presets Box */
+.scen-schedule-box {
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid var(--border-color, rgba(255,255,255,.08));
+  border-radius: 8px;
+  padding: 14px;
+  margin: 14px 0;
+}
+.scen-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.scen-preset-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+}
+.scen-preset-item:hover {
+  background: rgba(255,255,255,.04);
+}
+.scen-preset-item:has(input[type="radio"]:checked) {
+  border-color: rgba(34, 211, 238, 0.35);
+  background: rgba(34, 211, 238, 0.05);
+}
+.scen-preset-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+/* Time pickers grid & Summary box */
+.scen-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 500px) {
+  .scen-time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scen-summary-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0f2fe;
+}
+.scen-summary-box .ico {
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+/* Badges & Actions for Scenario Table */
+.scen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.scen-badge.active {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.scen-badge.paused {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.scen-badge.running {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.scen-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scen-actions .btn-sm {
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   SCROLLABLE MODALS (Thanh cuộn cho modal có nội dung dài)
+   ============================================================ */
+.modal-overlay {
+  overflow-y: auto;
+  padding: 24px 12px;
+}
+
+.modal-card {
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-cyan) rgba(255, 255, 255, 0.06);
+}
+
+.modal-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-card::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.modal-card::-webkit-scrollbar-thumb {
+  background: var(--accent-cyan);
+  border-radius: 4px;
+}
+
+.modal-card::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}

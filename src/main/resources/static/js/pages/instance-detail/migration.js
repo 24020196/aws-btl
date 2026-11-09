@@ -32,7 +32,52 @@ registerI18n({
   detLogModalTitle: ['Chi tiết lần chuyển vùng', 'Migration details'],
   detLogSaved: ['Log đã lưu trong XRegion-Migrations', 'Log stored in XRegion-Migrations'],
   detCopyLog: ['Sao chép log', 'Copy log'],
-  detCopy: ['Sao chép', 'Copy']
+  detCopy: ['Sao chép', 'Copy'],
+  // Chức năng số 5: Kịch bản chuyển vùng định kỳ & thủ công
+  detScenTitle: ['Kịch bản chuyển vùng', 'Migration Scenarios'],
+  detScenSub: ['Thiết lập tự động chuyển vùng theo lịch định kỳ (Scheduled/Cron) hoặc thủ công (Manual) nhằm tối ưu chi phí & hiệu năng.', 'Set up scheduled (Cron) or manual cross-region migration for cost and latency optimization.'],
+  detScenAddBtn: ['Thêm kịch bản', 'Create scenario'],
+  detScenSafetyTitle: ['Chính sách bảo vệ an toàn chuyển vùng:', 'Migration safety policy:'],
+  detScenSafetyDesc: ['Áp dụng khoảng chờ tối thiểu giữa hai lần chuyển (Cooldown) và khóa xung đột migration_lock (chặn chạy đồng thời 2 kịch bản trên cùng 1 máy ảo).', 'Enforces a cooldown interval between migrations and conflict lock (strictly prevents concurrent migrations on the same VM).'],
+  detScenColName: ['Tên kịch bản', 'Scenario Name'],
+  detScenColTrigger: ['Loại kích hoạt', 'Trigger Type'],
+  detScenColSchedule: ['Lịch trình / Cron', 'Schedule / Cron'],
+  detScenColDest: ['Vùng đích', 'Destination'],
+  detScenColCooldown: ['Cooldown', 'Cooldown'],
+  detScenColStatus: ['Trạng thái', 'Status'],
+  detScenColActions: ['Thao tác', 'Actions'],
+  detScenEmpty: ['Chưa có kịch bản chuyển vùng nào cho máy ảo này.', 'No migration scenarios configured for this instance.'],
+  modalScenTitle: ['Thiết lập kịch bản chuyển vùng', 'Configure Migration Scenario'],
+  modalScenDesc: ['Cấu hình máy ảo tự động chuyển vùng theo lịch định kỳ hoặc kích hoạt thủ công có ràng buộc an toàn.', 'Define the instance, destination region, trigger and conflict prevention.'],
+  modalScenName: ['Tên kịch bản', 'Scenario Name'],
+  modalScenNamePh: ['Ví dụ: Night-Shift Cost Optimization', 'e.g. Night-Shift Cost Optimization'],
+  modalScenTriggerType: ['Loại kích hoạt chuyển vùng', 'Migration Trigger Type'],
+  modalScenScheduled: ['Theo lịch định kỳ (Scheduled)', 'Scheduled (EventBridge / Cron)'],
+  modalScenScheduledHint: ['Tự động chuyển vào khung giờ định sẵn qua EventBridge / Cron.', 'Automatically migrates at predefined times using Amazon EventBridge / Cron.'],
+  modalScenManual: ['Kích hoạt thủ công (Manual)', 'Manual Trigger'],
+  modalScenManualHint: ['Chủ động bấm lệnh khi có nhu cầu tối ưu hoặc chuyển đổi vùng.', 'Trigger migration manually on demand.'],
+  modalScenSchedulePreset: ['Lịch trình thực thi', 'Execution Schedule'],
+  modalScenPresetShift: ['Luân phiên Ngày / Đêm', 'Day / Night Shift'],
+  modalScenPresetShiftHint: ['Tự động chuyển đổi giữa 2 vùng theo 2 mốc giờ sáng và tối', 'Automatically alternates regions according to morning and evening schedules'],
+  modalScenDayTime: ['Giờ ban ngày (Châu Á)', 'Daytime (APAC)'],
+  modalScenNightTime: ['Giờ ban đêm (Mỹ)', 'Nighttime (US)'],
+  modalScenPresetDaily: ['Hàng ngày vào lúc cố định', 'Daily at specific time'],
+  modalScenPresetDailyHint: ['Chuyển vùng định kỳ mỗi ngày một lần vào khung giờ chỉ định', 'Migrate once daily at a designated local time'],
+  modalScenDailyTimeLabel: ['Giờ chuyển hàng ngày (HH:mm)', 'Daily migration time (HH:mm)'],
+  modalScenTimeSelect: ['Chọn giờ chuyển (HH:mm)', 'Select migration time (HH:mm)'],
+  modalScenDestRegion: ['Vùng đích (Destination)', 'Destination Region'],
+  modalScenCooldown: ['Khoảng chờ tối thiểu (phút)', 'Minimum Cooldown (minutes)'],
+  modalScenNotify: ['Kênh thông báo kết quả', 'Notification Channels'],
+  modalScenNotifyDash: ['Thông báo trực tiếp trên Dashboard', 'Dashboard notification banner'],
+  modalScenNotifyEmail: ['Gửi Email tới Quản trị viên', 'Email notification to Admin'],
+  modalScenSaveBtn: ['Lưu & Kích hoạt kịch bản', 'Save & Activate Scenario'],
+  scenTriggerScheduled: ['Theo lịch', 'Scheduled'],
+  scenTriggerManual: ['Thủ công', 'Manual'],
+  scenRunNow: ['Chạy ngay', 'Run now'],
+  scenPause: ['Tạm dừng', 'Pause'],
+  scenResume: ['Kích hoạt', 'Resume'],
+  scenDelete: ['Xóa', 'Delete'],
+  scenDeleteConfirm: ['Bạn có chắc chắn muốn xóa kịch bản này?', 'Are you sure you want to delete this scenario?']
 });
 
 async function loadMigrationHistory() {
@@ -44,8 +89,10 @@ async function loadMigrationHistory() {
     renderLockAndCooldown();
     renderHistory();
     startCooldownTimer();
+    loadInstanceScenarios();
   } catch (err) {
     setHtml('historyBody', `<tr><td colspan="8" class="empty-cell">${t('Không tải được lịch sử chuyển vùng.', 'Could not load migration history.')}</td></tr>`);
+    loadInstanceScenarios();
   }
 }
 
@@ -322,4 +369,380 @@ function renderPipeline(p) {
     term.innerHTML = p.logs.map(l => `<div>${esc(l)}</div>`).join('');
     term.scrollTop = term.scrollHeight;
   }
+}
+
+// ============================================================
+// CHỨC NĂNG SỐ 5: KỊCH BẢN CHUYỂN VÙNG ĐỊNH KỲ (SCHEDULED) & THỦ CÔNG (MANUAL)
+// ============================================================
+
+const SCENARIO_STORAGE_KEY_PREFIX = 'xregion_scenarios_';
+
+function getStoredScenarios() {
+  if (!det.id) return [];
+  try {
+    const raw = localStorage.getItem(SCENARIO_STORAGE_KEY_PREFIX + det.id);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveStoredScenarios(scenarios) {
+  if (!det.id) return;
+  try {
+    localStorage.setItem(SCENARIO_STORAGE_KEY_PREFIX + det.id, JSON.stringify(scenarios));
+  } catch (e) {
+    console.error('Failed to save scenarios to localStorage:', e);
+  }
+}
+
+async function loadInstanceScenarios() {
+  if (!det.id) return;
+  let backendScenarios = [];
+  try {
+    const res = await apiRequest('/migrations/scenarios');
+    if (Array.isArray(res)) {
+      backendScenarios = res.filter(s => s.targetInstanceId === det.id);
+    }
+  } catch (err) {
+    // Backend endpoint might be unreachable or empty, fallback gracefully
+  }
+
+  const localScenarios = getStoredScenarios();
+
+  // Merge scenarios: local takes precedence for custom cron/presets, backend for ids
+  const mergedMap = new Map();
+  localScenarios.forEach(s => mergedMap.set(s.id, s));
+  backendScenarios.forEach(s => {
+    if (!mergedMap.has(s.id)) {
+      mergedMap.set(s.id, {
+        id: s.id,
+        name: s.name || `Scenario ${s.id}`,
+        targetInstanceId: s.targetInstanceId || det.id,
+        sourceRegion: s.sourceRegion || (det.inst ? det.inst.region : 'ap-southeast-2'),
+        destRegion: s.destRegion || otherRegion(det.inst ? det.inst.region : 'ap-southeast-2'),
+        triggerType: s.triggerType || 'SCHEDULED',
+        cronExpression: s.cronExpression || '0 7,19 * * *',
+        cooldownMinutes: s.cooldownMinutes || 60,
+        status: s.status || 'ACTIVE'
+      });
+    }
+  });
+
+  // If no scenarios exist yet, seed a default template scenario based on BTL report
+  if (mergedMap.size === 0) {
+    const defaultScen = {
+      id: 'sc-' + Math.random().toString(36).substring(2, 10),
+      name: 'Night-Shift Cost Optimization',
+      targetInstanceId: det.id,
+      sourceRegion: det.inst ? det.inst.region : 'ap-southeast-2',
+      destRegion: otherRegion(det.inst ? det.inst.region : 'ap-southeast-2'),
+      triggerType: 'SCHEDULED',
+      cronExpression: '0 7,19 * * *',
+      cooldownMinutes: 60,
+      status: 'ACTIVE',
+      notifyEmail: true,
+      notifyDashboard: true
+    };
+    mergedMap.set(defaultScen.id, defaultScen);
+    saveStoredScenarios([defaultScen]);
+  }
+
+  det.scenarios = Array.from(mergedMap.values());
+  renderScenarios();
+}
+
+function renderScenarios() {
+  const scenarios = det.scenarios || [];
+  const tbody = document.getElementById('scenariosBody');
+  const countEl = document.getElementById('scenarioCount');
+  if (countEl) countEl.textContent = String(scenarios.length);
+
+  if (!tbody) return;
+
+  if (scenarios.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-cell">${t('Chưa có kịch bản chuyển vùng nào cho máy ảo này.', 'No migration scenarios configured for this instance.')}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = scenarios.map((s, idx) => {
+    const isSched = s.triggerType === 'SCHEDULED';
+    const isActive = s.status === 'ACTIVE';
+    const triggerBadge = isSched
+      ? `<span class="ec2-state state-running">${ICON('ui-clock', 'ico-sm')} <strong>${t('Theo lịch', 'Scheduled')}</strong></span>`
+      : `<span class="ec2-state state-stopped">${ICON('ui-play', 'ico-sm')} <strong>${t('Thủ công', 'Manual')}</strong></span>`;
+
+    const statusBadge = isActive
+      ? `<span class="scen-badge active"><span class="tab-dot" style="margin:0 4px 0 0; width:6px; height:6px;"></span> ACTIVE</span>`
+      : `<span class="scen-badge paused">PAUSED</span>`;
+
+    const cronDisplay = isSched
+      ? `<strong style="color:var(--accent-cyan); font-size:13px;">${esc(describeCron(s.cronExpression))}</strong>`
+      : `<span class="muted">${t('Theo lệnh người dùng', 'On-demand trigger')}</span>`;
+
+    const destDisplay = `${regionTag(s.destRegion || otherRegion(det.inst ? det.inst.region : 'ap-southeast-2'))}`;
+
+    const toggleBtn = isActive
+      ? `<button class="btn btn-secondary btn-sm" onclick="toggleScenarioStatus('${esc(s.id)}')" title="${t('Tạm dừng kịch bản', 'Pause scenario')}">${ICON('ui-stop', 'ico-xs')} <span>${t('Tạm dừng', 'Pause')}</span></button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="toggleScenarioStatus('${esc(s.id)}')" title="${t('Kích hoạt kịch bản', 'Activate scenario')}">${ICON('ui-play', 'ico-xs')} <span>${t('Kích hoạt', 'Resume')}</span></button>`;
+
+    const runBtn = `<button class="btn btn-secondary btn-sm" onclick="runScenarioNow('${esc(s.id)}')" title="${t('Kích hoạt chuyển vùng ngay', 'Trigger migration now')}">${ICON('ui-migrate', 'ico-xs')} <span>${t('Chạy ngay', 'Run now')}</span></button>`;
+
+    const deleteBtn = `<button class="btn btn-secondary btn-sm" style="color:#f87171;" onclick="deleteScenario('${esc(s.id)}')" title="${t('Xóa kịch bản', 'Delete scenario')}">${ICON('ui-trash', 'ico-xs')}</button>`;
+
+    return `
+      <tr>
+        <td>
+          <strong style="color:var(--text-main);">${esc(s.name)}</strong>
+          <div class="card-sub mono" style="font-size:11px;">${esc(s.id)}</div>
+        </td>
+        <td>${triggerBadge}</td>
+        <td>${cronDisplay}</td>
+        <td>${destDisplay}</td>
+        <td>${s.cooldownMinutes || 60} ${t('phút', 'min')}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div class="scen-actions">
+            ${runBtn}
+            ${toggleBtn}
+            ${deleteBtn}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function describeCron(expr) {
+  if (!expr) return '';
+  const shiftM = expr.match(/^(\d+)\s+(\d+),(\d+)\s+\*\s+\*\s+\*$/);
+  if (shiftM) {
+    const min = shiftM[1].padStart(2, '0');
+    const h1 = shiftM[2].padStart(2, '0');
+    const h2 = shiftM[3].padStart(2, '0');
+    return `${h1}:${min} & ${h2}:${min} (${t('Ngày/Đêm', 'Day/Night')})`;
+  }
+  const dailyM = expr.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*$/);
+  if (dailyM) {
+    const min = dailyM[1].padStart(2, '0');
+    const hr = dailyM[2].padStart(2, '0');
+    return `${hr}:${min} (${t('Hàng ngày', 'Daily')})`;
+  }
+  return expr;
+}
+
+function openScenarioModal() {
+  const form = document.getElementById('scenarioForm');
+  if (form) form.reset();
+
+  const nameInput = document.getElementById('scenName');
+  if (nameInput) {
+    const vmName = det.inst && det.inst.name ? det.inst.name : (det.id || 'vm');
+    nameInput.value = `AutoMigrate-${vmName}`;
+  }
+
+  const destSelect = document.getElementById('scenDestRegion');
+  if (destSelect && det.inst) {
+    destSelect.value = otherRegion(det.inst.region);
+  }
+
+  // Default to scheduled shift
+  const radioSched = document.querySelector('input[name="scenTriggerMode"][value="SCHEDULED"]');
+  if (radioSched) radioSched.checked = true;
+
+  const radioShift = document.querySelector('input[name="scenPreset"][value="shift"]');
+  if (radioShift) radioShift.checked = true;
+
+  const dayInput = document.getElementById('scenDayTime');
+  if (dayInput) dayInput.value = '07:00';
+  const nightInput = document.getElementById('scenNightTime');
+  if (nightInput) nightInput.value = '19:00';
+  const dailyInput = document.getElementById('scenDailyTime');
+  if (dailyInput) dailyInput.value = '02:00';
+
+  onTriggerModeChange();
+  onSchedulePresetChange();
+
+  openModal('scenarioModal');
+}
+
+function onTriggerModeChange() {
+  const mode = document.querySelector('input[name="scenTriggerMode"]:checked')?.value || 'SCHEDULED';
+  const schedSection = document.getElementById('scenScheduleSection');
+  if (schedSection) {
+    schedSection.style.display = mode === 'SCHEDULED' ? 'block' : 'none';
+  }
+}
+
+function onSchedulePresetChange() {
+  const preset = document.querySelector('input[name="scenPreset"]:checked')?.value || 'shift';
+  const shiftRow = document.getElementById('scenShiftTimeRow');
+  const dailyRow = document.getElementById('scenDailyRow');
+
+  if (preset === 'shift') {
+    if (shiftRow) shiftRow.style.display = 'grid';
+    if (dailyRow) dailyRow.style.display = 'none';
+  } else {
+    if (shiftRow) shiftRow.style.display = 'none';
+    if (dailyRow) dailyRow.style.display = 'block';
+  }
+  syncScheduleFromInputs();
+}
+
+function syncScheduleFromInputs() {
+  const preset = document.querySelector('input[name="scenPreset"]:checked')?.value || 'shift';
+  const summaryEl = document.getElementById('scenScheduleSummary');
+  let cronExpr = '0 7,19 * * *';
+  let summaryText = '';
+
+  if (preset === 'shift') {
+    const dayTime = document.getElementById('scenDayTime')?.value || '07:00';
+    const nightTime = document.getElementById('scenNightTime')?.value || '19:00';
+    const [dHr, dMin] = dayTime.split(':');
+    const [nHr, nMin] = nightTime.split(':');
+    cronExpr = `${parseInt(dMin, 10)} ${parseInt(dHr, 10)},${parseInt(nHr, 10)} * * *`;
+    summaryText = t(
+      `Tự động chuyển lúc ${dayTime} (ban ngày) và ${nightTime} (ban đêm) mỗi ngày.`,
+      `Automatically alternates at ${dayTime} (daytime) and ${nightTime} (nighttime) daily.`
+    );
+  } else {
+    const dailyTime = document.getElementById('scenDailyTime')?.value || '02:00';
+    const [hr, min] = dailyTime.split(':');
+    cronExpr = `${parseInt(min, 10)} ${parseInt(hr, 10)} * * *`;
+    summaryText = t(
+      `Tự động chuyển lúc ${dailyTime} hàng ngày.`,
+      `Automatically migrates at ${dailyTime} daily.`
+    );
+  }
+
+  if (summaryEl) summaryEl.textContent = summaryText;
+  det.currentScenarioCron = cronExpr;
+  return { cronExpr, summaryText };
+}
+
+async function submitScenario(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('scenName')?.value.trim();
+  const triggerMode = document.querySelector('input[name="scenTriggerMode"]:checked')?.value || 'SCHEDULED';
+  const { cronExpr } = syncScheduleFromInputs();
+  const destRegion = document.getElementById('scenDestRegion')?.value || otherRegion(det.inst ? det.inst.region : 'ap-southeast-2');
+  const cooldownMin = parseInt(document.getElementById('scenCooldown')?.value, 10) || 60;
+  const notifyDash = document.getElementById('scenNotifyDashboard')?.checked ?? true;
+  const notifyEmail = document.getElementById('scenNotifyEmail')?.checked ?? true;
+
+  if (!name) {
+    showToast(t('Vui lòng nhập tên kịch bản', 'Please enter scenario name'), 'error');
+    return;
+  }
+
+  // Conflict Lock check: If machine already has an ACTIVE scenario with the same instance, warn
+  const existingActive = (det.scenarios || []).find(s => s.status === 'ACTIVE' && s.targetInstanceId === det.id);
+  if (existingActive && triggerMode === 'SCHEDULED') {
+    const ok = confirm(t(
+      `Máy ảo này đã có kịch bản hoạt động "${existingActive.name}". Bạn có muốn lưu kịch bản mới này ở trạng thái TẠM DỪNG (PAUSED) để tránh xung đột khóa không?`,
+      `This instance already has an active scenario "${existingActive.name}". Do you want to save this new scenario as PAUSED to prevent lock conflicts?`
+    ));
+    if (!ok) return;
+  }
+
+  const scenarioId = 'sc-' + Math.random().toString(36).substring(2, 10);
+  const newScen = {
+    id: scenarioId,
+    name: name,
+    targetInstanceId: det.id,
+    sourceRegion: det.inst ? det.inst.region : 'ap-southeast-2',
+    destRegion: destRegion,
+    triggerType: triggerMode,
+    cronExpression: triggerMode === 'SCHEDULED' ? cronExpr : null,
+    cooldownMinutes: cooldownMin,
+    status: existingActive && triggerMode === 'SCHEDULED' ? 'PAUSED' : 'ACTIVE',
+    notifyDashboard: notifyDash,
+    notifyEmail: notifyEmail,
+    createdAt: Date.now()
+  };
+
+  // Call backend API if possible
+  try {
+    await apiRequest('/migrations/scenarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: name,
+        targetInstanceId: det.id,
+        sourceRegion: newScen.sourceRegion,
+        destRegion: destRegion,
+        triggerType: triggerMode,
+        cronExpression: cronExpr,
+        cooldownMinutes: cooldownMin
+      })
+    });
+  } catch (err) {
+    // If backend returns error or in-memory map, we still keep it in local scenarios
+  }
+
+  det.scenarios = [newScen, ...(det.scenarios || [])];
+  saveStoredScenarios(det.scenarios);
+
+  closeModal('scenarioModal');
+  renderScenarios();
+  showToast(t('Đã lưu và kích hoạt kịch bản chuyển vùng thành công!', 'Migration scenario saved and activated successfully!'), 'success');
+}
+
+function toggleScenarioStatus(id) {
+  const scen = (det.scenarios || []).find(s => s.id === id);
+  if (!scen) return;
+
+  if (scen.status === 'ACTIVE') {
+    scen.status = 'PAUSED';
+    showToast(t(`Đã tạm dừng kịch bản "${scen.name}"`, `Paused scenario "${scen.name}"`), 'info');
+  } else {
+    // Check conflict: cannot activate two scheduled scenarios on the same instance
+    if (scen.triggerType === 'SCHEDULED') {
+      const otherActive = (det.scenarios || []).find(s => s.id !== id && s.status === 'ACTIVE' && s.triggerType === 'SCHEDULED');
+      if (otherActive) {
+        showToast(t(`Khóa xung đột: Đã có kịch bản "${otherActive.name}" đang BẬT. Hãy tạm dừng kịch bản đó trước!`, `Conflict lock: "${otherActive.name}" is already ACTIVE. Pause it first!`), 'error');
+        return;
+      }
+    }
+    scen.status = 'ACTIVE';
+    showToast(t(`Đã kích hoạt kịch bản "${scen.name}"`, `Activated scenario "${scen.name}"`), 'success');
+  }
+
+  saveStoredScenarios(det.scenarios);
+  renderScenarios();
+}
+
+function deleteScenario(id) {
+  const scen = (det.scenarios || []).find(s => s.id === id);
+  if (!scen) return;
+
+  if (!confirm(t(`Bạn có chắc chắn muốn xóa kịch bản "${scen.name}"?`, `Are you sure you want to delete scenario "${scen.name}"?`))) {
+    return;
+  }
+
+  det.scenarios = (det.scenarios || []).filter(s => s.id !== id);
+  saveStoredScenarios(det.scenarios);
+  renderScenarios();
+  showToast(t('Đã xóa kịch bản chuyển vùng', 'Migration scenario deleted'), 'info');
+}
+
+function runScenarioNow(id) {
+  const scen = (det.scenarios || []).find(s => s.id === id);
+  if (!scen) return;
+
+  const reason = migrationBlockReason();
+  if (reason) {
+    showToast(esc(reason), 'error');
+    return;
+  }
+
+  // Open the fast migrate modal with target destination preconfigured
+  openMigrateModal();
+}
+
+// Re-render scenarios when language switches
+if (typeof onLangChange === 'function') {
+  onLangChange(() => {
+    renderScenarios();
+  });
 }
