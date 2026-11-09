@@ -29,3 +29,4 @@ PROJECT.md
 TESTCASES_SERVERLESS_POOLS.md
 serverless/*
 !serverless/launch-contract/
+plan

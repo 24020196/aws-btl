@@ -47,6 +47,8 @@ def lambda_handler(event, context):
     if state not in ("available", "extending") or not isinstance(size, int):
         raise RuntimeError("Cinder extension failed: " + str(state))
     if state == "available" and size >= target:
+        if record.get("storage_backend") == "aws-ebs":
+            runtime.validate_ebs_mapping(record, volume)
         table.update_item(Key={"volume_id": key},
             UpdateExpression="SET size_gb=:u0, extend_status=:u1",
             ConditionExpression=condition & Attr("extend_reservation_id").eq(rid) & Attr("extend_target_gb").eq(target),

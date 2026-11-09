@@ -3,6 +3,7 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -21,6 +22,8 @@ ENI = os.environ.get("OPENSTACK_PUBLIC_ENI", "eni-091eaee3e69e3f42d")
 MAP = "XRegion-NetworkMappings"
 RES = "XRegion-NetworkReservations"
 MODE = "linux_nat_v1"
+STORAGE_BACKEND = "aws-ebs"
+CINDER_VOLUME_TYPE = "aws-ebs-gp3"
 SESSION = boto3.Session(region_name=REGION)
 DDB = SESSION.resource("dynamodb")
 EC2 = SESSION.client("ec2")
@@ -39,6 +42,29 @@ class LaunchMaintenance(RuntimeError):
 
 class StorageUnavailable(RuntimeError):
     pass
+
+
+def ebs_pool_record(record):
+    return (record.get("storage_backend") == STORAGE_BACKEND and
+            record.get("cinder_volume_type") == CINDER_VOLUME_TYPE and
+            bool(re.fullmatch(r"vol-(?:[0-9a-f]{8}|[0-9a-f]{17})", record.get("ebs_volume_id", ""))))
+
+
+def validate_ebs_mapping(record, volume):
+    if not ebs_pool_record(record) or volume.get("volume_type", volume.get("type")) != CINDER_VOLUME_TYPE or volume.get("provider_id") != record["ebs_volume_id"]:
+        raise StorageUnavailable("Cinder/EBS backend mapping mismatch (type=" +
+            str(volume.get("volume_type", volume.get("type"))) + ", provider_present=" +
+            str(bool(volume.get("provider_id"))) + ")")
+    disk = EC2.describe_volumes(VolumeIds=[record["ebs_volume_id"]])["Volumes"][0]
+    tags = {t["Key"]: t["Value"] for t in disk.get("Tags", [])}
+    if (tags.get("ManagedBy") != "xregion-cinder-ebs-v1" or
+            tags.get("CinderVolumeId") != record["cinder_volume_id"] or
+            tags.get("StorageBackend") != STORAGE_BACKEND or tags.get("StorageHostId") != HOST or
+            disk.get("VolumeType") != "gp3" or not disk.get("Encrypted") or
+            disk["Size"] != volume["size"] or
+            any(a["InstanceId"] != HOST for a in disk.get("Attachments", []))):
+        raise StorageUnavailable("EBS ownership, attachment or size mismatch")
+    return disk
 
 
 def checked_volume(volume_id, image_id):
@@ -108,9 +134,13 @@ def os_api(service, path, method="GET", body=None, missing=False):
             if os.environ.get("OS_PROJECT_ID") and project_id != os.environ["OS_PROJECT_ID"]:
                 raise ValueError("Keystone project does not match configured Cinder project")
             TOKEN = response.headers["X-Subject-Token"]
+    headers = {"Content-Type": "application/json", "X-Auth-Token": TOKEN}
+    if service == "CINDER":
+        # provider_id is exposed to administrators only from microversion 3.21.
+        headers["OpenStack-API-Version"] = "volume 3.42"
     req = urllib.request.Request(os.environ[service + "_URL"].rstrip("/") + path,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Content-Type": "application/json", "X-Auth-Token": TOKEN}, method=method)
+        headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
             data = response.read()
@@ -175,6 +205,7 @@ def check_pool(event):
     volumes = scan("XRegion-Volumes", FilterExpression="#s=:s AND image_id=:image",
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": "AVAILABLE", ":image": event["image_id"]})
+    volumes = [v for v in volumes if ebs_pool_record(v)]
     if not volumes:
         raise PoolNotReady("No available reserve volume for the requested image")
     spare = [a for a in EC2.describe_addresses()["Addresses"]
@@ -203,6 +234,7 @@ def allocate(event):
         record = get("XRegion-Volumes", "volume_id", event["cinder_volume_key"]) or {}
         if record.get("cinder_volume_id") != event["cinder_volume_id"] or record.get("image_id") != event["image_id"]:
             raise ValueError("Diagnostic volume metadata mismatch")
+        validate_ebs_mapping(record, volume)
         EC2.describe_addresses()
         return dict(diagnostic_only=True, status="PREFLIGHT_OK", volume_status=volume["status"])
     rid = event["reservation_id"]
@@ -216,10 +248,11 @@ def allocate(event):
     os_api("NOVA", "/os-keypairs/" + key_name)
     volumes = scan("XRegion-Volumes", FilterExpression="#s=:s",
         ExpressionAttributeNames={"#s": "status"}, ExpressionAttributeValues={":s": "AVAILABLE"})
-    volumes = [v for v in volumes if v.get("image_id") == event.get("image_id")]
+    volumes = [v for v in volumes if v.get("image_id") == event.get("image_id") and ebs_pool_record(v)]
     addresses = EC2.describe_addresses()["Addresses"]
     for v in volumes:
         volume = checked_volume(v["cinder_volume_id"], event["image_id"])
+        validate_ebs_mapping(v, volume)
         if event["size_gb"] < int(volume.get("volume_image_metadata", {}).get("min_disk", 0)):
             raise ValueError("Requested size is below the image minimum")
         for a in addresses:
@@ -230,13 +263,16 @@ def allocate(event):
                 cinder_volume_key=v["volume_id"], cinder_volume_id=v.get("cinder_volume_id", v["volume_id"]),
                 original_size_gb=int(volume["size"]), allocation_id=a["AllocationId"],
                 elastic_ip=a["PublicIp"], status="RESERVED", created_at=int(time.time()))
+            record.update(storage_backend=STORAGE_BACKEND, cinder_volume_type=CINDER_VOLUME_TYPE,
+                          ebs_volume_id=v["ebs_volume_id"])
             tx = [claim_put("EIP#" + a["AllocationId"], rid), {"Put": {"TableName": RES,
                 "Item": wire(record), "ConditionExpression": "attribute_not_exists(resource_key)"}},
                 {"Update": {"TableName": "XRegion-Volumes", "Key": wire({"volume_id": v["volume_id"]}),
                  "UpdateExpression": "SET #s=:allocated, lease_instance_id=:i, leased_at=:t",
-                 "ConditionExpression": "#s=:available", "ExpressionAttributeNames": {"#s": "status"},
+                 "ConditionExpression": "#s=:available AND storage_backend=:backend AND ebs_volume_id=:ebs", "ExpressionAttributeNames": {"#s": "status"},
                  "ExpressionAttributeValues": wire({":allocated": "ALLOCATED", ":available": "AVAILABLE",
-                    ":i": event["instance_id"], ":t": int(time.time())})}}]
+                    ":i": event["instance_id"], ":t": int(time.time()),
+                    ":backend": STORAGE_BACKEND, ":ebs": v["ebs_volume_id"]})}}]
             try:
                 SESSION.client("dynamodb").transact_write_items(TransactItems=tx)
             except ClientError as error:
@@ -317,6 +353,8 @@ def boot(event):
             raise RuntimeError("Ambiguous Nova create; reconcile before retrying")
         else:
             volume = checked_volume(r["cinder_volume_id"], event["image_id"])
+            if r.get("storage_backend") == STORAGE_BACKEND:
+                validate_ebs_mapping(r, volume)
             receipt = event.get("volume_extension") or {}
             if (receipt.get("status") != "CONFIRMED" or receipt.get("cinder_volume_id") != r["cinder_volume_id"] or
                     volume["size"] < event["size_gb"]):
@@ -497,12 +535,14 @@ def sync(event):
         raise StorageUnavailable("Confirmed volume size missing at synchronization")
     legacy.lambda_handler(dict(event, server_id=m["nova_id"], private_ip=m["guest_private_ip"],
         elastic_ip=m["elastic_ip"], security_group_id=m["nova_id"]), None)
+    storage = {k: event[k] for k in ("storage_backend", "cinder_volume_type", "ebs_volume_id") if k in event}
     DDB.Table("XRegion-Instances").update_item(Key={"instance_id": event["instance_id"]},
-        UpdateExpression="SET confirmed_size_gb=:size",
+        UpdateExpression="SET confirmed_size_gb=:size" + "".join(", " + k + "=:storage" + str(i) for i, k in enumerate(storage)),
         ConditionExpression="launch_execution_arn=:owner",
-        ExpressionAttributeValues={":size": receipt["actual_size_gb"], ":owner": event["reservation_id"]})
+        ExpressionAttributeValues={":size": receipt["actual_size_gb"], ":owner": event["reservation_id"],
+            **{":storage" + str(i): v for i, v in enumerate(storage.values())}})
     update("XRegion-Nova", "nova_id", m["nova_id"], {"network_mode": MODE,
-        "gateway_private_ip": m["gateway_private_ip"], "network_mapping_id": m["nova_id"]})
+        "gateway_private_ip": m["gateway_private_ip"], "network_mapping_id": m["nova_id"], **storage})
     update(MAP, "nova_id", m["nova_id"], {"status": "ACTIVE", "updated_at": int(time.time())})
     return dict(event, status="SUCCESS", private_ip=m["guest_private_ip"], network_mode=MODE)
 

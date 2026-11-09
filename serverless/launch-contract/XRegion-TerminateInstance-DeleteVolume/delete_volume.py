@@ -178,6 +178,17 @@ def lambda_handler(event, context):
         if not record or not owned(record, event["instance_id"]) or identity(record) != (resource["kind"], resource["id"]):
             raise ValueError("Volume ownership changed before deletion")
         absent = delete_cinder(resource) if resource["kind"] == "cinder" else delete_ebs(resource, record)
+        if absent and resource["kind"] == "cinder" and record.get("storage_backend") == "aws-ebs":
+            # Cinder owns detach/delete. This Lambda independently verifies physical absence.
+            actual = record.get("ebs_volume_id", "")
+            if not re.fullmatch(r"vol-(?:[0-9a-f]{8}|[0-9a-f]{17})", actual):
+                raise ValueError("Missing EBS receipt for Cinder deletion")
+            try:
+                EC2.describe_volumes(VolumeIds=[actual])
+                absent = False
+            except ClientError as error:
+                if error.response["Error"]["Code"] != "InvalidVolume.NotFound":
+                    raise
         if absent:
             mark_deleted(resource, record, event["instance_id"])
         else:

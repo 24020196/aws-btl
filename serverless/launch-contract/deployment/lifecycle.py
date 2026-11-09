@@ -153,12 +153,12 @@ def backend(path, method="GET", body=None):
 
 
 def launch_canary(x):
-    current = x.client("lambda").get_function_configuration(FunctionName=MANIFEST["functions"]["CheckPool"])
-    if current.get("Environment", {}).get("Variables", {}).get("LAUNCH_ADMISSION_PARAMETER"):
-        raise RuntimeError("Use size_admission.py for shared admission; the legacy canary command is retired")
     marker = x.directory / "backend-launch-attempt.json"
     if marker.exists():
         raise RuntimeError("A POST was already attempted; reconcile it instead of creating another VM")
+    current = x.client("lambda").get_function_configuration(FunctionName=MANIFEST["functions"]["CheckPool"])
+    if current.get("Environment", {}).get("Variables", {}).get("LAUNCH_ADMISSION_PARAMETER"):
+        raise RuntimeError("Use size_admission.py for shared admission; the legacy canary command is retired")
     if json.loads((x.directory / "allocate-probe.json").read_text())["payload"].get("status") != "PREFLIGHT_OK":
         raise RuntimeError("Read-only Lambda probe has not passed")
     no_running(x)

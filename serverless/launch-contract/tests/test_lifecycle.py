@@ -355,13 +355,31 @@ class ContractTests(TestCase):
     def test_probe_is_read_only_and_checks_metadata(self):
         h = load(ROOT / "runtime/network_runtime.py")
         event = dict(diagnostic_only=True, cinder_volume_id=VID, cinder_volume_key="key", image_id="image")
-        with mock.patch.object(h, "checked_volume", return_value={"status": "available"}), \
-             mock.patch.object(h, "get", return_value={"cinder_volume_id": VID, "image_id": "image"}):
+        ebs='vol-1234567890abcdef0'
+        record=dict(cinder_volume_id=VID,image_id='image',storage_backend='aws-ebs',
+                    cinder_volume_type='aws-ebs-gp3',ebs_volume_id=ebs)
+        tags=dict(ManagedBy='xregion-cinder-ebs-v1',CinderVolumeId=VID,StorageBackend='aws-ebs',StorageHostId=h.HOST)
+        h.EC2.describe_volumes.return_value={'Volumes':[dict(VolumeId=ebs,Size=10,Encrypted=True,
+            VolumeType='gp3',Attachments=[],Tags=[dict(Key=k,Value=v) for k,v in tags.items()])]}
+        with mock.patch.object(h, "checked_volume", return_value={"status": "available",'size':10,
+                    'volume_type':'aws-ebs-gp3','provider_id':ebs}), \
+             mock.patch.object(h, "get", return_value=record):
             self.assertEqual(h.allocate(event)["status"], "PREFLIGHT_OK")
         h.DDB.Table.assert_not_called()
         h.SESSION.client.return_value.transact_write_items.assert_not_called()
         h.EC2.create_tags.assert_not_called()
         h.EC2.associate_address.assert_not_called()
+
+    def test_cinder_requests_microversion_that_exposes_provider_id(self):
+        h=load(ROOT/'runtime/network_runtime.py')
+        h.TOKEN='test-token'
+        response=mock.MagicMock()
+        response.__enter__.return_value.read.return_value=b'{"volume":{}}'
+        with mock.patch.dict('os.environ',{'CINDER_URL':'http://cinder/v3'}), \
+             mock.patch.object(h.urllib.request,'urlopen',return_value=response) as call:
+            h.os_api('CINDER','/project/volumes/'+VID)
+        request=call.call_args.args[0]
+        self.assertEqual(request.get_header('Openstack-api-version'),'volume 3.42')
 
     def test_sync_requires_volume_receipt_and_does_not_overwrite_new_nova(self):
         h = load(ROOT / "runtime/network_runtime.py")

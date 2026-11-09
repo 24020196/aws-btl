@@ -121,7 +121,8 @@ def probe(x):
         if not page.get("LastEvaluatedKey"):
             break
         request["ExclusiveStartKey"] = page["LastEvaluatedKey"]
-    candidate = next(i for i in items if i.get("status") == "AVAILABLE" and i.get("image_id") == "fd249548-1863-4d30-b809-732108cab057")
+    candidate = next(i for i in items if i.get("status") == "AVAILABLE" and
+                     i.get("storage_backend") == "aws-ebs" and i.get("image_id") == "fd249548-1863-4d30-b809-732108cab057")
     event = dict(diagnostic_only=True, cinder_volume_id=candidate["cinder_volume_id"],
                  cinder_volume_key=candidate["volume_id"], image_id=candidate["image_id"])
     response = x.call("lambda", "invoke", FunctionName=MANIFEST["functions"]["AllocateResource"], Payload=json.dumps(event).encode())
