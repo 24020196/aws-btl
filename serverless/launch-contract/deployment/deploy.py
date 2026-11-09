@@ -20,7 +20,7 @@ def package(x, logical):
     with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as target:
         if source:
             target.writestr(source["handler"].rsplit(".", 1)[0] + ".py", (ROOT / source["source"]).read_bytes())
-            if logical == "ExtendVolume":
+            if logical in ("ExtendVolume", "CinderPoolManager"):
                 target.writestr("network_runtime.py", (ROOT / "runtime/network_runtime.py").read_bytes())
         else:
             target.writestr("network_runtime.py", (ROOT / "runtime/network_runtime.py").read_bytes())

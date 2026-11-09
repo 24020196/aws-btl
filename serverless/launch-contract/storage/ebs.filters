@@ -1,0 +1,5 @@
+[Filters]
+# Read-only identity and size checks; never accepts an arbitrary device path.
+xregion_ebs_serial: RegExpFilter, lsblk, root, lsblk, --nodeps, --noheadings, --output, SERIAL, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol[0-9a-f]{17}
+xregion_ebs_readonly: RegExpFilter, blockdev, root, blockdev, --getro, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol[0-9a-f]{17}
+xregion_ebs_size: RegExpFilter, blockdev, root, blockdev, --getsize64, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol[0-9a-f]{17}

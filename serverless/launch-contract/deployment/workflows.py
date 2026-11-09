@@ -58,7 +58,7 @@ def render(name, account=None, region=None):
             "ChooseNetworkMode": {"Type": "Choice", "Choices": [
                 {"And": [{"Variable": "$.network_mode", "StringEquals": "linux_nat_v1"},
                          {"Variable": "$.network_cleanup_complete", "BooleanEquals": True}], "Next": "DeleteSecurityGroup"},
-                {"Variable": "$.network_mode", "StringEquals": "linux_nat_v1", "Next": "RemoveNatMapping"}], "Default": "LegacyDeleteSecurityGroup"},
+                {"Variable": "$.network_mode", "StringEquals": "linux_nat_v1", "Next": "RemoveNatMapping"}], "Default": "LegacyDeleteNova"},
             "RemoveNatMapping": task("Dispatch", "WaitNatCommand", catch="TerminationFailed"),
             "WaitNatCommand": {"Type": "Wait", "Seconds": 3, "Next": "CheckNatCommand"},
             "CheckNatCommand": task("CheckCommand", "ChoiceNatCommand", catch="TerminationFailed"),
@@ -73,8 +73,8 @@ def render(name, account=None, region=None):
             "SyncDynamoDB": task("TerminateSync", "TerminationSuccess", catch="TerminationFailed"),
             "TerminationSuccess": {"Type": "Succeed"},
             "TerminationFailed": {"Type": "Fail", "Error": "TerminationError"},
-            "LegacyDeleteSecurityGroup": task("DeleteSecurityGroup", "LegacyDeleteNova", catch="TerminationFailed"),
-            "LegacyDeleteNova": task("DeleteNova", "LegacyDeleteVolume", catch="TerminationFailed"),
+            "LegacyDeleteSecurityGroup": task("DeleteSecurityGroup", "LegacyDeleteVolume", catch="TerminationFailed"),
+            "LegacyDeleteNova": task("DeleteNova", "LegacyDeleteSecurityGroup", catch="TerminationFailed"),
             "LegacyDeleteVolume": task("DeleteVolume", "LegacyVolumeDeletionStatus", catch="TerminationFailed"),
             "LegacyVolumeDeletionStatus": {"Type": "Choice", "Choices": [
                 {"Variable": "$.volume_cleanup.status", "StringEquals": "DELETED", "Next": "LegacyReleaseEIP"}], "Default": "WaitLegacyVolumeDeletion"},
