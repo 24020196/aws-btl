@@ -12,6 +12,32 @@ workflow, not the undeployed `serverless/phase1` candidate.
 - ExtendVolume uses `size_gb` with the existing 10 GB default. The workflow
   no longer maps `ebs_size_gb`.
 
+## Security group sync (code only, not deployed)
+
+`XRegion-SyncSecurityGroup/sync_security_group.py` consumes
+`security-group.updated` events (`source` `xregion.backend.security`) and reconciles
+the Neutron security group of the guest VM. It never touches the AWS EC2 security
+group of `eni-091eaee3e69e3f42d`: that ENI is shared by every guest.
+
+- Backend publishing is disabled by default. Enable only after deployment and the
+  EventBridge rule exist: `XREGION_SG_SYNC_ENABLED=true`.
+- The worker runs as a dry run unless `XREGION_SG_SYNC_LIVE=true`; it needs
+  `OS_PASSWORD` (secret), `NEUTRON_URL`, `KEYSTONE_URL` and read/write access to
+  `XRegion-SecurityGroups`, `XRegion-Instances`, `XRegion-Nova`,
+  `XRegion-NetworkMappings`.
+- It applies only while `security_group.revision` equals the event revision, only
+  creates missing rules, and deletes only rules it created (description `xregion`).
+  `SYNCED` is recorded only after read-back verification.
+- Tests: `python -B -m unittest discover -s tests -p "test_sg_sync.py" -v`.
+
+`deployment/sg_inventory.py` is a read-only inventory of `XRegion-SecurityGroups`
+(live table or a JSON export). It proposes duplicates/ownerless groups and never
+writes or deletes:
+
+```bash
+python deployment/sg_inventory.py --snapshot C:/Temp/sg-export.json --out C:/Temp/sg-report.json
+```
+
 ## Verification
 
 Run `python -m unittest discover -s serverless/launch-contract/tests -v`

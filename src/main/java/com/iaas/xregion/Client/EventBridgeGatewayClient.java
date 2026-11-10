@@ -74,10 +74,13 @@ public class EventBridgeGatewayClient {
     }
 
     /**
-     * Gửi sự kiện yêu cầu hành động vòng đời máy ảo (Launch, Start, Stop, Shelve, Terminate)
+     * Gửi sự kiện yêu cầu hành động vòng đời máy ảo (Launch, Start, Stop, Reboot, Terminate).
+     *
+     * <p>SPEC-06 mục 2.1: chỉ gửi {@code key_id} — không gửi {@code key_name}/{@code name} để tránh
+     * xung đột namespace giữa OpenStack và AWS.
      */
     public EventBridgeEventResponse sendInstanceLifecycleEvent(String action, String instanceId, String instanceName,
-                                                              String flavor, String targetRegion, String keyName, String requestedBy) {
+                                                              String flavor, String targetRegion, String keyId, String requestedBy) {
         Map<String, Object> detail = new HashMap<>();
         detail.put("event_id", "evt-" + UUID.randomUUID().toString().substring(0, 8));
         detail.put("action", action);
@@ -85,7 +88,7 @@ public class EventBridgeGatewayClient {
         detail.put("instance_name", instanceName);
         detail.put("flavor", flavor);
         detail.put("target_region", targetRegion);
-        detail.put("key_name", keyName);
+        detail.put("key_id", keyId);
         detail.put("requested_by", requestedBy);
         detail.put("timestamp", System.currentTimeMillis());
 
@@ -97,6 +100,21 @@ public class EventBridgeGatewayClient {
      */
     public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceId, String instanceName, int sizeGb, String volumeType,
                                                             String flavorName, String imageId, String keyId, String username) {
+        return sendInstanceLaunchEvent(instanceId, instanceName, sizeGb, volumeType, flavorName, imageId, keyId, username,
+                null, null);
+    }
+
+    /**
+     * Launch kèm bộ rule tường lửa người dùng soạn ở bước 6.
+     *
+     * <p>SPEC-SF-01 mục 2.2 bước 7: pipeline phải ánh xạ 1-1 inbound/outbound từ payload và không tự
+     * tiêm rule mặc định. Hai danh sách được chuyển tiếp nguyên vẹn để SyncDynamoDB lưu đúng cấu hình
+     * mà hạ tầng đã nhận, thay vì ghi danh sách rỗng kèm trạng thái SYNCED.
+     */
+    public EventBridgeEventResponse sendInstanceLaunchEvent(String instanceId, String instanceName, int sizeGb, String volumeType,
+                                                            String flavorName, String imageId, String keyId, String username,
+                                                            List<Map<String, Object>> inboundRules,
+                                                            List<Map<String, Object>> outboundRules) {
         Map<String, Object> detail = new HashMap<>();
         detail.put("event_id", "evt-launch-" + UUID.randomUUID().toString().substring(0, 8));
         detail.put("instance_id", instanceId);
@@ -108,6 +126,12 @@ public class EventBridgeGatewayClient {
         detail.put("flavor_name", flavorName);
         detail.put("image_id", imageId);
         detail.put("username", username);
+        if (inboundRules != null) {
+            detail.put("inbound_rules", inboundRules);
+        }
+        if (outboundRules != null) {
+            detail.put("outbound_rules", outboundRules);
+        }
         detail.put("timestamp", System.currentTimeMillis());
 
         return sendEvent("xregion.backend.instance", "instance.launch", detail);
@@ -155,6 +179,32 @@ public class EventBridgeGatewayClient {
         detail.put("timestamp", System.currentTimeMillis());
 
         return sendEvent("xregion.backend.security", "security.create", detail);
+    }
+
+    /**
+     * Gửi sự kiện cập nhật rule Security Group của một máy ảo (worker XRegion-SyncSecurityGroup tiêu thụ).
+     * Firewall không đổi tại lời gọi này: backend chỉ lưu cấu hình mong muốn rồi phát yêu cầu áp dụng.
+     *
+     * @param groupId    mã Security Group phía backend (XRegion-SecurityGroups)
+     * @param instanceId mã máy ảo đang dùng nhóm này
+     * @param novaId     Nova UUID đang hoạt động, dùng để tìm Neutron SG đã gắn vào máy
+     * @param revision   số revision của cấu hình mong muốn
+     * @param ruleCount  số rule inbound + outbound sau khi thay
+     * @param requestedBy người yêu cầu
+     */
+    public EventBridgeEventResponse sendSecurityGroupSyncEvent(String groupId, String instanceId, String novaId,
+                                                               long revision, int ruleCount, String requestedBy) {
+        Map<String, Object> detail = new HashMap<>();
+        detail.put("event_id", "evt-sg-sync-" + UUID.randomUUID().toString().substring(0, 8));
+        detail.put("group_id", groupId);
+        detail.put("instance_id", instanceId);
+        detail.put("nova_id", novaId);
+        detail.put("revision", revision);
+        detail.put("rule_count", ruleCount);
+        detail.put("requested_by", requestedBy);
+        detail.put("timestamp", System.currentTimeMillis());
+
+        return sendEvent("xregion.backend.security", "security-group.updated", detail);
     }
 
     /**

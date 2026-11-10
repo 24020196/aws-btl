@@ -136,7 +136,8 @@ def lambda_handler(event, context):
                                     raise
             # Only truly AVAILABLE or currently CREATING rows consume slots
             occupied = sum(r["status"] in ("AVAILABLE", "CREATING") for r in rows)
-            for _ in range(max(0, 3 - occupied)):
+            # SPEC-SF-03: Warm Pool tối đa 2 đơn vị cho mỗi image_id: max(0, 2 - occupied).
+            for _ in range(max(0, 2 - occupied)):
                 if context and context.get_remaining_time_in_millis() < 30000:
                     break
                 ident = str(uuid.uuid4())

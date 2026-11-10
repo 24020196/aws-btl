@@ -43,17 +43,18 @@ registerI18n({
 });
 
 // ---------------- Security groups & network ----------------
+// SPEC-04 §5: backend đã loại bỏ hẳn GET /api/network (dữ liệu VPC/ENI giả lập). Trang này chỉ
+// gọi các endpoint nghiệp vụ còn lại; bản ghi DNS được hiển thị theo đúng cách backend sinh ra
+// nó (dns + elastic_ip, TTL 60) thay vì gọi endpoint đã bị xóa.
 async function loadSecurityAndNetwork() {
   // Mỗi máy có đúng một Security Group riêng (backend tự tạo nếu máy chưa có).
-  const [attached, net] = await Promise.all([
-    apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null),
-    apiRequest('/network').catch(() => null)
-  ]);
+  const attached = await apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null);
   det.groups = attached || [];
-  if (net) {
-    det.vpc = (net.vpcs || []).find(v => v.region === det.inst.region) || null;
-    det.dns = (net.dnsRecords || []).find(d => String(d.domainName).toLowerCase() === String(det.inst.dnsDomain).toLowerCase()) || null;
-  }
+  det.vpc = null;
+  const publicIp = det.inst.publicIp && det.inst.publicIp !== 'Chưa gán' ? det.inst.publicIp : '';
+  det.dns = (det.inst.dnsDomain && publicIp)
+    ? { domainName: det.inst.dnsDomain, targetIp: publicIp, ttl: 60 }
+    : null;
   renderSecurityGroups();
   renderNetwork();
 }
@@ -147,7 +148,7 @@ function renderNetwork() {
         <td>1:1 NAT (iptables DNAT/SNAT)</td>
         <td><span class="muted">${t('Tắt (để định tuyến IP máy ảo)', 'Disabled (to route the instance IP)')}</span></td>
       </tr>`
-    : `<tr><td colspan="7" class="empty-cell">${t('Không đọc được thông tin ENI của vùng này.', 'Could not read the ENI of this region.')}</td></tr>`);
+    : `<tr><td colspan="7" class="empty-cell">${t('Máy ảo không có ENI riêng: dùng NAT 1:1 trên ENI dùng chung của máy chủ.', 'No dedicated ENI: the instance uses 1:1 NAT on the shared host ENI.')}</td></tr>`);
 
   const target = det.dns ? det.dns.targetIp : null;
   setText('netDnsTarget', target || t('Chưa có bản ghi', 'No record'));

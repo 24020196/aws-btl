@@ -1,7 +1,7 @@
 {
   "Comment": "xregion linux-nat-v1 contract 1",
   "StartAt": "LoadNetworkContext",
-  "TimeoutSeconds": 1800,
+  "TimeoutSeconds": 300,
   "States": {
     "LoadNetworkContext": {
       "Type": "Task",
@@ -23,7 +23,7 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "ChooseNetworkMode",
+      "Next": "RemoveNatMapping",
       "Catch": [
         {
           "ErrorEquals": [
@@ -33,30 +33,6 @@
           "Next": "TerminationFailed"
         }
       ]
-    },
-    "ChooseNetworkMode": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "And": [
-            {
-              "Variable": "$.network_mode",
-              "StringEquals": "linux_nat_v1"
-            },
-            {
-              "Variable": "$.network_cleanup_complete",
-              "BooleanEquals": true
-            }
-          ],
-          "Next": "DeleteSecurityGroup"
-        },
-        {
-          "Variable": "$.network_mode",
-          "StringEquals": "linux_nat_v1",
-          "Next": "RemoveNatMapping"
-        }
-      ],
-      "Default": "LegacyDeleteSecurityGroup"
     },
     "RemoveNatMapping": {
       "Type": "Task",
@@ -323,146 +299,6 @@
     "TerminationFailed": {
       "Type": "Fail",
       "Error": "TerminationError"
-    },
-    "LegacyDeleteSecurityGroup": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup",
-        "Payload.$": "$"
-      },
-      "OutputPath": "$.Payload",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ],
-      "Next": "LegacyDeleteNova",
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "ResultPath": "$.error",
-          "Next": "TerminationFailed"
-        }
-      ]
-    },
-    "LegacyDeleteNova": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteNova",
-        "Payload.$": "$"
-      },
-      "OutputPath": "$.Payload",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ],
-      "Next": "LegacyDeleteVolume",
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "ResultPath": "$.error",
-          "Next": "TerminationFailed"
-        }
-      ]
-    },
-    "LegacyDeleteVolume": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteVolume",
-        "Payload.$": "$"
-      },
-      "OutputPath": "$.Payload",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ],
-      "Next": "LegacyVolumeDeletionStatus",
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "ResultPath": "$.error",
-          "Next": "TerminationFailed"
-        }
-      ]
-    },
-    "LegacyVolumeDeletionStatus": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.volume_cleanup.status",
-          "StringEquals": "DELETED",
-          "Next": "LegacyReleaseEIP"
-        }
-      ],
-      "Default": "WaitLegacyVolumeDeletion"
-    },
-    "WaitLegacyVolumeDeletion": {
-      "Type": "Wait",
-      "Seconds": 5,
-      "Next": "LegacyDeleteVolume"
-    },
-    "LegacyReleaseEIP": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-ReleaseEIP",
-        "Payload.$": "$"
-      },
-      "OutputPath": "$.Payload",
-      "Retry": [
-        {
-          "ErrorEquals": [
-            "Lambda.ServiceException",
-            "Lambda.AWSLambdaException",
-            "Lambda.SdkClientException"
-          ],
-          "IntervalSeconds": 2,
-          "MaxAttempts": 2,
-          "BackoffRate": 2
-        }
-      ],
-      "Next": "SyncDynamoDB",
-      "Catch": [
-        {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
-          "ResultPath": "$.error",
-          "Next": "TerminationFailed"
-        }
-      ]
     }
   }
 }

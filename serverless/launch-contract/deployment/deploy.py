@@ -22,6 +22,10 @@ def package(x, logical):
             target.writestr(source["handler"].rsplit(".", 1)[0] + ".py", (ROOT / source["source"]).read_bytes())
             if logical in ("ExtendVolume", "CinderPoolManager"):
                 target.writestr("network_runtime.py", (ROOT / "runtime/network_runtime.py").read_bytes())
+            # Scheduled recovery ships with its policy module: Lambda loads siblings from
+            # the task root, exactly as the tests load them.
+            for extra in source.get("include", []):
+                target.writestr(Path(extra).name, (ROOT / extra).read_bytes())
         else:
             target.writestr("network_runtime.py", (ROOT / "runtime/network_runtime.py").read_bytes())
         if logical in MANIFEST["modify"]:

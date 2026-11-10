@@ -36,6 +36,26 @@ class EventBridgeGatewayClientTest {
     }
 
     @Test
+    void securityGroupSyncEventCarriesRevisionAndNovaId() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://example.test");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://example.test"))
+                .andExpect(jsonPath("$.source").value("xregion.backend.security"))
+                .andExpect(jsonPath("$.detailType").value("security-group.updated"))
+                .andExpect(jsonPath("$.detail.group_id").value("sg-abc"))
+                .andExpect(jsonPath("$.detail.instance_id").value("i-4c0906ee"))
+                .andExpect(jsonPath("$.detail.nova_id").value("nova-1"))
+                .andExpect(jsonPath("$.detail.revision").value(6))
+                .andExpect(jsonPath("$.detail.rule_count").value(4))
+                .andRespond(withSuccess("{\"FailedEntryCount\":0,\"Entries\":[{\"EventId\":\"event-1\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        new EventBridgeGatewayClient(builder.build())
+                .sendSecurityGroupSyncEvent("sg-abc", "i-4c0906ee", "nova-1", 6, 4, "lam");
+        server.verify();
+    }
+
+    @Test
     void rejectsPartialPutEventsFailure() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://example.test");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

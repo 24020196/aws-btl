@@ -3,6 +3,9 @@ package com.iaas.xregion.Model.Request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+import java.util.Map;
+
 @Data
 public class LaunchInstanceRequest {
     @NotBlank(message = "Instance name is required")
@@ -23,6 +26,10 @@ public class LaunchInstanceRequest {
     private int ebsThroughput = 125;
     private String keyPairName = "xregion-key";
     private String securityGroup = "sg-default";
+    // Rule tường lửa người dùng soạn ở bước 6 của launch wizard. Backend chuyển nguyên vẹn vào sự kiện
+    // instance.launch để pipeline và bản ghi Security Group dùng đúng cấu hình này (SPEC-SF-01 bước 7).
+    private List<Map<String, Object>> inboundRules;
+    private List<Map<String, Object>> outboundRules;
     private String domainName; // optional custom domain name for Route 53
 }
 

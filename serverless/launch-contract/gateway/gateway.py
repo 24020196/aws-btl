@@ -5,6 +5,7 @@ import fcntl
 import ipaddress
 import json
 from pathlib import Path
+import socket
 import subprocess
 import time
 import uuid
@@ -24,6 +25,30 @@ def run(*args, input=None):
 
 def address(value):
     return str(ipaddress.IPv4Address(value))
+
+
+VERIFY_TIMEOUT_SECONDS = 10
+
+
+def address_of_mapping(nova_id):
+    """Địa chỉ guest của mapping, dùng khi SSM không truyền guestPrivateIp."""
+    cfg = json.loads(CONFIG.read_text())
+    table = boto3.resource("dynamodb", region_name=cfg["region"]).Table(cfg["table"])
+    item = table.get_item(Key={"nova_id": str(uuid.UUID(nova_id))}, ConsistentRead=True)["Item"]
+    return address(item["guest_private_ip"])
+
+
+def reachable(guest):
+    """SPEC-04: phải ping ICMP được *và* mở TCP 22 từ gateway tới guest_private_ip."""
+    try:
+        run("ping", "-I", "br-xregion", "-c", "1", "-W", "1", guest)
+    except RuntimeError:
+        return False
+    try:
+        with socket.create_connection((guest, 22), timeout=2):
+            return True
+    except OSError:
+        return False
 
 
 def read_mappings(config):
@@ -156,20 +181,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("operation", choices=("APPLY", "REMOVE", "RECONCILE", "VERIFY"))
     parser.add_argument("nova_id", nargs="?")
+    # SSM document truyền guestPrivateIp cho VERIFY (SPEC-SF-01 bước 9).
+    parser.add_argument("guest_private_ip", nargs="?")
     args = parser.parse_args()
     if args.operation == "VERIFY":
-        cfg = json.loads(CONFIG.read_text())
-        table = boto3.resource("dynamodb", region_name=cfg["region"]).Table(cfg["table"])
-        m = table.get_item(Key={"nova_id": str(uuid.UUID(args.nova_id))}, ConsistentRead=True)["Item"]
-        deadline = time.monotonic() + 480
+        # SPEC-04 / SPEC-SF-01: ping ICMP + TCP 22, tổng thời gian kiểm tra tối đa 10 giây.
+        deadline = time.monotonic() + VERIFY_TIMEOUT_SECONDS
+        guest = args.guest_private_ip or address_of_mapping(args.nova_id)
         while True:
-            try:
-                run("ping", "-I", "br-xregion", "-c", "2", "-W", "2", address(m["guest_private_ip"]))
+            if reachable(guest):
                 break
-            except RuntimeError:
-                if time.monotonic() >= deadline:
-                    raise
-                time.sleep(5)
-        print(json.dumps(dict(status="SUCCEEDED", nova_id=args.nova_id, operation="VERIFY")))
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Network unreachable within %ds (ICMP + TCP 22)" % VERIFY_TIMEOUT_SECONDS)
+            time.sleep(1)
+        print(json.dumps(dict(status="SUCCEEDED", nova_id=args.nova_id, operation="VERIFY",
+                              guest_private_ip=guest)))
     else:
         reconcile(args.nova_id)

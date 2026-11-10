@@ -69,7 +69,7 @@ const RULE_PRESETS = {
   'postgres':   { protocol: 'tcp',  from: 5432, to: 5432 },
   'custom-tcp': { protocol: 'tcp',  from: 8080, to: null },
   'custom-udp': { protocol: 'udp',  from: 53,   to: null },
-  'icmp':       { protocol: 'icmp', from: 0,    to: 65535 },
+  'icmp':       { protocol: 'icmp', from: 0,    to: 0 },
   'all':        { protocol: 'all',  from: 0,    to: 65535 }
 };
 

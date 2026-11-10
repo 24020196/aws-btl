@@ -391,16 +391,17 @@ async function handleLaunchPageSubmit(e) {
     domainName: document.getElementById('instDomain').value.trim()
   };
 
+  // SPEC-SF-01 bước 7: rule tường lửa đi cùng payload launch để pipeline và bản ghi
+  // Security Group dùng đúng cấu hình người dùng vừa nhập (không tiêm rule mặc định).
+  if (typeof lfwPayload === 'function') {
+    Object.assign(payload, lfwPayload());
+  }
+
   try {
     const res = await apiRequest('/instances', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-
-    // Áp dụng inbound/outbound rules vào Security Group riêng
-    if (res && res.id && typeof lfwApplyToInstance === 'function') {
-      await lfwApplyToInstance(res.id);
-    }
 
     const form = document.getElementById('launchInstancePageForm');
     if (form) form.reset();

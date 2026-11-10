@@ -1,10 +1,38 @@
 import json
 import os
 import time
+import uuid
 import boto3
 
 AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
 dynamodb = boto3.client("dynamodb", region_name=AWS_REGION)
+
+
+def _normalize_launch_rules(rules, owner):
+    if not isinstance(rules, list):
+        return []
+    out = []
+    for r in rules:
+        if not isinstance(r, dict):
+            continue
+        proto = str(r.get("protocol") or "tcp").lower()
+        if proto == "icmp":
+            from_p, to_p = 0, 0
+        elif proto == "all":
+            from_p, to_p = 0, 65535
+        else:
+            from_p = int(r.get("fromPort", 0) or 0)
+            to_p = int(r.get("toPort", 0) or from_p)
+        out.append({
+            "ruleId": str(r.get("ruleId") or ("sgr-" + uuid.uuid4().hex[:10])),
+            "protocol": proto,
+            "fromPort": from_p,
+            "toPort": to_p,
+            "cidr": str(r.get("cidr") or "0.0.0.0/0").strip(),
+            "description": str(r.get("description") or "").strip(),
+            "addedBy": str(r.get("addedBy") or owner),
+        })
+    return out
 
 def lambda_handler(event, context):
     print("Received SyncDynamoDB event:", json.dumps(event))
@@ -43,6 +71,10 @@ def lambda_handler(event, context):
     elastic_ip = event.get("elastic_ip", "Chưa gán")
     # 1-1 Security Group: id trùng với server_id (Nova VM ID)
     sg_id = event.get("security_group_id") or event.get("security_group") or server_id
+    # SPEC-SF-01 mục 4: owner = event.get("username") or event.get("owner") — cấm "system" cho SG 1-1.
+    sg_owner = event.get("username") or event.get("owner")
+    if not sg_owner:
+        raise ValueError("Missing username/owner for 1-1 security group ownership")
     now_sec = int(time.time())
 
     if not server_id:
@@ -92,9 +124,15 @@ def lambda_handler(event, context):
             print(f"Notice: updating XRegion-Volumes: {e}")
 
     # 3. Upsert 1-1 Security Group record into XRegion-SecurityGroups
+    # SPEC-SF-01 bước 9 / SPEC-06 mục 3.1: owner = username của chủ máy (CẤM hardcode "system"),
+    # group_id = nova_id, reported_revision = 1, managed = true.
+    # Rules lấy nguyên từ payload launch (không tiêm rule mặc định). Worker XRegion-SyncSecurityGroup
+    # là nơi DUY NHẤT áp rule xuống Neutron, nên launch chỉ lưu cấu hình MONG MUỐN:
+    # sync_status = PENDING_SYNC và KHÔNG ghi applied_revision (không có bằng chứng đã áp dụng).
     try:
-        now_ms = str(int(time.time() * 1000))
-        short_id = server_id[:8] if len(server_id) >= 8 else server_id
+        now_sec_sg = int(time.time())
+        inbound_rules = _normalize_launch_rules(event.get("inbound_rules"), sg_owner)
+        outbound_rules = _normalize_launch_rules(event.get("outbound_rules"), sg_owner)
         dynamodb.put_item(
             TableName="XRegion-SecurityGroups",
             Item={
@@ -102,18 +140,18 @@ def lambda_handler(event, context):
                 "name": {"S": sg_id},
                 "description": {"S": f"1-1 Security Group for Nova VM {server_id}"},
                 "region": {"S": AWS_REGION},
-                "owner": {"S": "system"},
-                "inbound_rules": {"S": json.dumps([
-                    {"ruleId": f"sgr-{short_id}-ssh", "protocol": "tcp", "fromPort": 22, "toPort": 22, "cidr": "0.0.0.0/0", "description": "SSH", "addedBy": "system"},
-                    {"ruleId": f"sgr-{short_id}-icmp", "protocol": "icmp", "fromPort": 0, "toPort": 0, "cidr": "0.0.0.0/0", "description": "ICMP", "addedBy": "system"}
-                ])},
-                "outbound_rules": {"S": json.dumps([
-                    {"ruleId": f"sgr-{short_id}-egress", "protocol": "all", "fromPort": 0, "toPort": 65535, "cidr": "0.0.0.0/0", "description": "All Egress", "addedBy": "system"}
-                ])},
-                "created_at": {"N": now_ms}
+                "instance_id": {"S": instance_id or server_id},
+                "nova_id": {"S": server_id},
+                "owner": {"S": sg_owner},
+                "inbound_rules": {"S": json.dumps(inbound_rules)},
+                "outbound_rules": {"S": json.dumps(outbound_rules)},
+                "revision": {"N": "1"},
+                "sync_status": {"S": "PENDING_SYNC"},
+                "managed": {"BOOL": True},
+                "created_at": {"N": str(now_sec_sg)},
             }
         )
-        print(f"Successfully recorded 1-1 Security Group [{sg_id}] into XRegion-SecurityGroups.")
+        print(f"Successfully recorded 1-1 Security Group [{sg_id}] for owner [{sg_owner}] into XRegion-SecurityGroups.")
     except Exception as e:
         print(f"Notice saving to XRegion-SecurityGroups: {e}")
 
