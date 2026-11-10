@@ -1,0 +1,31 @@
+# Git and agents
+.git
+.gitignore
+.agents
+
+# Build output
+target/
+*.class
+*.jar
+
+# Environment and secrets
+.env
+.env*.local
+
+# Documentation and planning
+docs/
+plan/
+backup/
+e2e/
+serverless/
+*.md
+
+# Logs
+*.log
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

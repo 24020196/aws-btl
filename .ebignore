@@ -1,0 +1,29 @@
+# Ignore build and cache
+target/
+*.class
+*.jar
+
+# Ignore secrets and local env
+.env
+.env*.local
+
+# Ignore docs, plans, and development agents
+.agents
+docs/
+plan/
+backup/
+e2e/
+serverless/
+*.md
+
+# Logs
+*.log
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+.git
+.gitignore

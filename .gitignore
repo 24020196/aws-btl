@@ -6,6 +6,10 @@ target/
 .env
 .env*.local
 
+# Elastic Beanstalk & Deployment bundles
+.elasticbeanstalk/
+*.zip
+
 # IDE and Editor files
 .vscode/
 .idea/
@@ -20,8 +24,8 @@ Thumbs.db
 
 # Log files
 *.log
-.agents
 
+# Project specific ignores
 .agents
 scratch_lambda
 temp.md

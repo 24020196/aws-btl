@@ -1,0 +1,44 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy to Elastic Beanstalk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 Temurin
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Verify Maven Project
+        run: mvn clean compile -B -DskipTests
+
+      - name: Create Elastic Beanstalk Deployment Package
+        run: |
+          mkdir -p bundle
+          zip -r deploy.zip Dockerfile pom.xml src .ebextensions -x "src/test/*"
+
+      - name: Deploy to AWS Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ap-southeast-2
+          application_name: ${{ secrets.EB_APP_NAME || 'xregion-app' }}
+          environment_name: ${{ secrets.EB_ENV_NAME || 'xregion-app-env' }}
+          version_label: xregion-${{ github.sha }}-${{ github.run_number }}
+          deployment_package: deploy.zip
+          use_existing_version_if_available: true
+          wait_for_deployment: true
