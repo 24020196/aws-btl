@@ -33,11 +33,21 @@ public class SecurityGroupRequest {
     /** Kiểu gọi cũ "đổi nhóm" (không còn hỗ trợ). Có trường này thì API báo lỗi thay vì ghi đè rule thành rỗng. */
     private java.util.List<String> groupIds;
 
+    /**
+     * Revision client đang hiển thị. Có giá trị thì backend chỉ ghi khi bảng vẫn ở đúng revision đó,
+     * tránh trường hợp hai người sửa cùng lúc và bản sau âm thầm ghi đè bản trước.
+     */
+    private Long expectedRevision;
+
+    /**
+     * null = client không gửi trường này (khác với [] là chủ ý bỏ hết rule). Backend từ chối null thay vì
+     * coi như danh sách rỗng, nếu không một payload thiếu trường sẽ vô tình xóa toàn bộ rule của nhóm.
+     */
     @Valid
-    private List<Rule> inboundRules = new ArrayList<>();
+    private List<Rule> inboundRules;
 
     @Valid
-    private List<Rule> outboundRules = new ArrayList<>();
+    private List<Rule> outboundRules;
 
     @Data
     public static class Rule {
@@ -54,7 +64,8 @@ public class SecurityGroupRequest {
         private int toPort;
 
         @NotBlank(message = "Nguồn/đích (CIDR) là bắt buộc")
-        @Pattern(regexp = "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$|^sg-[a-zA-Z0-9-]+$", message = "Nguồn/đích phải là CIDR (vd 0.0.0.0/0) hoặc mã Security Group")
+        @Pattern(regexp = "^(?!sg-)(?:(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)/(?:3[0-2]|[12]?\\d)$|^sg-[0-9a-f]{8,32}$",
+                message = "Nguồn/đích phải là CIDR IPv4 hợp lệ (vd 0.0.0.0/0) hoặc mã Security Group (sg-...)")
         private String cidr = "0.0.0.0/0";
 
         private String description;

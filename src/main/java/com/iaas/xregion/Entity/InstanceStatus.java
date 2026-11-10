@@ -3,6 +3,7 @@ package com.iaas.xregion.Entity;
 public enum InstanceStatus {
     PENDING,
     RUNNING,
+    STARTING,
     STOPPING,
     STOPPED,
     REBOOTING,

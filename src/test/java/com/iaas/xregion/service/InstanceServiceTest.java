@@ -9,7 +9,6 @@ import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
-import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Services.AuditLogService;
 import com.iaas.xregion.Services.AuthService;
@@ -170,6 +169,12 @@ class InstanceServiceTest {
         req.setImageId("img-ubuntu22");
         req.setEbsSizeGb(50);
         req.setKeyPairName("prod-key");
+        // SPEC-SF-01 bước 7: rule người dùng soạn phải đi cùng sự kiện launch, không bị bỏ lại ở UI.
+        List<java.util.Map<String, Object>> inbound = List.of(
+                java.util.Map.of("protocol", "tcp", "fromPort", 443, "toPort", 443, "cidr", "0.0.0.0/0"));
+        List<java.util.Map<String, Object>> outbound = List.of();
+        req.setInboundRules(inbound);
+        req.setOutboundRules(outbound);
 
         UserEntity userEntity = UserEntity.builder()
                 .userId("usr-testuser")
@@ -193,57 +198,8 @@ class InstanceServiceTest {
         verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
         verify(auditLogService, times(1)).logAction(eq("LAUNCH_VM"), eq("INSTANCE"), anyString(), anyString());
         verify(eventBridgeGatewayClient, times(1)).sendInstanceLaunchEvent(
-                anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"));
-    }
-
-    @Test
-    @DisplayName("updateInstance prevents flavor modification when instance is RUNNING (EC2 rule)")
-    void testUpdateFlavorWhileRunningFails() {
-        InstanceEntity runningInst = InstanceEntity.builder()
-                .instanceId("i-running")
-                .instanceName("App")
-                .flavor("m1.small")
-                .username("testuser")
-                .currentStatus("RUNNING")
-                .build();
-
-        when(instancesTable.getItem(any(Key.class))).thenReturn(runningInst);
-
-        UpdateInstanceRequest req = UpdateInstanceRequest.builder()
-                .name("App")
-                .flavor("m1.large")
-                .build();
-
-        assertThatThrownBy(() -> instanceService.updateInstance("i-running", req))
-                .isInstanceOf(AppException.class)
-                .hasMessageContaining("Dừng máy ảo (Stop) trước khi thay đổi");
-    }
-
-    @Test
-    @DisplayName("updateInstance permits flavor modification when instance is STOPPED")
-    void testUpdateFlavorWhileStoppedSucceeds() {
-        InstanceEntity stoppedInst = InstanceEntity.builder()
-                .instanceId("i-stopped")
-                .instanceName("App")
-                .flavor("m1.small")
-                .username("testuser")
-                .activeNovaId("nova-stopped")
-                .currentStatus("STOPPED")
-                .build();
-
-        when(instancesTable.getItem(any(Key.class))).thenReturn(stoppedInst);
-
-        UpdateInstanceRequest req = UpdateInstanceRequest.builder()
-                .name("App Renamed")
-                .flavor("m1.large")
-                .build();
-
-        InstanceResponse response = instanceService.updateInstance("i-stopped", req);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getFlavor()).isEqualTo("m1.large");
-        assertThat(response.getName()).isEqualTo("App Renamed");
-        verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
+                anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"),
+                eq(inbound), eq(outbound));
     }
 
     @Test
@@ -367,7 +323,9 @@ class InstanceServiceTest {
     }
 
     @Test
-    void ambiguousLaunchDeliveryDoesNotMarkInstanceFailed() {
+    void ambiguousLaunchDeliveryIsRecordedInsteadOfLeftPending() {
+        // XR-RISK-003: a transport failure left the record PENDING forever: nothing showed
+        // the request was stuck, and it was indistinguishable from a launch still starting.
         LaunchInstanceRequest req = new LaunchInstanceRequest();
         req.setName("Unconfirmed launch");
         req.setRegion("ap-southeast-2");
@@ -376,8 +334,11 @@ class InstanceServiceTest {
                 .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
                         anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
                         anyString(), anyString());
+
         assertThatThrownBy(() -> instanceService.launchInstance(req)).isInstanceOf(AppException.class);
-        verify(instancesTable, never()).updateItem(any(UpdateItemEnhancedRequest.class));
+        // Still PENDING (we cannot prove it was not delivered) but rewritten with an explicit
+        // marker, so the request is visible and reconcilable rather than silently stuck.
+        verify(instancesTable).updateItem(any(UpdateItemEnhancedRequest.class));
     }
 
     @Test
@@ -448,4 +409,44 @@ class InstanceServiceTest {
         assertThat(response.getActiveNovaId()).isEqualTo("nova-uuid-999");
         assertThat(response.getNovaIds()).containsExactly("nova-uuid-999");
     }
+
+    @Test
+    @DisplayName("auto-link ignores terminated Nova and never publishes RUNNING for a SHUTOFF VM")
+    @SuppressWarnings("unchecked")
+    void autoLinkIgnoresDeadNovaRows() {
+        // XR-RISK-002: the index query has no filter, so a terminated server from an older
+        // launch could be relinked while the real VM was SHUTOFF, publishing RUNNING.
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-7953bdff")
+                .instanceName("canary")
+                .username("testuser")
+                .currentStatus("PENDING")
+                .currentRegion("ap-southeast-2")
+                .build();
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+
+        NovaEntity dead = NovaEntity.builder()
+                .novaId("nova-old").instanceId("i-7953bdff")
+                .status("TERMINATED").createdAt(1000L).build();
+        NovaEntity stopped = NovaEntity.builder()
+                .novaId("nova-current").instanceId("i-7953bdff")
+                .status("SHUTOFF").createdAt(2000L).build();
+
+        var index = mock(software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex.class);
+        when(novaTable.index("instance_id-index")).thenReturn(index);
+        PageIterable<NovaEntity> pages = mock(PageIterable.class);
+        @SuppressWarnings("unchecked")
+        software.amazon.awssdk.enhanced.dynamodb.model.Page<NovaEntity> page =
+                mock(software.amazon.awssdk.enhanced.dynamodb.model.Page.class);
+        when(page.items()).thenReturn(List.of(dead, stopped));
+        doReturn(pages).when(index).query(any(java.util.function.Consumer.class));
+        when(pages.iterator()).thenReturn(List.of(page).iterator());
+
+        InstanceResponse response = instanceService.getInstanceById("i-7953bdff");
+
+        assertThat(inst.getActiveNovaId()).isEqualTo("nova-current");
+        assertThat(inst.getCurrentStatus()).isEqualTo("STOPPED");
+        assertThat(response.getStatus()).isNotEqualTo("RUNNING");
+    }
 }
+

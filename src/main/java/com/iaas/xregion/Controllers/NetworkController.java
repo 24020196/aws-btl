@@ -3,10 +3,10 @@ package com.iaas.xregion.Controllers;
 import com.iaas.xregion.Model.Request.SecurityGroupRequest;
 import com.iaas.xregion.Model.Request.UpdateDnsRequest;
 import com.iaas.xregion.Model.Response.ApiResponse;
-import com.iaas.xregion.Model.Response.NetworkResponse;
 import com.iaas.xregion.Services.NetworkService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,11 +19,6 @@ import java.util.Map;
 public class NetworkController {
 
     private final NetworkService networkService;
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<NetworkResponse>> getNetworkOverview() {
-        return ResponseEntity.ok(ApiResponse.ok(networkService.getNetworkOverview()));
-    }
 
     @PostMapping("/dns")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateDnsRecord(@Valid @RequestBody UpdateDnsRequest request) {
@@ -52,12 +47,27 @@ public class NetworkController {
     /**
      * PUT /api/network/security-groups/instances/{instanceId}
      * body: {"inboundRules": [...], "outboundRules": [...]} — ghi đè rule của Security Group riêng của máy.
+     * 200 khi không có gì thay đổi; 202 khi đã lưu cấu hình và còn chờ đồng bộ xuống hạ tầng (data.syncStatus).
+     */
+    /**
+     * PUT /api/network/security-groups/instances/{instanceId}
+     * body: {"inboundRules": [...], "outboundRules": [...], "expectedRevision": 5}
+     * 200 khi không có gì thay đổi; 202 khi đã lưu cấu hình và còn chờ đồng bộ xuống hạ tầng (data.syncStatus).
+     *
+     * eventPublished/syncAccepted phải nằm trong response: giao diện dựa vào đó để nói rõ đã gửi yêu cầu
+     * áp dụng hay chưa, khác với việc cấu hình đã được lưu.
      */
     @PutMapping("/security-groups/instances/{instanceId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> replaceInstanceRules(
             @PathVariable String instanceId, @Valid @RequestBody SecurityGroupRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Security group rules replaced",
-                networkService.replaceInstanceRules(instanceId, request)));
+        Map<String, Object> group = networkService.replaceInstanceRules(instanceId, request);
+        boolean syncRequested = Boolean.TRUE.equals(group.get("eventPublished"))
+                || Boolean.TRUE.equals(group.get("syncAccepted"));
+        String message = syncRequested
+                ? "Đã lưu rule, đang chờ đồng bộ xuống hạ tầng"
+                : "Đã lưu rule; hạ tầng chưa được cập nhật (xem syncStatus)";
+        return ResponseEntity.status(syncRequested ? HttpStatus.ACCEPTED : HttpStatus.OK)
+                .body(ApiResponse.ok(message, group));
     }
 
     /** DELETE /api/network/security-groups/{groupId}/rules/{ruleId}: xóa một inbound/outbound rule. */

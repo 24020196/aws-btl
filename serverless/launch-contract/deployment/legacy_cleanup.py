@@ -47,7 +47,8 @@ def build_manifest(baseline, project_ids):
     if len(roots) != 1:
         raise ValueError("Root volume identity is ambiguous")
     lv_ids = {uid(v["lv_name"][7:]) for report in baseline["openstack"]["lvs"].get("report", [])
-              for v in report.get("lv", []) if re.fullmatch(r"volume-[0-9a-f-]{36}", v["lv_name"])}
+              for v in report.get("lv", []) if v.get("vg_name") == "cinder-volumes"
+              and re.fullmatch(r"volume-[0-9a-f-]{36}", v["lv_name"])}
     volumes = []
     for v in baseline["openstack"]["volumes"]:
         tenant = v.get("project_id") or v.get("os-vol-tenant-attr:tenant_id")
@@ -116,12 +117,33 @@ def safe_lvs():
     if proc.returncode == 0:
         return json.loads(proc.stdout)
     err = (proc.stderr or "") + (proc.stdout or "")
-    if proc.returncode == 5 and ("Volume group \"cinder-volumes\" not found" in err or "Cannot process volume group cinder-volumes" in err):
+    has_not_found = 'Volume group "cinder-volumes" not found' in err
+    has_permission_or_io = any(s in err.lower() for s in ["permission denied", "operation not permitted", "i/o error", "locking failed", "read-only"])
+    if proc.returncode == 5 and has_not_found and not has_permission_or_io:
         return {"report": []}
     raise subprocess.CalledProcessError(proc.returncode, proc.args, output=proc.stdout, stderr=proc.stderr)
+def target_inventory():
+    # Do not transport CHAP account information in inventory evidence.
+    return '\n'.join(line for line in command('docker','exec','tgtd','tgtadm','--lld','iscsi','--mode','target','--op','show').splitlines()
+                     if line.startswith('Target ') or 'Backing store path:' in line or 'I_T nexus:' in line)
+def session_inventory():
+    proc = subprocess.run(['docker','exec','nova_compute','iscsiadm','-m','session'], capture_output=True, text=True)
+    if proc.returncode == 21 and 'No active sessions' in proc.stderr:
+        return ''
+    if proc.returncode:
+        raise subprocess.CalledProcessError(proc.returncode, proc.args, output=proc.stdout, stderr=proc.stderr)
+    return proc.stdout
 result = dict(servers=[s.to_dict() for s in c.compute.servers(all_projects=True)],
               volumes=[v.to_dict() for v in c.block_storage.volumes(details=True, all_projects=True)],
               ports=[p.to_dict() for p in c.network.ports()],
+              security_groups=[g.to_dict() for g in c.network.security_groups()],
+              targets=target_inventory(),
+              iscsi_sessions=session_inventory(),
+              nat_rules=command('iptables-save','-t','nat'),
+              addresses=json.loads(command('ip','-j','address','show')),
+              default_volume_type=c.block_storage.get('/types/default').json()['volume_type']['name'],
+              services=[s.to_dict() for s in c.block_storage.services()],
+              legacy_backing_exists=Path('/var/lib/cinder/cinder-volumes.img').exists(),
               lvs=safe_lvs(),
               domains=command('docker','exec','nova_libvirt','virsh','list','--all','--uuid').split(),
               loops=json.loads(command('losetup','--json','--output','NAME,BACK-FILE,RO')),
@@ -309,10 +331,10 @@ def remove_orphan_network(x, server, ports):
         return
     if mapping.get("cleanup_phase") == "TAGS_REMOVED":
         # Finalize the transaction to delete the mapping record and release claims
+        remote_delete(x, "server", server, ports)
         result = invoke_network(x, "Release", dict(nova_id=server["id"], server_id=server["id"],
                                                    cleanup_phase="TAGS_REMOVED", network_operation="REMOVE",
                                                    release_operation="FINALIZE"))
-        remote_delete(x, "server", server, ports)
         x.save("legacy-orphan-network-" + server["id"] + ".json", result)
         return
     event = invoke_network(x, "Release", dict(nova_id=server["id"], server_id=server["id"]))
@@ -321,7 +343,10 @@ def remove_orphan_network(x, server, ports):
         x.save("legacy-orphan-network-" + server["id"] + ".json", event)
         return
     event = invoke_network(x, "Dispatch", event)
+    deadline = time.monotonic() + 240
     while event.get("command_status") != "SUCCEEDED":
+        if event.get("command_status") in ("FAILED", "TIMED_OUT", "CANCELLED") or time.monotonic() >= deadline:
+            raise RuntimeError("Orphan NAT removal not confirmed; inspect command before resuming")
         time.sleep(3)
         event = invoke_network(x, "CheckCommand", event)
     remote_delete(x, "server", server, ports)
@@ -378,6 +403,15 @@ def apply_cleanup(x, baseline, manifest, receipts):
         if state.get("server", {}).get(server["id"]):
             continue
         if mapping and mapping.get("status") != "DELETED":
+            live_mapping = x.session.resource("dynamodb").Table("XRegion-NetworkMappings").get_item(
+                Key={"nova_id": server["id"]}, ConsistentRead=True).get("Item")
+            if not live_mapping or live_mapping.get("reservation_id") != mapping["reservation_id"]:
+                raise ValueError("Legacy network mapping ownership changed")
+            if live_mapping.get("status") == "DELETED":
+                ports = [p for p in baseline['openstack']['ports'] if p.get('device_id') == server['id']]
+                remote_delete(x, "server", server, ports)
+                checkpoint(x, state, "server", server["id"])
+                continue
             owners = [r for r in instances if server["id"] in (r.get("active_nova_id"), r.get("current_nova_id"))]
             if not owners:
                 ports=[p for p in baseline['openstack']['ports'] if p.get('device_id')==server['id']]
@@ -438,10 +472,110 @@ def verify(x, baseline, manifest):
                      domains=[s["id"] for s in manifest["servers"] if s["id"] in domains],
                      lvs=[v["id"] for v in manifest["volumes"] if v["id"] in remaining_lvs],
                      ports=[pid for pid in legacy_ports if pid in ports])
+    remaining.update(verify_physical_network(x, baseline, manifest, current))
     x.save("legacy-verification.json", remaining)
     if any(remaining.values()):
         raise RuntimeError("Legacy resources remain; inspect legacy-verification.json")
     return remaining
+
+
+def verify_physical_network(x, baseline, manifest, current):
+    """Fail closed if host evidence is incomplete, even when APIs are empty."""
+    os_state = current["openstack"]
+    for field in ("targets", "iscsi_sessions", "nat_rules", "addresses", "security_groups", "blocks"):
+        if field not in os_state:
+            raise RuntimeError("Missing physical inventory: " + field)
+    server_ids = {s["id"] for s in manifest["servers"]}
+    volume_ids = {v["id"] for v in manifest["volumes"]}
+    mappings = [m for m in baseline["tables"]["XRegion-NetworkMappings"] if m["nova_id"] in server_ids]
+    nova_rows = [r for r in baseline["tables"]["XRegion-Nova"] if r["nova_id"] in server_ids]
+    sg_ids = {m.get("neutron_sg_id") for m in mappings}
+    port_ids = {m.get("neutron_port_id") for m in mappings}
+    private_ips = {m["gateway_private_ip"] for m in mappings}
+    private_ips.update(r["private_ip"] for r in nova_rows if r.get("private_ip") and r["nova_id"] not in {m["nova_id"] for m in mappings})
+    tokens = server_ids | private_ips | {m["guest_private_ip"] for m in mappings}
+    nat = [line for line in os_state["nat_rules"].splitlines()
+           if any(re.search(r"(?<![\w.:-])" + re.escape(t) + r"(?![\w.:-])", line) for t in tokens)]
+    eni = x.client("ec2").describe_network_interfaces(NetworkInterfaceIds=["eni-091eaee3e69e3f42d"])["NetworkInterfaces"][0]
+    addresses = x.client("ec2").describe_addresses()["Addresses"]
+    eip_ips = {m["elastic_ip"] for m in mappings} | {r["elastic_ip"] for r in nova_rows if r.get("elastic_ip")}
+    allocated = [a["PublicIp"] for a in addresses if a["PublicIp"] in eip_ips and
+                 (a.get("AssociationId") or any(t["Key"] in ("ClaimedBy", "ReservationId", "NovaId") for t in a.get("Tags", [])))]
+    return dict(targets=[v for v in volume_ids if v in os_state["targets"]],
+                iscsi_sessions=[v for v in volume_ids if v in os_state["iscsi_sessions"]],
+                block_devices=[v for v in volume_ids if v in json.dumps(os_state["blocks"])],
+                security_groups=[g["id"] for g in os_state["security_groups"] if g["id"] in sg_ids or g.get("name") in server_ids],
+                mapping_ports=[p["id"] for p in os_state["ports"] if p["id"] in port_ids],
+                nat_rules=nat,
+                host_addresses=[a["local"] for link in os_state["addresses"] for a in link.get("addr_info", []) if a["local"] in private_ips],
+                eni_addresses=[p["PrivateIpAddress"] for p in eni["PrivateIpAddresses"] if p["PrivateIpAddress"] in private_ips],
+                eip_ownership=allocated)
+
+
+def reconcile_records(x, baseline, manifest):
+    """Only mark existing, unchanged legacy rows after full physical absence."""
+    from boto3.dynamodb.conditions import Attr
+    assert_frozen(x)
+    verify(x, baseline, manifest)
+    ddb = x.session.resource("dynamodb")
+    volume_ids = {v["id"] for v in manifest["volumes"]}
+    server_ids = {s["id"] for s in manifest["servers"]}
+    changes = []
+    selections = (
+        ("XRegion-Volumes", "volume_id", baseline["tables"]["XRegion-Volumes"], "DELETED", "status",
+         lambda r: r.get("cinder_volume_id") in volume_ids),
+        ("XRegion-Nova", "nova_id", baseline["tables"]["XRegion-Nova"], "TERMINATED", "status",
+         lambda r: r.get("nova_id") in server_ids),
+        ("XRegion-Instances", "instance_id", baseline["tables"]["XRegion-Instances"], "TERMINATED", "current_status",
+         lambda r: r.get("active_nova_id") in server_ids or r.get("current_nova_id") in server_ids))
+    for name, key, rows, target, status_field, selected in selections:
+        table = ddb.Table(name)
+        for old in filter(selected, rows):
+            row = table.get_item(Key={key: old[key]}, ConsistentRead=True).get("Item")
+            if not row:
+                raise ValueError("Legacy row disappeared: " + old[key])
+            live_pointer = row.get("active_nova_id") in server_ids or row.get("current_nova_id") in server_ids
+            if row.get(status_field) == target and not (name == "XRegion-Instances" and live_pointer):
+                continue
+            condition = Attr(key).exists() & Attr(status_field).eq(row[status_field])
+            for field in ("cinder_volume_id", "attached_instance_id", "lease_instance_id", "instance_id",
+                          "active_nova_id", "current_nova_id", "launch_execution_arn"):
+                if field != key:
+                    if row.get(field) != old.get(field):
+                        raise ValueError("Legacy ownership changed: " + field)
+                    condition &= Attr(field).eq(old[field]) if field in old else Attr(field).not_exists()
+            update_expression = "SET #s=:s, legacy_cleanup_manifest=:m, legacy_cleanup_at=:t"
+            values = {":s": target, ":m": manifest["manifest_sha256"], ":t": int(time.time())}
+            if name == "XRegion-Instances":
+                values.update({":empty": "", ":false": False, ":nova": row.get("active_nova_id") or row.get("current_nova_id")})
+                update_expression += ", active_nova_id=:empty, migration_lock=:false, legacy_cleanup_nova_id=:nova REMOVE current_nova_id"
+            table.update_item(Key={key: old[key]}, ConditionExpression=condition,
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames={"#s": status_field},
+                ExpressionAttributeValues=values)
+            changes.append(dict(table=name, key=old[key], status=target))
+    table = ddb.Table("XRegion-SecurityGroups")
+    for ident in server_ids:
+        row = table.get_item(Key={"group_id": ident}, ConsistentRead=True).get("Item")
+        if row:
+            if row.get("name") != ident or ident not in row.get("description", ""):
+                raise ValueError("Security-group record ownership is ambiguous")
+            condition = Attr("group_id").eq(ident)
+            for field, value in row.items():
+                condition &= Attr(field).eq(value)
+            table.delete_item(Key={"group_id": ident}, ConditionExpression=condition)
+            changes.append(dict(table="XRegion-SecurityGroups", key=ident, status="ABSENT"))
+    # The Release stage owns claim deletion. Never bypass its transaction here.
+    current = inventory(x, "legacy-reconciled.json")
+    for mapping in current["tables"]["XRegion-NetworkMappings"]:
+        if mapping["nova_id"] not in server_ids:
+            continue
+        if mapping["status"] != "DELETED":
+            raise RuntimeError("Legacy mapping not finalized")
+        if any(r.get("reservation_id") == mapping["reservation_id"] for r in current["tables"]["XRegion-NetworkReservations"]):
+            raise RuntimeError("Legacy claims remain")
+    x.save("legacy-record-reconciliation.json", dict(complete=True, changes=changes, manifest_sha256=manifest["manifest_sha256"]))
+    return changes
 
 
 def delete_legacy_ebs(x, manifest, selected):

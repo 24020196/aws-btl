@@ -419,15 +419,10 @@ def assign_group(event):
         raise ValueError("Ambiguous security group")
     sg = groups[0] if groups else os_api("NEUTRON", "/security-groups", "POST", {
         "security_group": {"name": m["nova_id"], "description": "xregion NAT guest"}})["security_group"]
-    for protocol, ports in (("tcp", {"port_range_min": 22, "port_range_max": 22}), ("icmp", {})):
-        desired = dict(security_group_id=sg["id"], direction="ingress", ethertype="IPv4",
-                       remote_ip_prefix="0.0.0.0/0", protocol=protocol, **ports)
-        current = os_api("NEUTRON", "/security-groups/" + sg["id"])["security_group"]["security_group_rules"]
-        if not any(all(rule.get(k) == v for k, v in desired.items()) for rule in current):
-            os_api("NEUTRON", "/security-group-rules", "POST", {"security_group_rule": desired})
-    port = os_api("NEUTRON", "/ports/" + m["neutron_port_id"])["port"]
-    ids = sorted(set(port.get("security_groups", []) + [sg["id"]]))
-    os_api("NEUTRON", "/ports/" + m["neutron_port_id"], "PUT", {"port": {"security_groups": ids}})
+    # SPEC-SF-01 bước 7 / SPEC-SF-05: rule Inbound/Outbound do người dùng cấu hình; worker
+    # XRegion-SyncSecurityGroup là nơi duy nhất áp rule xuống Neutron. Ở đây chỉ gắn SG vào port.
+    # SPEC-06 Mục 3.1: Cách ly tuyệt đối 1-1, loại bỏ hoàn toàn SG 'default', chỉ giữ duy nhất SG 1-1.
+    os_api("NEUTRON", "/ports/" + m["neutron_port_id"], "PUT", {"port": {"security_groups": [sg["id"]]}})
     update(MAP, "nova_id", m["nova_id"], {"neutron_sg_id": sg["id"], "security_group_id": m["nova_id"]})
     return dict(event, neutron_sg_id=sg["id"], security_group_id=m["nova_id"])
 
@@ -461,11 +456,15 @@ def dispatch(event):
             raise RuntimeError("Ambiguous SSM dispatch; reconcile command before retry")
         return dict(event, ssm_command_id=m["ssm_command_id"], command_deadline=int(m["command_deadline"]),
                     network_operation=op, command_status="PENDING", generation=int(m["generation"]))
-    deadline = int(time.time()) + (660 if op == "VERIFY" else 120)
+    deadline = int(time.time()) + (30 if op == "VERIFY" else 120)
     update(MAP, "nova_id", m["nova_id"], {"command_operation": op, "command_generation": int(m["generation"]),
            "ssm_command_id": "", "command_deadline": deadline})
+    params = {"operation": [op], "novaId": [m["nova_id"]]}
+    if op == "VERIFY":
+        params["guestPrivateIp"] = [m["guest_private_ip"]]
     r = SSM.send_command(InstanceIds=[HOST], DocumentName="XRegion-NetworkGateway",
-        Parameters={"operation": [op], "novaId": [m["nova_id"]]}, TimeoutSeconds=60,
+        Parameters=params,
+        TimeoutSeconds=30 if op == "VERIFY" else 60,
         CloudWatchOutputConfig={"CloudWatchOutputEnabled": True, "CloudWatchLogGroupName": "/xregion/network/ssm"})
     cid = r["Command"]["CommandId"]
     update(MAP, "nova_id", m["nova_id"], {"ssm_command_id": cid})
@@ -544,6 +543,24 @@ def sync(event):
     update("XRegion-Nova", "nova_id", m["nova_id"], {"network_mode": MODE,
         "gateway_private_ip": m["gateway_private_ip"], "network_mapping_id": m["nova_id"], **storage})
     update(MAP, "nova_id", m["nova_id"], {"status": "ACTIVE", "updated_at": int(time.time())})
+    try:
+        SESSION.client("lambda").invoke(
+            FunctionName="XRegion-SyncSecurityGroup",
+            InvocationType="Event",
+            Payload=json.dumps({
+                "detail": {
+                    "event_id": "evt-sg-launch-" + str(uuid.uuid4())[:8],
+                    "group_id": m["nova_id"],
+                    "instance_id": event["instance_id"],
+                    "nova_id": m["nova_id"],
+                    "revision": 1,
+                    "requested_by": event.get("username") or event.get("owner") or "",
+                    "timestamp": int(time.time() * 1000)
+                }
+            }).encode("utf-8")
+        )
+    except Exception as exc:
+        print(f"Notice: could not trigger initial XRegion-SyncSecurityGroup for {m['nova_id']}: {exc}")
     return dict(event, status="SUCCESS", private_ip=m["guest_private_ip"], network_mode=MODE)
 
 
@@ -676,9 +693,9 @@ def release(event):
 
 
 def delete_nova(event):
+    # SPEC-SF-02: chỉ còn hợp đồng linux_nat_v1, không nhánh legacy.
     if event.get("network_mode") != MODE:
-        import legacy
-        return dict(event, **legacy.lambda_handler(event, None))
+        raise ValueError("Unsupported network_mode for terminate: " + str(event.get("network_mode")))
     path = "/servers/" + str(uuid.UUID(event["nova_id"]))
     if os_api("NOVA", path, missing=True):
         os_api("NOVA", path, "DELETE", missing=True)
@@ -692,8 +709,7 @@ def delete_nova(event):
 
 def delete_group(event):
     if event.get("network_mode") != MODE:
-        import legacy
-        return dict(event, **legacy.lambda_handler(event, None))
+        raise ValueError("Unsupported network_mode for terminate: " + str(event.get("network_mode")))
     groups = os_api("NEUTRON", "/security-groups?name=" + event["nova_id"])["security_groups"]
     if len(groups) > 1:
         raise ValueError("Ambiguous security group; refusing cleanup")
@@ -701,18 +717,25 @@ def delete_group(event):
         if event.get("neutron_sg_id") and group["id"] != event["neutron_sg_id"]:
             raise ValueError("Security group identity changed")
         os_api("NEUTRON", "/security-groups/" + group["id"], "DELETE", missing=True)
-    DDB.Table("XRegion-SecurityGroups").delete_item(Key={"group_id": event["nova_id"]})
+    table = DDB.Table("XRegion-SecurityGroups")
+    # Bản ghi do launch tạo dùng khóa group_id = nova_id.
+    table.delete_item(Key={"group_id": event["nova_id"]})
+    instance_id = event.get("instance_id")
+    if instance_id:
+        # Nhóm do backend tạo dùng khóa sg-<uuid> nhưng luôn mang instance_id (liên kết 1-1);
+        # xóa theo liên kết để terminate không để lại bản ghi mồ côi.
+        for record in scan("XRegion-SecurityGroups", FilterExpression="instance_id = :iid",
+                           ExpressionAttributeValues={":iid": instance_id}):
+            table.delete_item(Key={"group_id": record["group_id"]})
     return event
 
 
 def legacy_release(event):
-    if event.get("network_mode") == MODE or (event.get("nova_id") and mapping(event)):
-        raise ValueError("Use Network-Release for NAT mappings")
-    import legacy
-    return dict(event, **legacy.lambda_handler(event, None))
+    raise ValueError("Use Network-Release for NAT mappings")
 
 
 def term_sync(event):
+    """SPEC-SF-02: bước 7 — HARD DELETE, chỉ chạy sau khi mọi bước dọn dẹp trước đó đã xác nhận."""
     receipt = event.get("volume_cleanup", {})
     if receipt.get("status") != "DELETED" or not receipt.get("resources"):
         raise RuntimeError("Volume cleanup incomplete")
@@ -721,28 +744,33 @@ def term_sync(event):
         actual = v.get("cinder_volume_id") if resource["kind"] == "cinder" else v.get("ebs_volume_id", v.get("volume_id"))
         if actual != resource["id"] or v.get("status") != "DELETED" or event["instance_id"] not in (v.get("attached_instance_id"), v.get("lease_instance_id")):
             raise RuntimeError("Volume cleanup ownership not confirmed")
-    if event.get("network_mode") == MODE:
-        m = mapping(event)
-        if m["status"] != "DELETED":
-            raise RuntimeError("Network cleanup incomplete")
-        current = get("XRegion-Instances", "instance_id", event["instance_id"]) or {}
-        nova = get("XRegion-Nova", "nova_id", event["nova_id"]) or {}
-        if current.get("current_status") == "TERMINATED" and nova.get("status") == "TERMINATED":
-            return dict(event, status="TERMINATED")
-        now = int(time.time() * 1000)
-        tx = [{"Update": {"TableName": "XRegion-Instances", "Key": wire({"instance_id": event["instance_id"]}),
-            "ConditionExpression": "attribute_exists(instance_id) AND (active_nova_id=:n OR current_nova_id=:n) AND launch_execution_arn=:r",
-            "UpdateExpression": "SET current_status=:s, active_nova_id=:empty, terminated_at=:t, migration_lock=:lock REMOVE current_nova_id",
-            "ExpressionAttributeValues": wire({":s": "TERMINATED", ":empty": "", ":t": now, ":lock": False,
-                ":n": event["nova_id"], ":r": m["reservation_id"]})}},
-            {"Update": {"TableName": "XRegion-Nova", "Key": wire({"nova_id": event["nova_id"]}),
-             "ConditionExpression": "attribute_exists(nova_id) AND instance_id=:i", "UpdateExpression": "SET #s=:s, terminated_at=:t",
-             "ExpressionAttributeNames": {"#s": "status"}, "ExpressionAttributeValues": wire({":s": "TERMINATED", ":t": now, ":i": event["instance_id"]})}}]
-        SESSION.client("dynamodb").transact_write_items(TransactItems=tx)
-        return dict(event, status="TERMINATED")
-    import legacy
-    legacy.lambda_handler(event, None)
-    return dict(event, status="TERMINATED")
+    if event.get("network_mode") != MODE:
+        raise ValueError("Unsupported network_mode for terminate: " + str(event.get("network_mode")))
+    m = mapping(event)
+    if m["status"] != "DELETED":
+        raise RuntimeError("Network cleanup incomplete")
+    current = get("XRegion-Instances", "instance_id", event["instance_id"]) or {}
+    # Danh sách Nova cần xóa cứng: active_nova_id, current_nova_id (kiểu cũ) và mọi nova_ids lịch sử.
+    nova_ids = []
+    for key in ("active_nova_id", "current_nova_id"):
+        value = current.get(key)
+        if value:
+            nova_ids.append(value)
+    nova_ids.extend(current.get("nova_ids") or [])
+    if event.get("nova_id"):
+        nova_ids.append(event["nova_id"])
+    nova_ids = [nid for nid in dict.fromkeys(nova_ids) if nid and not str(nid).startswith("i-")]
+    if not current:
+        raise RuntimeError("Instance record missing before hard delete")
+    if current.get("active_nova_id") and current.get("active_nova_id") != event.get("nova_id"):
+        raise RuntimeError("Active Nova changed during termination")
+    client = SESSION.client("dynamodb")
+    # Hard delete: xóa cứng bản ghi máy ảo; Nova của instance và bản ghi Nova tương ứng.
+    client.delete_item(TableName="XRegion-Instances", Key=wire({"instance_id": event["instance_id"]}))
+    for nid in nova_ids:
+        client.delete_item(TableName="XRegion-Nova", Key=wire({"nova_id": nid}))
+    update(MAP, "nova_id", m["nova_id"], {"status": "DELETED", "updated_at": int(time.time() * 1000)})
+    return dict(event, status="TERMINATED", hard_deleted=True, nova_ids=nova_ids)
 
 
 HANDLERS = {"Reserve": reserve, "Commit": commit, "Dispatch": dispatch, "CheckCommand": check_command,

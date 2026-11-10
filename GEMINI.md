@@ -6,6 +6,13 @@
 
 ---
 
+## 0. Phase 0: Spec-First & Scope Guard (Bắt buộc kiểm tra Đặc tả Nghiệp vụ)
+- **Đọc tài liệu chuẩn trước khi hành động**: Trước khi Grill-Me hoặc lập Plan, Agent BẮT BUỘC phải đối soát nghiệp vụ với bộ tài liệu trong `docs/specs/` và `docs/specs/serverless/` (`SPEC-00` đến `SPEC-07`, `SPEC-SF-00` đến `SPEC-SF-05`).
+- **Cấm tự suy diễn (Zero-Speculation)**: Tuyệt đối không tự bịa enum, không tự sinh luồng xử lý và không tự viết test case ngoài phạm vi đã định nghĩa trong Spec.
+- **Kích hoạt Pause Protocol khi chưa có Spec**: Nếu nghiệp vụ chưa được ghi rõ trong Spec, Agent BẮT BUỘC phải tạm ngưng ngay và thông báo người dùng cập nhật Spec (tăng version), không được tự ý tiếp tục.
+
+---
+
 ## 1. Phase 1: Grill-Me First (Luôn phản biện và làm rõ yêu cầu)
 - **Không vội vàng code hay chạy lệnh ngay**: Dù yêu cầu có vẻ đơn giản, luôn phải rà soát các phương án kỹ thuật, ràng buộc môi trường và rủi ro tiềm ẩn.
 - **Chủ động hỏi lại (Grill-Me)**:
