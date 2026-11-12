@@ -8,11 +8,9 @@ registerI18n({
   detSumState: ['Trạng thái máy ảo', 'Instance state'],
   detSumType: ['Loại máy ảo', 'Instance type'],
   detSumChecks: ['Kiểm tra trạng thái', 'Status checks'],
-  detSumPlatform: ['Nền tảng', 'Platform'],
   detSumOwner: ['Chủ sở hữu', 'Owner'],
   detHwTitle: ['Phần cứng & Hệ điều hành', 'Hardware & OS'],
   detOs: ['Hệ điều hành', 'Operating system'],
-  detPlatform: ['Nền tảng', 'Platform'],
   detVirt: ['Ảo hóa', 'Virtualization'],
   detVirtValue: ['KVM (OpenStack Nova) trên EC2 Bare Metal', 'KVM (OpenStack Nova) on EC2 Bare Metal'],
   detIdTitle: ['Định danh & Truy cập', 'Identity & access'],
@@ -144,7 +142,7 @@ function fmtCountdown(sec) {
 }
 
 // ---------------- Tabs ----------------
-const DET_TABS = ['details', 'security', 'networking', 'storage', 'monitoring', 'migration'];
+const DET_TABS = ['details', 'monitoring', 'migration'];
 const SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
 
 function sshUser(inst) {
@@ -191,7 +189,6 @@ function switchDetailTab(tab) {
   if (location.hash !== '#' + tab) history.replaceState(null, '', location.pathname + location.search + '#' + tab);
   if (tab === 'monitoring' && det.inst) loadMetrics();
   scheduleMetricsRefresh(tab);
-  if (tab === 'storage' && det.inst) { loadVolumes(); loadSnapshots(); }
 }
 
 // Đổi ngôn ngữ: i18n.js đã vẽ lại phần đầu trang, tab Security/Networking và lịch sử;
@@ -199,7 +196,6 @@ function switchDetailTab(tab) {
 onLangChange(() => {
   if (!det.inst) return;
   const tab = (location.hash || '').replace('#', '');
-  if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
   if (tab === 'monitoring') loadMetrics();
   renderMonSub();
   if (det.lastProgress) renderPipeline(det.lastProgress);
@@ -227,7 +223,6 @@ async function initInstanceDetail() {
   await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
   const tabNow = (location.hash || '').replace('#', '');
   if (tabNow === 'monitoring') loadMetrics();
-  if (tabNow === 'storage') { loadVolumes(); loadSnapshots(); }
   await resumeRunningMigration();
   if (new URLSearchParams(window.location.search).get('action') === 'migrate') {
     switchDetailTab('migration');
@@ -365,7 +360,6 @@ async function refreshAll() {
       await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
       const tab = (location.hash || '').replace('#', '');
       if (tab === 'monitoring') loadMetrics();
-      if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
       showToast(t('Đã làm mới thông tin máy ảo', 'Instance refreshed'), 'success');
     }
   } finally {

@@ -48,7 +48,9 @@ registerI18n({
 // nó (dns + elastic_ip, TTL 60) thay vì gọi endpoint đã bị xóa.
 async function loadSecurityAndNetwork() {
   // Mỗi máy có đúng một Security Group riêng (backend tự tạo nếu máy chưa có).
-  const attached = await apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null);
+  const attached = document.getElementById('tab-security')
+    ? await apiRequest(`/network/security-groups?instanceId=${encodeURIComponent(det.id)}`).catch(() => null)
+    : null;
   det.groups = attached || [];
   det.vpc = null;
   const publicIp = det.inst.publicIp && det.inst.publicIp !== 'Chưa gán' ? det.inst.publicIp : '';
@@ -135,9 +137,6 @@ function renderNetwork() {
   const pubIp = inst.publicIp && inst.publicIp !== 'Chưa gán' ? inst.publicIp : '–';
   setText('netPublicIp', pubIp);
   setText('netDomain', inst.dnsDomain || '–');
-  setText('netAz', vpc && vpc.availabilityZone ? vpc.availabilityZone : '–');
-  setText('sumAz', vpc && vpc.availabilityZone ? vpc.availabilityZone : '–');
-  setText('sumVpc', vpc ? vpc.id : '–');
   setHtml('eniBody', vpc && vpc.bareMetalEniId
     ? `<tr>
         <td class="mono">${esc(vpc.bareMetalEniId)}</td>

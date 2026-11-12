@@ -75,9 +75,6 @@
         <div class="summary-item"><div class="summary-label">AMI</div><div class="summary-value" id="sumAmi">–</div></div>
         <div class="summary-item"><div class="summary-label">Key pair</div><div class="summary-value mono" id="sumKey">–</div></div>
         <div class="summary-item"><div class="summary-label">Region</div><div class="summary-value" id="sumRegion">–</div></div>
-        <div class="summary-item"><div class="summary-label">Availability Zone</div><div class="summary-value mono" id="sumAz">–</div></div>
-        <div class="summary-item"><div class="summary-label">VPC ID</div><div class="summary-value mono" id="sumVpc">–</div></div>
-        <div class="summary-item"><div class="summary-label" data-i18n="detSumPlatform">Platform</div><div class="summary-value" id="sumPlatform">Linux/UNIX</div></div>
         <div class="summary-item"><div class="summary-label" data-i18n="detSumOwner">Owner</div><div class="summary-value" id="sumOwner">–</div></div>
         <div class="summary-item"><div class="summary-label">migration_lock</div><div class="summary-value" id="sumLock">–</div></div>
       </div>
@@ -86,9 +83,6 @@
     <!-- Tabs -->
     <div class="det-tabs" role="tablist" aria-label="Instance details">
       <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-info"></use></svg><span data-i18n="tabDetails">Chi tiết</span></button>
-      <button class="det-tab" role="tab" data-tab="security" id="tabBtn-security" aria-controls="tab-security" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-shield"></use></svg><span data-i18n="tabSecurity">Bảo mật</span></button>
-      <button class="det-tab" role="tab" data-tab="networking" id="tabBtn-networking" aria-controls="tab-networking" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-network"></use></svg><span data-i18n="tabNetworking">Mạng</span></button>
-      <button class="det-tab" role="tab" data-tab="storage" id="tabBtn-storage" aria-controls="tab-storage" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-storage"></use></svg><span data-i18n="tabStorage">Lưu trữ</span></button>
       <button class="det-tab" role="tab" data-tab="monitoring" id="tabBtn-monitoring" aria-controls="tab-monitoring" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chart"></use></svg><span data-i18n="tabMonitoring">Giám sát</span></button>
       <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg><span data-i18n="tabMigration">Chuyển vùng</span> <span class="tab-dot" id="migTabDot" hidden></span></button>
     </div>
@@ -103,7 +97,6 @@
             <tr><td class="kv-label">vCPU / RAM</td><td class="kv-value" id="detSpecs">--</td></tr>
             <tr><td class="kv-label" data-i18n="detOs">Hệ điều hành</td><td class="kv-value" id="detImageName">--</td></tr>
             <tr><td class="kv-label">Glance Image ID</td><td class="kv-value"><code id="detImageId">--</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detPlatform">Nền tảng</td><td class="kv-value">Linux/UNIX · x86_64</td></tr>
             <tr><td class="kv-label" data-i18n="detVirt">Ảo hóa</td><td class="kv-value" data-i18n="detVirtValue">KVM (OpenStack Nova) trên EC2 Bare Metal</td></tr>
           </table>
         </div>
@@ -118,132 +111,6 @@
             <tr><td class="kv-label">SSH Key Pair</td><td class="kv-value"><span class="badge badge-key" id="detKeyName">--</span></td></tr>
             <tr><td class="kv-label" data-i18n="detLoginUser">User đăng nhập</td><td class="kv-value"><code id="detSshUser">--</code></td></tr>
             <tr><td class="kv-label" data-i18n="detConnect">Kết nối</td><td class="kv-value"><button class="link-btn" onclick="openConnectModal()" data-i18n="detViewSsh">Xem lệnh SSH</button> · <a href="#" id="detConsoleLink" target="_blank" rel="noopener" class="link-accent">Web Terminal (VNC)</a></td></tr>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB: Security -->
-    <section class="det-panel" id="tab-security" role="tabpanel" aria-labelledby="tabBtn-security">
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Security Groups</div>
-            <div class="card-sub" data-i18n="detSgSub">Mỗi máy ảo có một Security Group riêng. Lưu lượng chỉ đi qua khi khớp ít nhất một rule inbound/outbound.</div>
-          </div>
-          <div class="det-actions">
-            <button class="btn btn-primary btn-sm" onclick="openAddRuleModal('inbound')" data-i18n="detRuleAdd">+ Thêm inbound rule</button>
-          </div>
-        </div>
-        <div class="sg-chips" id="sgChips"><span class="muted" data-i18n="detLoading">Đang tải...</span></div>
-
-        <div class="rules-head">
-          <h3 class="rules-title">Inbound rules <span class="muted" id="inboundCount"></span></h3>
-          <input type="search" class="rules-filter" id="ruleFilter" placeholder="Lọc rule (cổng, nguồn, mô tả…)" aria-label="Lọc rule inbound và outbound" data-i18n-placeholder="detRuleFilter" data-i18n-aria="detRuleFilterAria" oninput="renderSecurityGroups()">
-        </div>
-        <div class="table-scroll">
-          <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColSource">Nguồn</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
-            <tbody id="inboundRulesBody"></tbody>
-          </table>
-        </div>
-
-        <div class="rules-head">
-          <h3 class="rules-title">Outbound rules <span class="muted" id="outboundCount"></span></h3>
-          <button class="btn btn-secondary btn-sm" onclick="openAddRuleModal('outbound')" data-i18n="detRuleAddOut">+ Thêm outbound rule</button>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table rules-table">
-            <thead><tr><th>Rule ID</th><th data-i18n="detColType">Loại</th><th>Port range</th><th data-i18n="detColProto">Giao thức</th><th data-i18n="detColDest">Đích</th><th data-i18n="detColDesc">Mô tả</th><th class="rule-actions" data-i18n="detColActions">Thao tác</th></tr></thead>
-            <tbody id="outboundRulesBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- TAB: Networking -->
-    <section class="det-panel" id="tab-networking" role="tabpanel" aria-labelledby="tabBtn-networking">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title" data-i18n="detNetTitle">Mạng &amp; Route 53</div>
-          <button class="btn btn-primary btn-sm" onclick="openDnsModal()" data-i18n="detDnsUpdate">Cập nhật Route 53 DNS</button>
-        </div>
-        <div class="net-grid">
-          <table class="kv-table">
-            <tr><td class="kv-label">VPC</td><td class="kv-value"><code id="netVpcId">--</code> <span class="muted" id="netVpcCidr"></span></td></tr>
-            <tr><td class="kv-label">Subnet</td><td class="kv-value"><code id="netSubnetId">--</code> <span class="muted" id="netSubnetCidr"></span></td></tr>
-            <tr><td class="kv-label">Private IP</td><td class="kv-value"><code id="netPrivateIp">--</code></td></tr>
-            <tr><td class="kv-label">Elastic IP (Public)</td><td class="kv-value"><code id="netPublicIp" class="mono-accent">--</code></td></tr>
-            <tr><td class="kv-label">Availability Zone</td><td class="kv-value"><code id="netAz">--</code></td></tr>
-          </table>
-          <table class="kv-table">
-            <tr><td class="kv-label" data-i18n="detDomain">Tên miền</td><td class="kv-value"><code id="netDomain">--</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detDnsTarget">Bản ghi A đang trỏ tới</td><td class="kv-value"><code id="netDnsTarget">--</code></td></tr>
-            <tr><td class="kv-label">TTL</td><td class="kv-value" id="netDnsTtl">--</td></tr>
-            <tr><td class="kv-label" data-i18n="detDnsSync">Đồng bộ với Elastic IP</td><td class="kv-value" id="netDnsSync">--</td></tr>
-          </table>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="detEniTitle">Network interface (ENI)</div>
-            <div class="card-sub" data-i18n="detEniSub">Máy ảo không có ENI riêng: nó dùng một secondary IP trên ENI của máy chủ EC2 Bare Metal, Elastic IP được NAT 1:1 vào IP đó.</div>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Interface ID</th><th data-i18n="detEniAttached">Gắn vào</th><th>Primary IP (Bare Metal)</th><th data-i18n="detEniSecondary">Secondary IP (máy ảo)</th><th>Elastic IP</th><th>NAT</th><th>Source/dest check</th></tr></thead>
-            <tbody id="eniBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- TAB: Storage -->
-    <section class="det-panel" id="tab-storage" role="tabpanel" aria-labelledby="tabBtn-storage">
-      <div class="card">
-        <div class="card-header"><div class="card-title" data-i18n="detRootTitle">Thiết bị gốc</div></div>
-        <div class="net-grid">
-          <table class="kv-table">
-            <tr><td class="kv-label" data-i18n="detRootName">Tên thiết bị gốc</td><td class="kv-value"><code>/dev/vda</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detRootType">Loại thiết bị</td><td class="kv-value">EBS (Cinder Volume)</td></tr>
-            <tr><td class="kv-label">Root EBS Volume</td><td class="kv-value"><code id="detEbsVolumeId">--</code></td></tr>
-          </table>
-          <table class="kv-table">
-            <tr><td class="kv-label" data-i18n="detDiskType">Loại ổ đĩa</td><td class="kv-value"><span class="badge badge-key">gp3 SSD</span></td></tr>
-            <tr><td class="kv-label" data-i18n="detDiskSize">Dung lượng</td><td class="kv-value" id="detRootDiskSize">--</td></tr>
-            <tr><td class="kv-label" data-i18n="detDiskPerf">Hiệu năng</td><td class="kv-value">3.000 IOPS · 125 MB/s</td></tr>
-          </table>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title"><span data-i18n="detBlockTitle">Block devices đang gắn</span> <span class="muted" id="volCount"></span></div>
-            <div class="card-sub" data-i18n="detBlockSub">Khi chuyển vùng, ổ gốc được chụp snapshot và sao chép sang vùng đích. Ổ dữ liệu gắn thêm cần sao chép riêng bằng Cross-region copy.</div>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Volume ID</th><th data-i18n="detColName">Tên</th><th data-i18n="detDevice">Thiết bị</th><th data-i18n="detDiskSize">Dung lượng</th><th data-i18n="detColType">Loại</th><th>IOPS / Throughput</th><th data-i18n="detColState">Trạng thái</th></tr></thead>
-            <tbody id="volumesBody"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title ico-label"><svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-snapshot"></use></svg> <span>Snapshots</span> <span class="muted" id="snapCount"></span></div>
-            <div class="card-sub" data-i18n="detSnapSub">EBS snapshot tạo ở bước 2 của mỗi lần chuyển vùng, bản sao ở vùng đích tạo ở bước 3 (CopySnapshot).</div>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Snapshot ID</th><th>Region</th><th data-i18n="detSnapSource">Snapshot nguồn</th><th data-i18n="detSnapDesc">Mô tả</th><th data-i18n="detSnapState">Trạng thái</th><th data-i18n="detSnapStarted">Thời điểm tạo</th></tr></thead>
-            <tbody id="snapshotsBody"><tr><td colspan="6" class="empty-cell">…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -666,7 +533,6 @@
   <script src="/js/pages/instance-detail/migration.js"></script>
   <script src="/js/pages/instance-detail/dialogs.js"></script>
   <script src="/js/pages/instance-detail/security.js"></script>
-  <script src="/js/pages/instance-detail/storage.js"></script>
   <script src="/js/pages/instance-detail/monitoring.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {

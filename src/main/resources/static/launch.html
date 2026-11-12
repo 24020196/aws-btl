@@ -88,7 +88,12 @@
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" data-i18n="launchInputName">Tên máy ảo (Instance name) *</label>
                 <input type="text" class="form-input" id="instName" required placeholder="vd: my-web-server"
+                  pattern="^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$" maxlength="63"
+                  title="Tên máy ảo chỉ gồm chữ cái tiếng Anh, số, dấu '-', '_' hoặc '.', từ 1 đến 63 ký tự và bắt đầu bằng chữ hoặc số."
                   oninput="updatePageLaunchSummary()">
+                <div class="form-hint" style="font-size: 11.5px; color: var(--text-muted); margin-top: 5px;" data-i18n="launchNameHint">
+                  Chỉ dùng chữ cái tiếng Anh (không dấu), số, dấu '-', '_' hoặc '.', từ 1 đến 63 ký tự.
+                </div>
               </div>
             </div>
 
@@ -131,10 +136,7 @@
                 <svg class="ico ico-md" aria-hidden="true">
                   <use href="/img/icons/sprite.svg#svc-ami"></use>
                 </svg>
-                <span data-i18n="launchSecAmi">Application and OS Images (Amazon Machine Image)</span>
-              </div>
-              <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="launchAmiHelp">
-                Chọn ảnh hệ điều hành (Glance OS Image / AMI) được lưu trữ trên cụm hạ tầng đám mây:
+                <span data-i18n="launchSecAmi">Application and OS Images</span>
               </div>
 
               <div class="option-grid" id="osOptionsGrid">
@@ -206,7 +208,7 @@
               <div class="form-group">
                 <label class="form-label" data-i18n="launchSelectFlavor">Chọn Flavor (vCPU & RAM):</label>
                 <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
-                  <option value="m1.medium">m1.medium (2 vCPUs • 4096 MB RAM • 10 GB Disk)</option>
+                  <option value="m1.small">m1.small (1 vCPU • 2048 MB RAM • 10 GB Disk)</option>
                 </select>
               </div>
 
@@ -232,13 +234,13 @@
                       </tr>
                     </thead>
                     <tbody id="flavorMatrixBody">
-                      <tr id="row-m1-medium"
+                      <tr id="row-m1-small"
                         style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(56, 189, 248, 0.12);">
                         <td style="padding: 8px 12px; color: #38bdf8;">Tiêu chuẩn (m1)</td>
-                        <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #fff;">m1.medium
+                        <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: #38bdf8;">m1.small <span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>
                         </td>
-                        <td style="padding: 8px 12px;">2</td>
-                        <td style="padding: 8px 12px;">4096</td>
+                        <td style="padding: 8px 12px; font-weight: 700; color: #fff;">1</td>
+                        <td style="padding: 8px 12px; font-weight: 700; color: #fff;">2048</td>
                         <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
                       </tr>
                     </tbody>
@@ -288,6 +290,8 @@
               </div>
             </div>
 
+
+
             <!-- Panel 6: Network settings & Firewall (Security Group) -->
             <div class="card" style="margin-bottom: 0; padding: 22px;">
               <div
@@ -297,11 +301,6 @@
                 </svg>
                 <span data-i18n="lfwTitle">Network settings & Firewall (Security Group)</span>
               </div>
-              <p class="lfw-sub" data-i18n="lfwSub"
-                style="margin-bottom: 14px; font-size: 12.5px; color: var(--text-muted);">
-                Hệ thống tự động cấu hình Security Group riêng cho máy ảo. Chỉ lưu lượng khớp các quy tắc bên dưới mới
-                được phép truy cập.
-              </p>
 
               <div class="lfw-head">
                 <h3 style="font-size: 13.5px; color: #fff; display: flex; align-items: center; gap: 6px;">
@@ -324,10 +323,6 @@
                   </thead>
                   <tbody id="lfwInboundBody"></tbody>
                 </table>
-              </div>
-              <div class="form-warn lfw-warn" id="lfwWarn" hidden data-i18n="lfwWarn">
-                Có rule mở cổng khác HTTP/HTTPS cho 0.0.0.0/0 (toàn Internet). Nên giới hạn nguồn, ví dụ trong VPC
-                10.0.0.0/16.
               </div>
 
               <div class="lfw-head" style="margin-top: 18px;">
@@ -429,21 +424,13 @@
                   xregion-key</div>
               </div>
 
-              <div style="margin-bottom: 14px;">
-                <div
-                  style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
-                  data-i18n="launchSumSg">SECURITY GROUP</div>
-                <div id="sumSgText" style="font-size: 13.5px; font-weight: 700; color: #38bdf8; margin-top: 3px;">
-                  sg-default</div>
-              </div>
-
               <div style="margin-bottom: 20px;">
                 <div
                   style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
                   data-i18n="launchSumSpecs">INSTANCE SPECIFICATIONS</div>
                 <div id="sumSpecsText"
-                  style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">2 vCPUs • 4096
-                  MB RAM • 10 GB Root Disk</div>
+                  style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">1 vCPU • 2048
+                  MB (2 GB) • 10 GiB Root Disk</div>
               </div>
 
               <button type="submit" id="btnLaunchInstance" class="btn btn-aws"

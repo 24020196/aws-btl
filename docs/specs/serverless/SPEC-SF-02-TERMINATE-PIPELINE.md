@@ -1,21 +1,21 @@
 # SPEC-SF-02: Quy Trình Hủy Máy Ảo Step Function (Terminate Pipeline)
 
-> **Phiên bản**: `1.1.0`  
+> **Phiên bản**: `1.2.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-11`  
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)
 
 ---
 
 ## 1. Tổng Quan Kiến Trúc & Máy Trạng Thái
 
-Máy trạng thái AWS Step Functions `TerminateInstance` thực thi chuỗi dọn dẹp tuần tự toàn diện toàn bộ hạ tầng mạng, nhóm bảo mật, compute, lưu trữ volume và xóa cứng dữ liệu trong DynamoDB khi người dùng gửi yêu cầu hủy máy (`DELETE /api/instances/{id}`).
+Máy trạng thái AWS Step Functions `TerminateInstance` thực thi chuỗi dọn dẹp tuần tự toàn diện toàn bộ hạ tầng mạng, nhóm bảo mật, compute, lưu trữ volume và cập nhật đồng bộ trạng thái `TERMINATED` trong DynamoDB khi người dùng gửi yêu cầu hủy máy (`DELETE /api/instances/{id}`).
 
 - **Thời gian timeout tối đa của Step Function**: **`300 giây (5 phút)`**.
 - **Tập tin định nghĩa ASL**: `serverless/launch-contract/TerminateInstance.asl.json`.
 - **Tập tin Generator ASL**: `serverless/launch-contract/deployment/workflows.py` (`name == "TerminateInstance"`).
 - **Loại bỏ hoàn toàn nhánh Legacy**: Toàn bộ máy ảo trong hệ thống bắt buộc 100% tuân thủ chuẩn `linux_nat_v1`. Toàn bộ các State nhánh cũ (`LegacyDeleteNova`, `LegacyDeleteSecurityGroup`, `LegacyDeleteVolume`, `LegacyVolumeDeletionStatus`, `WaitLegacyVolumeDeletion`, `LegacyReleaseEIP`) bị loại bỏ hoàn toàn khỏi ASL.
-- **Nguyên tắc an toàn (Fail-Closed Mandate)**: Nếu bất kỳ bước dọn dẹp hạ tầng nào (SSM gỡ NAT, xóa Nova, xóa Volume) gặp lỗi hoặc timeout, Step Function **DỪNG LẠI NGAY LẬP TỨC** và ném lỗi `TerminationFailed`. **TUYỆT ĐỐI KHÔNG TIẾN HÀNH XÓA CỨNG TRONG DYNAMODB** để bảo toàn khả năng đối soát cho kỹ sư.
+- **Nguyên tắc an toàn (Fail-Closed Mandate)**: Nếu bất kỳ bước dọn dẹp hạ tầng nào (SSM gỡ NAT, xóa Nova, xóa Volume) gặp lỗi hoặc timeout, Step Function **DỪNG LẠI NGAY LẬP TỨC** và ném lỗi `TerminationFailed`. **TUYỆT ĐỐI KHÔNG CẬP NHẬT TRẠNG THÁI TERMINATED TRONG DYNAMODB** để bảo toàn khả năng đối soát cho kỹ sư.
 
 ```mermaid
 flowchart TD
@@ -27,7 +27,7 @@ flowchart TD
     FNR --> DSG[5. DeleteSecurityGroup: Xóa SG 1-1 trên Neutron & DDB Delete]
     DSG --> DV[6. DeleteVolume: Xóa Cinder/EBS Boot Volume]
     DV -->|PENDING| WVD[Wait 5s] --> DV
-    DV -->|DELETED| SD[7. SyncDynamoDB: HARD DELETE xóa vĩnh viễn DB]
+    DV -->|DELETED| SD[7. SyncDynamoDB: Cập nhật TERMINATED trong DB]
     SD --> Done([TerminationSuccess])
 
     RNM -.->|Lỗi SSM / Timeout| Fail([TerminationFailed - Fail Closed])
@@ -63,10 +63,19 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
 5. **Bước 5: Xóa Lưu Trữ Boot Volume (`DeleteVolume`)**:
    - Gọi OpenStack Cinder API `DELETE /volumes/{id}` và xác nhận AWS EBS Volume liên kết đã chuyển sang trạng thái biến mất vật lý (`InvalidVolume.NotFound`).
    - Cập nhật trạng thái bản ghi trong `XRegion-Volumes` sang `DELETED`.
-6. **Bước 6: Xóa Cứng Toàn Diện tại `SyncDynamoDB` (Hard Delete)****:
-   - Gọi DynamoDB API `delete_item` xóa vĩnh viễn bản ghi máy ảo khỏi bảng `XRegion-Instances`.
-   - Gọi DynamoDB API `delete_item` xóa sạch toàn bộ các bản ghi Nova liên quan khỏi bảng `XRegion-Nova` (duyệt qua danh sách `nova_ids`).
-   - **Trải nghiệm UI Dashboard**: Máy ảo biến mất hoàn toàn khỏi danh sách (sau giai đoạn hiển thị badge cam `SHUTTING_DOWN`).
+6. **Bước 6: Đồng Bộ Bản Ghi tại `SyncDynamoDB` sang `TERMINATED` (Soft Delete)**:
+   - Gọi DynamoDB API `update_item` cập nhật bản ghi máy ảo trong bảng `XRegion-Instances`:
+     - `current_status = 'TERMINATED'`
+     - `terminated_at = now` (timestamp ms)
+     - `active_nova_id = ''`
+     - `elastic_ip = 'Chưa gán'`
+     - `public_ip = 'Chưa gán'`
+     - `migration_lock = false`
+     - `REMOVE current_nova_id`
+   - Gọi DynamoDB API `update_item` cập nhật toàn bộ các bản ghi Nova liên quan trong bảng `XRegion-Nova` (duyệt qua danh sách `nova_ids`):
+     - `status = 'TERMINATED'`
+     - `terminated_at = now`
+   - **Trải nghiệm UI Dashboard**: Máy ảo hiển thị trong danh sách với badge xám `TERMINATED` để người dùng và quản trị viên tra cứu lịch sử.
 
 ---
 
@@ -74,10 +83,10 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
 
 > [!WARNING]
 > - **TUYỆT ĐỐI CẤM** xóa card mạng `OPENSTACK_PUBLIC_ENI` (`eni-091eaee3e69e3f42d`). Chỉ được gỡ Secondary IP.
-> - **TUYỆT ĐỐI CẤM** thực hiện `delete_item` trong DynamoDB nếu bất kỳ bước dọn dẹp nào trước đó bị FAIL (chống tạo tài nguyên mồ côi trên AWS/OpenStack).
+> - **TUYỆT ĐỐI CẤM** thực hiện `update_item` sang `TERMINATED` trong DynamoDB nếu bất kỳ bước dọn dẹp nào trước đó bị FAIL (chống tạo tài nguyên mồ côi trên AWS/OpenStack).
 > - **TUYỆT ĐỐI CẤM** duy trì hoặc sinh lại các State nhánh Legacy trong `workflows.py` và `TerminateInstance.asl.json`.
 > - **TUYỆT ĐỐI CẤM** gỡ Elastic IP trước khi lệnh gỡ rule `nftables` đạt `SUCCEEDED`.
-> - **TUYỆT ĐỐI CẤM** để lại trạng thái `TERMINATED` tồn đọng trong database sau khi quy trình hoàn tất thành công.
+> - **TUYỆT ĐỐI CẤM** tự ý xóa cứng bản ghi khỏi `XRegion-Instances` hoặc `XRegion-Nova` khi hệ thống quy chuẩn lưu vết lịch sử `TERMINATED`.
 
 ---
 
@@ -87,3 +96,4 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
 | :--- | :--- | :--- | :--- |
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành đặc tả Step Function TerminateInstance, chuẩn hóa thứ tự 7 bước dọn dẹp tuần tự, fail-closed và Hard Delete trong DynamoDB. |
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Xác nhận qua xacnhan-skill: Loại bỏ hoàn toàn nhánh Legacy trong workflows.py và ASL, bắt buộc 100% linux_nat_v1; xác nhận xóa Nova trước FinalizeNetworkRelease; timeout 300s; xóa cứng delete_item toàn diện. |
+| `2026-11-11` | `1.2.0` | Chủ dự án (yêu cầu trực tiếp) | Chuyển đổi cơ chế đồng bộ sau khi TerminateInstance từ Xóa cứng (Hard Delete) sang Soft Delete: bước 6 update_item cập nhật current_status = TERMINATED và status = TERMINATED kèm timestamp terminated_at, lưu vết lịch sử trên UI. |

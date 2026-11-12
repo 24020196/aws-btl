@@ -98,10 +98,11 @@ async function teardown() {
         });
         if (checkRes.ok) {
           const body = await checkRes.json();
-          const currentIds = new Set((body.data || []).map(i => i.id || i.instanceId));
+          const instancesMap = new Map((body.data || []).map(i => [i.id || i.instanceId, i]));
           for (const id of Array.from(remaining)) {
-            if (!currentIds.has(id)) {
-              console.log(`[teardown] Máy [${id}] đã bị xóa cứng hoàn toàn.`);
+            const inst = instancesMap.get(id);
+            if (!inst || inst.status === 'TERMINATED' || inst.status === 'DELETED') {
+              console.log(`[teardown] Máy [${id}] đã hoàn tất dọn dẹp (${inst ? inst.status : 'Xóa khỏi danh sách'}).`);
               remaining.delete(id);
             }
           }

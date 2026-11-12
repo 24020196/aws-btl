@@ -32,6 +32,7 @@
   "create": ["Reserve", "Commit", "Dispatch", "CheckCommand", "Verify", "Release"],
   "modify": ["CheckPool", "AllocateResource", "BootNova", "AssignSecurityGroup", "SyncDynamoDB", "DeleteNova", "DeleteSecurityGroup", "ReleaseEIP", "TerminateSync"],
   "standalone": {"DeleteVolume": {"source": "XRegion-TerminateInstance-DeleteVolume/delete_volume.py", "handler": "delete_volume.lambda_handler"}, "ExtendVolume": {"source": "XRegion-LaunchInstance-ExtendVolume/extend_volume.py", "handler": "extend_volume.lambda_handler"}, "CinderPoolManager": {"source": "XRegion-CinderPoolManager/cinder_pool_manager.py", "handler": "cinder_pool_manager.lambda_handler"}, "InstanceRecovery": {"source": "XRegion-InstanceRecovery/recovery_worker.py", "handler": "recovery_worker.lambda_handler", "include": ["XRegion-InstanceRecovery/recovery_policy.py"]}, "Lifecycle": {"source": "XRegion-InstanceLifecycle/lifecycle_runtime.py", "handler": "lifecycle_runtime.lambda_handler"}},
+  "legacy_sources": {"SyncDynamoDB": "XRegion-LaunchInstance-SyncDynamoDB/sync_dynamodb.py"},
   "unchanged": [],
   "delete": [],
   "environment_secret_references": ["OS_PASSWORD"],

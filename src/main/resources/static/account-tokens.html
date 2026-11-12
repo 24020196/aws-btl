@@ -197,29 +197,6 @@
           </table>
         </div>
       </div>
-
-      <!-- Card 5: cURL Documentation -->
-      <div class="card" style="padding: 24px;">
-        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-main);" data-i18n="tokensCurlHeading">
-          Hướng Dẫn Gọi AWS API Gateway (Edge-Optimized)
-        </h2>
-        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="tokensCurlDesc">
-          Endpoint đã được tối ưu hóa toàn cầu qua mạng CloudFront Edge. Sử dụng lệnh cURL sau để gửi sự kiện vào Amazon EventBridge:
-        </p>
-
-        <div class="curl-box">curl -X POST "https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events" \
-  -H "Authorization: Bearer &lt;YOUR_API_TOKEN&gt;" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source": "xregion.backend.instance",
-    "detailType": "Instance Lifecycle Request",
-    "detail": {
-      "action": "START",
-      "instance_id": "78cfad73-d7f7-49ff-8bcc-446d7c2f538d",
-      "instance_name": "test1"
-    }
-  }'</div>
-      </div>
     </main>
   </div>
 
