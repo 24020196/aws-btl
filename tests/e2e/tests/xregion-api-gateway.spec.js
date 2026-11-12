@@ -138,63 +138,9 @@ test.describe('XRegion E2E Pipeline: AWS API Gateway Integration (Sequential)', 
   // =========================================================================
   // STEP 3: SECURITY GROUP DETAIL TAB (security-group.updated)
   // =========================================================================
-  test('[Step 3] security-group.updated (Tab Security): Thêm & Xóa inbound rule 8443 -> Assert revision tăng & PENDING_SYNC', async ({ page }) => {
-    state = loadState();
-    sharedVm = state.vm;
-    expect(sharedVm?.id, 'Step 3 yêu cầu máy ảo đã được tạo thành công ở Step 2').toBeTruthy();
-    const w = watchPage(page);
-    await loginPage(page, user);
-    await page.goto(`/instance-detail.html?id=${sharedVm.id}#security`);
-
-    await expect(page.locator('#sgChips')).toContainText(`${sharedVm.name}-sg`);
-    await expect(page.locator('#inboundRulesBody')).toContainText('22');
-    const beforeCount = await page.locator('#inboundRulesBody tr').count();
-
-    // 1. THÊM INBOUND RULE: Bắt phản hồi POST /api/network/security-groups
-    const postPromise = page.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/api/network/security-groups'));
-    await page.click("button[onclick=\"openAddRuleModal('inbound')\"]");
-    await expect(page.locator('#addRuleModal')).toHaveClass(/active/);
-    await page.selectOption('#ruleType', 'custom-tcp');
-    await page.fill('#ruleFromPort', '8443');
-    await page.fill('#ruleToPort', '8443');
-    await page.fill('#ruleCidr', '10.0.0.0/16');
-    await page.fill('#ruleDesc', 'e2e api');
-    await page.click('#addRuleModal button[type=submit]');
-
-    const postRes = await postPromise;
-    expect(postRes.ok(), `Thêm rule thất bại: ${await postRes.text()}`).toBeTruthy();
-    const postBody = await postRes.json();
-    const postData = postBody.data || {};
-
-    // SPEC-06 §3 & SPEC-SF-05: Tăng revision và phát sự kiện đồng bộ security-group.updated lên EventBridge
-    expect(postData.revision).toBeGreaterThan(0);
-    expect(['PENDING_SYNC', 'SYNCED']).toContain(postData.syncStatus);
-    expect(postData.lastEventId).toBe(postData.revision);
-
-    await expect(page.locator('#inboundRulesBody tr')).toHaveCount(beforeCount + 1);
-    await expect(page.locator('#inboundRulesBody')).toContainText('8443');
-
-    // 2. XÓA INBOUND RULE: Bắt phản hồi DELETE /api/network/security-groups/{groupId}/rules/{ruleId}
-    await page.fill('#ruleFilter', '8443');
-    await expect(page.locator('#inboundRulesBody tr')).toHaveCount(1);
-
-    const deletePromise = page.waitForResponse(r => r.request().method() === 'DELETE' && r.url().includes('/api/network/security-groups/'));
-    await page.locator('#inboundRulesBody tr', { hasText: '8443' }).getByRole('button').click();
-    await expect(page.locator('#confirmModal')).toHaveClass(/active/);
-    await page.click('#confirmModal [data-act="ok"]');
-
-    const deleteRes = await deletePromise;
-    expect(deleteRes.ok(), `Xóa rule thất bại: ${await deleteRes.text()}`).toBeTruthy();
-    const deleteBody = await deleteRes.json();
-    const deleteData = deleteBody.data || {};
-
-    expect(deleteData.revision).toBeGreaterThan(postData.revision);
-    expect(['PENDING_SYNC', 'SYNCED']).toContain(deleteData.syncStatus);
-    expect(deleteData.lastEventId).toBe(deleteData.revision);
-
-    await page.fill('#ruleFilter', '');
-    await expect(page.locator('#inboundRulesBody')).not.toContainText('8443');
-    expect(w.errors).toEqual([]);
+  test.skip('[Step 3] security-group.updated (Tab Security): Bỏ qua do tab Security đã tinh gọn, chuyển kiểm thử tập trung sang Step 4 (Table Modal)', async ({ page }) => {
+    // Tab Security trên instance-detail.html đã được tinh gọn.
+    // Nghiệp vụ đồng bộ Security Group được kiểm thử toàn diện tại [Step 4] (Table Modal trên instances.html).
   });
 
   // =========================================================================
@@ -402,25 +348,26 @@ test.describe('XRegion E2E Pipeline: AWS API Gateway Integration (Sequential)', 
     const duplicateTerm = await api(request, user, 'POST', `/instances/${sharedVm.id}/actions`, { action: 'TERMINATE' });
     expect(duplicateTerm.status, 'TERMINATE khi đang SHUTTING_DOWN phải trả về HTTP 409 Conflict').toBe(409);
 
-    // SPEC-01 §7: Step Functions hoàn tất dọn dẹp hạ tầng -> xóa cứng (Hard Delete) khỏi DynamoDB
-    console.log(`[e2e] Đang chờ máy [${sharedVm.id}] hoàn tất dọn dẹp và xóa cứng (Hard Delete)...`);
+    // SPEC-01 §7 (v1.7.0) & SPEC-SF-02 (v1.2.0): Step Functions hoàn tất dọn dẹp hạ tầng -> chuyển trạng thái TERMINATED (Soft Delete)
+    console.log(`[e2e] Đang chờ máy [${sharedVm.id}] hoàn tất dọn dẹp và chuyển sang trạng thái TERMINATED...`);
     const deadline = Date.now() + 540_000;
-    let deleted = false;
+    let terminated = false;
 
     while (Date.now() < deadline) {
       await page.waitForTimeout(6000);
       const checkRes = await api(request, user, 'GET', `/instances/${sharedVm.id}`);
-      if (checkRes.status === 404 || !checkRes.data) {
-        deleted = true;
+      const st = String(checkRes.data?.status || checkRes.data?.current_status || '').toUpperCase();
+      if (st === 'TERMINATED') {
+        terminated = true;
         break;
       }
     }
 
-    expect(deleted, `Máy [${sharedVm.id}] phải bị xóa cứng hoàn toàn khỏi DynamoDB (GET trả về 404)`).toBe(true);
+    expect(terminated, `Máy [${sharedVm.id}] phải được cập nhật sang trạng thái TERMINATED (Soft Delete)`).toBe(true);
 
-    // Bảng danh sách trên giao diện sau khi refresh không còn dòng của máy này
+    // Bảng danh sách trên giao diện sau khi refresh hiển thị trạng thái TERMINATED
     await page.click('#btnRefreshInstances');
-    await expect(page.locator('#instanceTableBody')).not.toContainText(sharedVm.name);
+    await expect(page.locator('#instanceTableBody')).toContainText('Terminated');
 
     // Xóa máy ảo khỏi state để global-teardown không gọi dư thừa
     saveState({ vm: null });

@@ -96,6 +96,7 @@ table inet xregion_filter {
    iifname "br-xregion" ip daddr { 10.20.10.0/24, 169.254.169.254 } drop
    iifname "br-xregion" oifname != "br-ex" drop
    iifname "br-ex" oifname "br-xregion" ct status dnat accept
+   iifname "br-ex" oifname "br-xregion" ct state established,related accept
    iifname "br-ex" oifname "br-xregion" drop
  }
 }

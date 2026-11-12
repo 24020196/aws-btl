@@ -1,8 +1,8 @@
 # SPEC-01: Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning)
 
-> **Phiên bản**: `1.6.0`  
+> **Phiên bản**: `1.7.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-11`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -23,7 +23,7 @@
 | *(Đang terminate)* | `SHUTTING_DOWN` | `SHUTTING_DOWN` | Step Functions đang dọn dẹp tài nguyên để xóa máy |
 | `ERROR` | `FAILED` | `FAILED` | Khởi tạo thất bại hoặc gặp sự cố phần cứng không thể phục hồi |
 | *(Có migration_lock)* | `MIGRATING` | `MIGRATING` | Máy ảo đang trong tiến trình chuyển vùng trực tiếp (Live Migration) |
-| *(Sau khi Terminate xong)* | *(Đã xóa cứng khỏi DB)* | *(Biến mất khỏi UI)* | Bản ghi đã bị Hard Delete hoàn toàn, không lưu rác |
+| *(Sau khi Terminate xong)* | `TERMINATED` | `TERMINATED` | Máy ảo đã hủy thành công, lưu vết bản ghi ở trạng thái `TERMINATED` |
 
 > [!WARNING]
 > **QUY CHUẨN CẤM**:
@@ -136,11 +136,11 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
    - **Bước 3 (XÓA SẠCH SECURITY GROUP 1-1)**: Xóa Security Group 1-1 trên OpenStack Neutron VÀ xóa vĩnh viễn bản ghi trong DynamoDB `XRegion-SecurityGroups`, không giữ lại tài nguyên rác.
    - **Bước 4 (Xóa Lưu Trữ)**: Xóa Boot Volume Cinder và AWS EBS Volume liên kết.
    - **Bước 5 (Dọn dẹp Pool)**: Kiểm tra dung lượng Warm Pool: Nếu số lượng Elastic IP hoặc Volume rảnh rỗi trong pool > 2, tự động dọn dẹp theo nguyên tắc FIFO (quy định tại [SPEC-02](SPEC-02-RESOURCE-POOL-CLEANER.md)).
-   - **Bước 6 (XÓA CỨNG BẢN GHI TẠI `syncDynamoDB` & TRẢI NGHIỆM GIAO DIỆN UI)**:
+   - **Bước 6 (ĐỒNG BỘ BẢN GHI TẠI `syncDynamoDB` SANG `TERMINATED` & TRẢI NGHIỆM GIAO DIỆN UI)**:
      - **Hiển thị trên UI**: Trong suốt thời gian Step Function đang dọn dẹp, giao diện Dashboard hiển thị badge trạng thái màu cam **`SHUTTING_DOWN`** (hoặc `TERMINATING`).
-     - **Xóa cứng (Hard Delete)**: Khi Step Function hoàn tất các bước dọn dẹp hạ tầng mạng, compute, volume và SG, bước `syncDynamoDB` gọi trực tiếp DynamoDB `delete_item` xóa vĩnh viễn bản ghi máy ảo khỏi bảng `XRegion-Instances`.
-     - Đồng thời gọi `delete_item` xóa sạch tất cả các bản ghi Nova liên quan trong bảng `XRegion-Nova`.
-     - **Biến mất hoàn toàn**: Ngay sau khi bản ghi bị xóa khỏi DynamoDB, máy ảo sẽ tự động **biến mất hoàn toàn** khỏi bảng danh sách máy ảo trên Dashboard (không còn lưu lại dòng `TERMINATED` xám).
+     - **Chuyển trạng thái `TERMINATED` (Soft Delete)**: Khi Step Function hoàn tất các bước dọn dẹp hạ tầng mạng, compute, volume và SG, bước `syncDynamoDB` gọi DynamoDB `update_item` chuyển trạng thái bản ghi máy ảo trong bảng `XRegion-Instances` sang **`TERMINATED`** kèm timestamp `terminated_at`, gỡ bỏ liên kết IP và Nova đang hoạt động.
+     - Đồng thời gọi `update_item` chuyển toàn bộ các bản ghi Nova liên quan trong bảng `XRegion-Nova` sang **`TERMINATED`** kèm timestamp `terminated_at`.
+     - **Lưu vết trên UI**: Bản ghi được giữ lại trong danh sách với trạng thái **`TERMINATED`** màu xám để phục vụ lịch sử đối soát và kiểm toán người dùng.
 
 ---
 
@@ -155,3 +155,4 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
 | `2026-11-10` | `1.4.0` | Lead Architect / Product Owner | Quy định máy ảo bất biến (cấm sửa cấu hình sau launch, loại bỏ updateInstance); Xóa cứng (Hard Delete) bản ghi ở step syncDynamoDB khi Terminate; Loại bỏ Web VNC Console (bắt buộc SSH terminal); Ràng buộc bảo vệ ENI dùng chung `ens6`; Tinh gọn VolumeService và ImageService. |
 | `2026-11-10` | `1.5.0` | Lead Architect / Product Owner | Xóa sạch UI instance-edit.html và menu sửa máy ảo; Quy định trải nghiệm UI khi Terminate (hiển thị SHUTTING_DOWN rồi biến mất hoàn toàn); Loại bỏ triệt để VolumeController & VolumeService khỏi backend; Xác nhận không giới hạn quota ở tầng backend. |
 | `2026-11-11` | `1.6.0` | Chủ dự án (yêu cầu trực tiếp) | Đồng bộ với SPEC-SF-01 `1.5.0`: bước 6 lưu Security Group kèm `instance_id` và rule nguyên văn từ payload với `sync_status = PENDING_SYNC`; bước 7 đổi `VerifyNetwork` thành `CheckNatCommand` (khớp SPEC-04 `1.2.0`). |
+| `2026-11-11` | `1.7.0` | Chủ dự án (yêu cầu trực tiếp) | Chuyển đổi cơ chế đồng bộ sau khi TerminateInstance từ Xóa cứng (Hard Delete) sang Soft Delete: cập nhật bản ghi trong XRegion-Instances và XRegion-Nova về trạng thái TERMINATED kèm timestamp terminated_at, lưu vết lịch sử trên UI. |

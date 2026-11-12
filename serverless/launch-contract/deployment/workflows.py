@@ -52,8 +52,34 @@ def render(name, account=None, region=None):
                 "Default": "WaitNatCommand"},
             "SyncDynamoDB": task("SyncDynamoDB", "LaunchSuccess"),
             "LaunchSuccess": {"Type": "Succeed"},
-            "MarkNetworkFailure": task("SyncDynamoDB", "ProvisioningFailed", catch="ProvisioningFailed"),
+            "MarkNetworkFailure": task("SyncDynamoDB", "ChoiceLaunchRollback", catch="ProvisioningFailed"),
+            "ChoiceLaunchRollback": {"Type": "Choice", "Choices": [
+                {"And": [{"Variable": "$.nova_id", "IsPresent": True},
+                         {"Variable": "$.generation", "IsPresent": True}], "Next": "SetLaunchRollback"}],
+                "Default": "ProvisioningFailed"},
+            "SetLaunchRollback": {"Type": "Pass", "Result": "LAUNCH_ROLLBACK", "ResultPath": "$.cleanup_mode", "Next": "RollbackLoadNetworkContext"},
+            "RollbackLoadNetworkContext": task("Release", "RollbackRemoveNatMapping"),
+            "RollbackRemoveNatMapping": task("Dispatch", "RollbackWaitNatCommand"),
+            "RollbackWaitNatCommand": {"Type": "Wait", "Seconds": 3, "Next": "RollbackCheckNatCommand"},
+            "RollbackCheckNatCommand": task("CheckCommand", "RollbackChoiceNatCommand"),
+            "RollbackChoiceNatCommand": {"Type": "Choice", "Choices": [
+                {"Variable": "$.command_status", "StringEquals": "SUCCEEDED", "Next": "RollbackDeleteNovaVM"}],
+                "Default": "RollbackWaitNatCommand"},
+            "RollbackDeleteNovaVM": task("DeleteNova", "RollbackFinalizeNetworkRelease"),
+            "RollbackFinalizeNetworkRelease": task("Release", "RollbackDeleteSecurityGroup"),
+            "RollbackDeleteSecurityGroup": task("DeleteSecurityGroup", "RollbackDeleteVolume"),
+            "RollbackDeleteVolume": task("DeleteVolume", "RollbackVolumeDeletionStatus"),
+            "RollbackVolumeDeletionStatus": {"Type": "Choice", "Choices": [
+                {"Variable": "$.volume_cleanup.status", "StringEquals": "DELETED", "Next": "SetRollbackComplete"}],
+                "Default": "RollbackWaitVolumeDeletion"},
+            "RollbackWaitVolumeDeletion": {"Type": "Wait", "Seconds": 5, "Next": "RollbackDeleteVolume"},
+            "SetRollbackComplete": {"Type": "Pass", "Result": "COMPLETE", "ResultPath": "$.launch_cleanup_status", "Next": "RecordRollbackResult"},
+            "SetRollbackFailed": {"Type": "Pass", "Result": "FAILED", "ResultPath": "$.launch_cleanup_status", "Next": "RecordRollbackResult"},
+            "RecordRollbackResult": task("SyncDynamoDB", "ProvisioningFailed", catch="ProvisioningFailed"),
             "ProvisioningFailed": {"Type": "Fail", "Error": "ProvisioningError"}}
+        for key, state in states.items():
+            if key.startswith("Rollback") and state["Type"] == "Task":
+                state["Catch"] = [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.cleanup_error", "Next": "SetRollbackFailed"}]
         states["CheckPool"]["Parameters"].pop("Payload.$")
         states["CheckPool"]["Retry"].insert(0, {"ErrorEquals": ["PoolNotReady"], "IntervalSeconds": 5,
             "MaxAttempts": 5, "BackoffRate": 2})

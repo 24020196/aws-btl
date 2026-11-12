@@ -503,12 +503,11 @@ def verify(event):
 
 
 def sync(event):
-    import legacy
     if event.get("error"):
         current = lease(event) if event.get("reservation_id") else {}
         error = event["error"]
         code = error.get("Error", "ProvisioningError")
-        if event.get("network_operation"):
+        if event.get("network_operation") and code == "TimeoutError":
             code = "NetworkTimeout" if code == "TimeoutError" else "NetworkProvisioningError"
         messages = {"LaunchMaintenance": "Launch is unavailable during maintenance",
                     "PoolNotReady": "No matching volume or unclaimed EIP is ready",
@@ -519,7 +518,21 @@ def sync(event):
             "current_status": "FAILED", "failure_reason": code,
             "failure_message": messages.get(code, "Provisioning failed; inspect the execution logs"),
             "failed_nova_id": event.get("nova_id", (current or {}).get("nova_id", "")),
-            "failed_reservation_id": event.get("reservation_id", "")}
+            "failed_reservation_id": event.get("reservation_id", ""),
+            "failure_cleanup_status": event.get("launch_cleanup_status", "PENDING"),
+            "last_failure_at": int(time.time())}
+        if event.get("cleanup_error"):
+            fields["failure_cleanup_error"] = event["cleanup_error"].get("Error", "CleanupError")
+        if event.get("launch_cleanup_status") == "COMPLETE":
+            if mapping(event).get("status") != "DELETED" or event.get("volume_cleanup", {}).get("status") != "DELETED":
+                raise RuntimeError("Launch rollback is not confirmed")
+            fields.update(active_nova_id="", current_nova_id="", elastic_ip="", public_ip="")
+            nova = get("XRegion-Nova", "nova_id", event["nova_id"])
+            if nova:
+                DDB.Table("XRegion-Nova").update_item(Key={"nova_id": event["nova_id"]},
+                    UpdateExpression="SET #s=:s", ExpressionAttributeNames={"#s": "status"},
+                    ExpressionAttributeValues={":s": "TERMINATED"},
+                    ConditionExpression=Attr("instance_id").eq(event["instance_id"]))
         DDB.Table("XRegion-Instances").update_item(Key={"instance_id": event["instance_id"]},
             UpdateExpression="SET " + ",".join(f"#f{i}=:v{i}" for i in range(len(fields))),
             ExpressionAttributeNames={f"#f{i}": k for i, k in enumerate(fields)},
@@ -528,6 +541,7 @@ def sync(event):
             ExpressionAttributeValues={**{f":v{i}": v for i, v in enumerate(fields.values())},
                                        ":execution": event.get("execution_arn") or event.get("reservation_id", "")})
         return event
+    import legacy
     m = mapping(event)
     receipt = event["volume_extension"]
     if receipt.get("status") != "CONFIRMED" or receipt.get("actual_size_gb", 0) < event["size_gb"]:
@@ -628,6 +642,14 @@ def release(event):
             instance = get("XRegion-Instances", "instance_id", event["instance_id"]) or {}
             nid = instance.get("active_nova_id") or instance.get("current_nova_id")
         m = get(MAP, "nova_id", nid) if nid else None
+        if event.get("cleanup_mode") == "LAUNCH_ROLLBACK":
+            instance = get("XRegion-Instances", "instance_id", event["instance_id"]) or {}
+            owner = event.get("reservation_id")
+            if (not m or not owner or m.get("reservation_id") != owner
+                    or instance.get("launch_execution_arn") != owner
+                    or instance.get("current_status") != "FAILED"
+                    or instance.get("failed_nova_id") != nid):
+                raise ValueError("Failed launch cleanup ownership changed")
         if not m:
             return dict(event, network_mode="legacy", network_cleanup_complete=False)
         r = get(RES, "resource_key", "LEASE#" + m["reservation_id"]) or {}
@@ -735,7 +757,7 @@ def legacy_release(event):
 
 
 def term_sync(event):
-    """SPEC-SF-02: bước 7 — HARD DELETE, chỉ chạy sau khi mọi bước dọn dẹp trước đó đã xác nhận."""
+    """SPEC-SF-02: bước 6 — SOFT DELETE (TERMINATED), chỉ chạy sau khi mọi bước dọn dẹp trước đó đã xác nhận."""
     receipt = event.get("volume_cleanup", {})
     if receipt.get("status") != "DELETED" or not receipt.get("resources"):
         raise RuntimeError("Volume cleanup incomplete")
@@ -750,7 +772,7 @@ def term_sync(event):
     if m["status"] != "DELETED":
         raise RuntimeError("Network cleanup incomplete")
     current = get("XRegion-Instances", "instance_id", event["instance_id"]) or {}
-    # Danh sách Nova cần xóa cứng: active_nova_id, current_nova_id (kiểu cũ) và mọi nova_ids lịch sử.
+    # Danh sách Nova cần cập nhật TERMINATED: active_nova_id, current_nova_id (kiểu cũ) và mọi nova_ids lịch sử.
     nova_ids = []
     for key in ("active_nova_id", "current_nova_id"):
         value = current.get(key)
@@ -761,16 +783,40 @@ def term_sync(event):
         nova_ids.append(event["nova_id"])
     nova_ids = [nid for nid in dict.fromkeys(nova_ids) if nid and not str(nid).startswith("i-")]
     if not current:
-        raise RuntimeError("Instance record missing before hard delete")
+        raise RuntimeError("Instance record missing before terminate sync")
     if current.get("active_nova_id") and current.get("active_nova_id") != event.get("nova_id"):
         raise RuntimeError("Active Nova changed during termination")
     client = SESSION.client("dynamodb")
-    # Hard delete: xóa cứng bản ghi máy ảo; Nova của instance và bản ghi Nova tương ứng.
-    client.delete_item(TableName="XRegion-Instances", Key=wire({"instance_id": event["instance_id"]}))
+    now_ms = int(time.time() * 1000)
+    # SPEC-01 1.7.0 / SPEC-SF-02 1.2.0: Cập nhật XRegion-Instances sang TERMINATED
+    client.update_item(
+        TableName="XRegion-Instances",
+        Key=wire({"instance_id": event["instance_id"]}),
+        UpdateExpression="SET current_status = :st, terminated_at = :now, active_nova_id = :empty, elastic_ip = :unassigned, public_ip = :unassigned, migration_lock = :lock REMOVE current_nova_id",
+        ConditionExpression="attribute_exists(instance_id)",
+        ExpressionAttributeValues=wire({
+            ":st": "TERMINATED",
+            ":now": now_ms,
+            ":empty": "",
+            ":unassigned": "Chưa gán",
+            ":lock": False
+        })
+    )
+    # SPEC-01 1.7.0 / SPEC-SF-02 1.2.0: Cập nhật XRegion-Nova sang TERMINATED
     for nid in nova_ids:
-        client.delete_item(TableName="XRegion-Nova", Key=wire({"nova_id": nid}))
-    update(MAP, "nova_id", m["nova_id"], {"status": "DELETED", "updated_at": int(time.time() * 1000)})
-    return dict(event, status="TERMINATED", hard_deleted=True, nova_ids=nova_ids)
+        client.update_item(
+            TableName="XRegion-Nova",
+            Key=wire({"nova_id": nid}),
+            UpdateExpression="SET #st = :st, terminated_at = :now",
+            ConditionExpression="attribute_exists(nova_id)",
+            ExpressionAttributeNames={"#st": "status"},
+            ExpressionAttributeValues=wire({
+                ":st": "TERMINATED",
+                ":now": now_ms
+            })
+        )
+    update(MAP, "nova_id", m["nova_id"], {"status": "DELETED", "updated_at": now_ms})
+    return dict(event, status="TERMINATED", hard_deleted=False, nova_ids=nova_ids, terminated_at=now_ms)
 
 
 HANDLERS = {"Reserve": reserve, "Commit": commit, "Dispatch": dispatch, "CheckCommand": check_command,

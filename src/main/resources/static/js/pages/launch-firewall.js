@@ -81,9 +81,8 @@ function lfwRenderTable(dir) {
 function lfwRender() {
   lfwRenderTable('inbound');
   lfwRenderTable('outbound');
-  const open = lfw.inbound.some(r => r.cidr.trim() === '0.0.0.0/0' && !['http', 'https'].includes(r.type));
   const warn = document.getElementById('lfwWarn');
-  if (warn) warn.hidden = !open;
+  if (warn) warn.hidden = true;
   if (typeof updatePageLaunchSummary === 'function') updatePageLaunchSummary();
 }
 
@@ -129,7 +128,6 @@ function lfwEnsureModal() {
           <button type="button" class="chip-btn" id="lfwAnyChip" onclick="lfwModalCidr('0.0.0.0/0')"></button>
           <button type="button" class="chip-btn" id="lfwVpcChip" onclick="lfwModalCidr(lfwVpcCidr())"></button>
         </div>
-        <div class="form-warn" id="lfwModalWarn" hidden></div>
       </div>
       <div class="form-group">
         <label class="form-label" for="lfwDesc" id="lfwDescLabel"></label>
@@ -185,14 +183,7 @@ function lfwModalCidr(cidr) {
   lfwModalWarn();
 }
 
-function lfwModalWarn() {
-  const type = document.getElementById('lfwType').value;
-  const open = document.getElementById('lfwDir').value === 'inbound'
-    && document.getElementById('lfwCidr').value.trim() === '0.0.0.0/0' && !['http', 'https'].includes(type);
-  const warn = document.getElementById('lfwModalWarn');
-  warn.hidden = !open;
-  warn.textContent = t('Cổng này sẽ mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.', 'This port will be open to the whole Internet. Only do this for HTTP/HTTPS.');
-}
+function lfwModalWarn() {}
 
 function lfwSubmitRule(e) {
   e.preventDefault();

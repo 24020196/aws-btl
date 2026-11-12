@@ -122,6 +122,7 @@ def lambda_handler(event, context):
             print(f"Successfully updated XRegion-Volumes [{cinder_vol_key}].")
         except Exception as e:
             print(f"Notice: updating XRegion-Volumes: {e}")
+            raise
 
     # 3. Upsert 1-1 Security Group record into XRegion-SecurityGroups
     # SPEC-SF-01 bước 9 / SPEC-06 mục 3.1: owner = username của chủ máy (CẤM hardcode "system"),
@@ -154,6 +155,7 @@ def lambda_handler(event, context):
         print(f"Successfully recorded 1-1 Security Group [{sg_id}] for owner [{sg_owner}] into XRegion-SecurityGroups.")
     except Exception as e:
         print(f"Notice saving to XRegion-SecurityGroups: {e}")
+        raise
 
     # 4. Update XRegion-Instances with active_nova_id and nova_ids (List)
     if instance_id:
@@ -188,6 +190,7 @@ def lambda_handler(event, context):
             print(f"Successfully updated XRegion-Instances [{instance_id}]: active_nova_id={server_id}, nova_ids={existing_nova_ids}")
         except Exception as e:
             print(f"Notice updating XRegion-Instances: {e}")
+            raise
 
     return {
         "status": "SUCCESS",

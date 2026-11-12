@@ -3,19 +3,9 @@
 
 registerI18n({
   dashCrumb: ['Bảng điều khiển', 'Dashboard'],
-  dashSubtitle: ['Máy ảo NovaVM trên EC2 Bare Metal ở 2 vùng, chuyển vùng bằng EBS snapshot và Route 53.', 'NovaVM instances on EC2 Bare Metal in 2 regions, migrated with EBS snapshots and Route 53.'],
   dashResources: ['Tài nguyên', 'Resources'],
-  dashResourcesSub: ['Bạn đang dùng các tài nguyên sau ở Sydney (ap-southeast-2) và N. Virginia (us-east-1).', 'You are using the following resources in Sydney (ap-southeast-2) and N. Virginia (us-east-1).'],
   dashResRunning: ['Máy ảo (đang chạy)', 'Instances (running)'],
   dashResInstances: ['Máy ảo (tất cả)', 'Instances (all)'],
-  dashResSnapshotsFoot: ['tạo khi chuyển vùng', 'created by migrations'],
-  dashRegionPrimary: ['Vùng chính', 'Primary'],
-  dashRegionStandby: ['Vùng dự phòng', 'Standby'],
-  dashRegionRole: ['Vai trò', 'Role'],
-  dashRegionRoleA: ['Chạy production', 'Production'],
-  dashRegionRoleB: ['Dự phòng, khôi phục sau sự cố', 'Standby, disaster recovery'],
-  dashRegionInstances: ['Máy ảo tại vùng', 'Instances in region'],
-  dashRegionOk: ['Dịch vụ hoạt động bình thường', 'This service is operating normally'],
   dashViewAll: ['Xem tất cả', 'View all'],
   dashColName: ['Tên', 'Name'],
   dashColType: ['Loại máy', 'Instance type'],
@@ -79,9 +69,6 @@ async function loadDashInstances() {
     const running = live.filter(i => ['RUNNING', 'ACTIVE'].includes(String(i.status || '').toUpperCase())).length;
     dashSet('resRunning', running);
     dashSet('resInstances', live.length);
-    dashSet('resEips', live.filter(i => i.publicIp).length);
-    dashSet('regionAInstanceCount', live.filter(i => (i.region || '').includes('southeast')).length);
-    dashSet('regionBInstanceCount', live.filter(i => (i.region || '').includes('us-east')).length);
 
     if (!tbody) return;
     if (!list.length) {
@@ -100,7 +87,7 @@ async function loadDashInstances() {
         <td>${dashStateBadge(inst.status)}</td>
       </tr>`).join('');
   } catch (err) {
-    ['resRunning', 'resInstances', 'resEips', 'regionAInstanceCount', 'regionBInstanceCount'].forEach(id => dashSet(id, '–'));
+    ['resRunning', 'resInstances'].forEach(id => dashSet(id, '–'));
     if (tbody) {
       tbody.innerHTML = `<tr><td colspan="7" class="empty-cell dash-err">${ICON('ui-error', 'ico-sm')}
         ${t('Không tải được danh sách máy ảo', 'Could not load instances')}: ${dashEsc(err.message)}</td></tr>`;
@@ -108,17 +95,14 @@ async function loadDashInstances() {
   }
 }
 
-// Các ô Resources còn lại: API nào lỗi thì chỉ ô đó hiện "–".
+// Đếm key pair cho ô Resources còn lại.
 async function loadDashResources() {
-  const safe = p => apiRequest(p).catch(() => null);
-  const [volumes, keys, groups, mig] = await Promise.all([
-    safe('/volumes'), safe('/keys'), safe('/network/security-groups'), safe('/migrations/summary')
-  ]);
-  dashSet('resVolumes', volumes ? volumes.length : '–');
-  dashSet('resVolumesGb', volumes ? `${volumes.reduce((s, v) => s + (v.sizeGb || 0), 0)} GiB` : '');
-  dashSet('resKeys', keys ? keys.length : '–');
-  dashSet('resSgs', groups ? groups.length : '–');
-  dashSet('resSnapshots', mig && mig.snapshotCount != null ? mig.snapshotCount : '–');
+  try {
+    const keys = (await apiRequest('/keys')) || [];
+    dashSet('resKeys', keys.length);
+  } catch {
+    dashSet('resKeys', '–');
+  }
 }
 
 async function loadDashLogs() {

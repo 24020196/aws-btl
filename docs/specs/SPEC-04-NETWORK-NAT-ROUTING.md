@@ -1,6 +1,6 @@
 # SPEC-04: Hạ Tầng Mạng NAT & Điều Tuyến L2 (Network NAT & Routing)
 
-> **Phiên bản**: `1.2.0`  
+> **Phiên bản**: `1.3.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
 > **Ngày phê duyệt**: `2026-11-10`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
@@ -43,6 +43,16 @@ ip daddr <gateway_private_ip> dnat to <guest_private_ip>
 # Egress (SNAT): Đổi nguồn từ guest_private_ip sang gateway_private_ip
 ip saddr <guest_private_ip> snat to <gateway_private_ip>
 ```
+
+**Chain `forward` của bảng lọc (bắt buộc):** luồng vào và luồng ra dùng chung một cặp địa chỉ NAT, nên bảng `xregion_filter` phải accept **cả hai loại trạng thái conntrack**:
+```nftables
+# Gói NEW của luồng inbound (đã DNAT)
+iifname "br-ex" oifname "br-xregion" ct status dnat accept
+# Gói hồi đáp của luồng inbound (DNAT) và của luồng máy ảo tự khởi tạo (SNAT)
+iifname "br-ex" oifname "br-xregion" ct state established,related accept
+iifname "br-ex" oifname "br-xregion" drop
+```
+Nếu thiếu rule `ct state established,related`, gói trả lời từ Internet của các kết nối do máy ảo khởi tạo bị rule `drop` cuối cùng loại bỏ: hiện tượng đặc trưng là **inbound thành công nhưng outbound mất toàn bộ gói trả lời** (máy ảo gửi DNS/TCP ra ngoài nhưng không nhận được phản hồi).
 
 ### 2.2. Tham số và Ràng Buộc Điều Phối SSM (`XRegion-Network-Dispatch`)
 - **Tài nguyên đích**: Host EC2 `i-056d7f3dd24156234`.
@@ -119,6 +129,7 @@ flowchart TD
 >    - Không được giả định Floating IP của Neutron tự hoạt động mà bỏ qua lệnh SSM cấu hình nftables trên host.
 >    - Không được dùng sự tồn tại của `VerifyNetwork`/`XRegion-Network-Verify` trong pipeline launch: bước này đã bị loại bỏ (xem mục 3).
 >    - Không được phép đảo ngược thứ tự: Disassociate EIP trước khi gỡ bỏ nftables rule.
+>    - Không được bỏ rule `ct state established,related accept` trên chain `forward` của `xregion_filter`; thiếu rule này thì mọi kết nối do máy ảo khởi tạo sẽ mất toàn bộ gói trả lời (xem mục 2.1).
 > 2. **Bộ Test Suite BẮT BUỘC phải bao quát các kịch bản**:
 >    - `test_launch_success_without_verify_network`: LaunchInstance không render state `VerifyNetwork`; APPLY `SUCCEEDED` đi thẳng `SyncDynamoDB`.
 >    - `test_ssm_dispatch_idempotent_reuse_command_id`: Lệnh SSM đang chạy thì dispatch lần 2 phải tái sử dụng command_id cũ.
@@ -133,3 +144,4 @@ flowchart TD
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành tài liệu đặc tả hạ tầng mạng NAT V1, điều phối SSM và quy chuẩn VerifyNetwork. |
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Loại bỏ hoàn toàn endpoint GET /api/network và hàm getNetworkOverview() khỏi Backend để triệt tiêu dead code và tham chiếu sai lệch Virginia. |
 | `2026-11-10` | `1.2.0` | Chủ dự án (yêu cầu trực tiếp) | Loại bỏ `VerifyNetwork` khỏi pipeline launch theo cùng quyết định với SPEC-SF-01 `1.4.0`; cập nhật ràng buộc kiểm thử sang `test_launch_success_without_verify_network`. Lệnh kiểm tra reachability chỉ còn dùng để chẩn đoán thủ công. |
+| `2026-11-11` | `1.3.0` | Chủ dự án (yêu cầu trực tiếp) | Bổ sung ràng buộc chain `forward` của `xregion_filter`: bắt buộc accept `ct status dnat` (gói NEW inbound) và `ct state established,related` (gói hồi đáp của DNAT và SNAT). Sửa lỗi outbound mất toàn bộ gói trả lời do rule `drop` cuối cùng. |

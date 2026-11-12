@@ -89,9 +89,6 @@ function updateInstancesKPIs() {
   if (elStop) elStop.textContent = stopped;
   if (elPending) elPending.textContent = pendingOrTransition;
   if (elBadge) elBadge.textContent = `(${total})`;
-
-  const pag = document.getElementById('paginationInfo');
-  if (pag) pag.textContent = total > 0 ? `1-${total} of ${total}` : '0 of 0';
 }
 
 // 3. Polling tự động khi có máy ảo đang trong trạng thái chuyển tiếp
@@ -195,13 +192,9 @@ function filterInstancesUI() {
   tbody.innerHTML = '';
 
   const q = (document.getElementById('instanceSearchInput')?.value || '').trim().toLowerCase();
-  const statusFilter = document.getElementById('instanceStatusFilter')?.value || 'ALL';
-
   const filtered = cachedInstances.filter(inst => {
-    const rawStatus = (inst.status || '').toUpperCase();
     const matchText = !q || (inst.name || '').toLowerCase().includes(q) || (inst.id || '').toLowerCase().includes(q) || (inst.publicIp || '').includes(q) || (inst.privateIp || '').includes(q);
-    const matchStatus = statusFilter === 'ALL' || rawStatus === statusFilter.toUpperCase();
-    return matchText && matchStatus;
+    return matchText;
   });
 
   if (filtered.length === 0) {

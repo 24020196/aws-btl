@@ -45,14 +45,21 @@ def identity(record):
 def resources(event):
     iid, nid = event["instance_id"], event.get("nova_id") or event.get("server_id")
     main = get("XRegion-Instances", "instance_id", iid) or {}
-    if not nid or nid not in (main.get("active_nova_id"), main.get("current_nova_id")):
+    rollback = event.get("cleanup_mode") == "LAUNCH_ROLLBACK"
+    owner = event.get("reservation_id")
+    if rollback and (not owner or main.get("launch_execution_arn") != owner
+                     or main.get("current_status") != "FAILED" or main.get("failed_nova_id") != nid):
+        raise ValueError("Failed launch ownership changed")
+    if not nid or (not rollback and nid not in (main.get("active_nova_id"), main.get("current_nova_id"))):
         raise ValueError("Instance Nova ownership changed")
     nova = get("XRegion-Nova", "nova_id", nid) or {}
-    if nova.get("instance_id") != iid:
+    if (nova and nova.get("instance_id") != iid) or (not nova and not rollback):
         raise ValueError("Nova does not belong to the terminating instance")
     prior = event.get("volume_cleanup", {}).get("resources")
     context = dict(event.get("cleanup_volume") or {})
     context.update({k: event[k] for k in ("cinder_volume_key", "cinder_volume_id") if event.get(k)})
+    if rollback and (not context.get("cinder_volume_key") or not context.get("cinder_volume_id")):
+        raise ValueError("Failed launch volume identity missing")
     if prior:
         records = [get("XRegion-Volumes", "volume_id", r["key"]) for r in prior]
     elif context.get("cinder_volume_key"):
@@ -63,10 +70,14 @@ def resources(event):
             FilterExpression="attached_instance_id=:i OR lease_instance_id=:i",
             ExpressionAttributeValues={":i": iid}) for r in page["Items"]]
     references = {v for v in (nova.get("volume_id"), main.get("volume_id"), main.get("cinder_volume_id")) if v}
+    if rollback:
+        references = {context["cinder_volume_id"]}
     out = []
     for record in records:
         if not record or not owned(record, iid):
             raise ValueError("Volume ownership is missing or ambiguous")
+        if rollback and record.get("extend_reservation_id") != owner:
+            raise ValueError("Failed launch volume reservation changed")
         kind, actual = identity(record)
         if actual not in references:
             # Never expand termination to historical generations discovered by a scan.

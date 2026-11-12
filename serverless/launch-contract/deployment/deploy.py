@@ -28,7 +28,10 @@ def package(x, logical):
                 target.writestr(Path(extra).name, (ROOT / extra).read_bytes())
         else:
             target.writestr("network_runtime.py", (ROOT / "runtime/network_runtime.py").read_bytes())
-        if logical in MANIFEST["modify"]:
+        local_legacy = MANIFEST.get("legacy_sources", {}).get(logical)
+        if local_legacy:
+            target.writestr("legacy.py", (ROOT / local_legacy).read_bytes())
+        elif logical in MANIFEST["modify"]:
             baseline = x.directory / (name + "-before.zip")
             if not baseline.exists():
                 baseline = x.directory / (name + ".zip")

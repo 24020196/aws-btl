@@ -7,8 +7,10 @@ registerI18n({
   launchPageTitle: ['Khởi tạo máy ảo', 'Launch an instance'],
   launchSecName: ['Tên và nhãn', 'Name and tags'],
   launchInputName: ['Tên máy ảo (Instance name) *', 'Instance name *'],
+  launchNameHint: ['Chỉ dùng chữ cái tiếng Anh (không dấu), số, dấu \'-\', \'_\' hoặc \'.\', từ 1 đến 63 ký tự.', 'Use only English alphanumeric characters, \'-\', \'_\' or \'.\', 1 to 63 characters.'],
+  launchNameErr: ['Tên máy ảo không hợp lệ. Chỉ dùng chữ cái tiếng Anh (không dấu), số, dấu \'-\', \'_\' hoặc \'.\', từ 1 đến 63 ký tự và bắt đầu bằng chữ hoặc số.', 'Invalid instance name. Must use only English alphanumeric characters, \'-\', \'_\' or \'.\' (1-63 chars), starting with an alphanumeric char.'],
   launchSecRegion: ['Vùng mục tiêu', 'Target Region'],
-  launchSecAmi: ['Ảnh hệ điều hành (Amazon Machine Image)', 'Application and OS Images (Amazon Machine Image)'],
+  launchSecAmi: ['Ảnh hệ điều hành', 'Application and OS Images'],
   launchAmiHelp: ['Chọn ảnh hệ điều hành (Glance OS Image / AMI) được lưu trữ trên hạ tầng đám mây:', 'Select an operating system (Glance OS Image / AMI) hosted in the cloud:'],
   launchSecType: ['Loại máy ảo (Instance type)', 'Instance type'],
   launchSelectFlavor: ['Chọn Flavor (vCPU & RAM):', 'Select Flavor (vCPU & RAM):'],
@@ -263,7 +265,7 @@ async function loadLaunchImagesAndFlavors() {
         if (m1Flavors.length > 0) {
           selectHtml += `<optgroup label="── ` + t('Dòng Tiêu Chuẩn (General Purpose)', 'General Purpose (m1)') + ` ──">`;
           m1Flavors.forEach(f => {
-            const isSel = f.name === 'm1.medium' ? 'selected' : '';
+            const isSel = f.name === 'm1.small' ? 'selected' : '';
             selectHtml += `<option value="${f.name}" ${isSel}>${f.name} — ${f.vcpus} vCPU • ${f.ramDisplay} • ${f.diskGb} GB Root Disk</option>`;
           });
           selectHtml += `</optgroup>`;
@@ -280,16 +282,16 @@ async function loadLaunchImagesAndFlavors() {
         if (flavorMatrixBody) {
           flavorMatrixBody.innerHTML = flavors.map(f => {
             const rowId = `row-${f.name.replace('.', '-')}`;
-            const isMedium = f.name === 'm1.medium';
+            const isSmall = f.name === 'm1.small';
             const seriesColor = f.name.startsWith('h1') ? '#a855f7' : '#38bdf8';
             return `
-              <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isMedium ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
+              <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isSmall ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
                 <td class="launch-series" data-series="${f.series || ''}" style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${launchSeriesLabel(f.series)}</td>
-                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isMedium ? '#38bdf8' : '#fff'};">
-                  ${f.name} ${isMedium ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
+                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isSmall ? '#38bdf8' : '#fff'};">
+                  ${f.name} ${isSmall ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
                 </td>
-                <td style="padding: 8px 12px; font-weight: ${isMedium ? '700' : '400'}; color: #fff;">${f.vcpus}</td>
-                <td style="padding: 8px 12px; font-weight: ${isMedium ? '700' : '400'}; color: #fff;">${f.ramMb}</td>
+                <td style="padding: 8px 12px; font-weight: ${isSmall ? '700' : '400'}; color: #fff;">${f.vcpus}</td>
+                <td style="padding: 8px 12px; font-weight: ${isSmall ? '700' : '400'}; color: #fff;">${f.ramMb}</td>
                 <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">${f.diskGb}</td>
               </tr>
             `;
@@ -326,10 +328,10 @@ function updatePageLaunchSummary() {
   const osLabel = dynamicOsMap[imageEl.value] || osMap[imageEl.value] || imageEl.value;
 
   const flavorVal = flavorEl.value;
-  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.medium'] || { vcpu: 2, ramDisplay: '4 GB', defaultDisk: 10 };
+  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.small'] || { vcpu: 1, ramDisplay: '2048 MB (2 GB)', defaultDisk: 10 };
   const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
 
-  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GB Root Disk`;
+  const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GiB Root Disk`;
 
   const sumReg = document.getElementById('sumRegionText');
   const sumOs = document.getElementById('sumOsText');
@@ -366,6 +368,16 @@ async function handleLaunchPageSubmit(e) {
   e.preventDefault();
   const errBox = document.getElementById('launchErrorBox');
   if (errBox) errBox.style.display = 'none';
+
+  // Kiểm tra tên máy ảo (chuẩn OpenStack / Hostname: alphanumeric, '-', '_', '.', 1-63 ký tự)
+  const nameInput = document.getElementById('instName');
+  const name = nameInput ? nameInput.value.trim() : '';
+  const nameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$/;
+  if (!nameRegex.test(name)) {
+    showToast(tk('launchNameErr'), 'error');
+    if (nameInput) nameInput.focus();
+    return;
+  }
 
   // Kiểm tra rule firewall (launch-firewall.js)
   const fwError = typeof lfwValidate === 'function' ? lfwValidate() : '';
