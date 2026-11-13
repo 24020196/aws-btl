@@ -172,19 +172,82 @@ Bảo đảm khi quản trị viên hủy một máy ảo, toàn bộ các tài 
 
 ---
 
-## Chức năng 7: Cổng Tiếp nhận Sự kiện, An ninh Phân quyền & Dữ liệu Nguyên tử
+## Chức năng 7: Cổng Tiếp nhận Sự kiện Zero-Lambda, An ninh IAM & Dữ liệu DynamoDB Global Tables
 
-- **Amazon API Gateway (`XRegion-EventGateway`, ID `379768w77h`)**:
-  - Cung cấp cổng HTTP API v2 duy nhất tại route `POST /prod/events` với cấu hình tích hợp trực tiếp **`AWS_PROXY` (`EventBridge-PutEvents`)**, đẩy thẳng sự kiện vào EventBridge mà không cần Lambda trung gian.
-  - Bảo vệ điểm cuối bằng cơ chế ký điện tử **AWS IAM SigV4** cho Backend và Bearer Token (`SPEC-07`).
-- **Amazon EventBridge (Bus `default`)**:
-  - Định tuyến các sự kiện nghiệp vụ từ Backend (`XRegion-BackendEventRule`) và từ daemon OpenStack (`XRegion-NovaStatusRule`) tới đúng Step Functions hoặc Lambda `XRegion-SyncSecurityGroup`.
-  - Lập lịch định kỳ (Scheduled Rules) cho các hàm độc lập `XRegion-CinderPoolManager`, `XRegion-EIPPoolManager`, `XRegion-InstanceRecovery`.
-- **AWS IAM (Least-Privilege Security)**:
-  - Phân tách hoàn toàn 3 Role thực thi: `XRegion-ApiGatewayEventBridgeRole` (chỉ được `events:PutEvents`), `XRegion-StepFunctionsExecutionRole` (chỉ được `lambda:InvokeFunction` tới prefix `XRegion-*`), và `XRegion-LambdaExecutionRole` (chỉ thao tác DynamoDB trên `table/XRegion-*`, kết nối VPC ENI và các quyền EC2/EBS tối thiểu).
-- **Amazon DynamoDB & Global Data Plane**:
-  - Lưu trữ trên 6 bảng nghiệp vụ (`XRegion-Instances`, `XRegion-Users`, `XRegion-Keys`, `XRegion-SecurityGroups`, `XRegion-Volumes`, `XRegion-Migrations`) và 3 bảng điều phối hạ tầng (`XRegion-Nova`, `XRegion-NetworkMappings`, `XRegion-NetworkReservations`).
-  - Hỗ trợ **Point-in-Time Recovery (PITR)** và thiết kế khóa phân vùng chuẩn bị sẵn sàng cho **DynamoDB Global Tables** đa vùng.
+### 7.1 Cơ chế API Gateway + EventBridge tự chuyển API thẳng xuống đúng Lambda / Step Functions (Zero-Lambda Routing)
+Thay vì sử dụng một hàm Lambda trung gian ("Router Lambda" hay "Proxy Lambda") để đọc payload rồi tự gọi `start_execution` hoặc `invoke`, hệ thống sử dụng kiến trúc **Zero-Lambda Routing** kết hợp trực tiếp **Amazon API Gateway** và **Amazon EventBridge**:
+
+```mermaid
+flowchart LR
+    Client["Backend / OpenStack<br/>POST /prod/events<br/>(Ký IAM SigV4)"] --> APIGW["API Gateway v2 (HTTP API)<br/>Direct Integration:<br/>EventBridge-PutEvents"]
+    APIGW -->|"events:PutEvents<br/>(Không qua Lambda)"| EB["EventBridge Bus: default"]
+
+    EB -->|"Rule: detail-type = instance.launch<br/>InputPath: $.detail"| SFN_L["Step Function:<br/>LaunchInstance"]
+    EB -->|"Rule: detail-type = instance.lifecycle<br/>InputPath: $.detail"| SFN_LF["Step Function:<br/>LifecycleInstance"]
+    EB -->|"Rule: detail-type = instance.terminate<br/>InputPath: $.detail"| SFN_T["Step Function:<br/>TerminateInstance"]
+    EB -->|"Rule: detail-type = sg.sync<br/>InputPath: $.detail"| L_SG["Lambda:<br/>XRegion-SyncSecurityGroup"]
+```
+
+*Hình 1.5: Cơ chế định tuyến trực tiếp API Gateway $\rightarrow$ EventBridge $\rightarrow$ Step Functions / Lambda không cần Lambda điều phối*
+
+Quy trình định tuyến tự động diễn ra qua **3 bước không máy chủ (Serverless Native)**:
+1. **Bước 1 — Tích hợp dịch vụ trực tiếp tại API Gateway (`EventBridge-PutEvents`)**:
+   - Trên cổng `XRegion-EventGateway` (HTTP API v2, ID `379768w77h`), route `POST /prod/events` được cấu hình kiểu `AWS_PROXY` với subtype **`EventBridge-PutEvents`**.
+   - API Gateway sử dụng Role `XRegion-ApiGatewayEventBridgeRole` để ánh xạ trực tiếp các trường JSON từ HTTP body (`$.source`, `$.detail-type`, `$.detail`) và gọi thẳng API `events:PutEvents` đẩy sự kiện lên EventBridge bus `default`. Phản hồi HTTP `200/202` được trả về ngay lập tức mà **không tốn thời gian chạy hay chi phí của bất kỳ hàm Lambda trung gian nào**.
+2. **Bước 2 — Đối khớp mẫu sự kiện khai báo trên EventBridge Rules (Declarative Event Patterns)**:
+   - Khi sự kiện vào bus `default`, EventBridge đối chiếu thời gian thực với tập luật JSON (Event Patterns) đã đăng ký trên từng Rule để phân loại tự động:
+     ```json
+     {
+       "source": ["xregion.backend"],
+       "detail-type": ["instance.launch"]
+     }
+     ```
+     - Sự kiện `instance.launch` $\rightarrow$ định tuyến thẳng tới Target ARN của Step Function `LaunchInstance` (qua hành động `states:StartExecution`).
+     - Sự kiện `instance.terminate` $\rightarrow$ định tuyến thẳng tới Target ARN của Step Function `TerminateInstance`.
+     - Sự kiện `instance.lifecycle` $\rightarrow$ định tuyến thẳng tới Target ARN của Step Function `LifecycleInstance`.
+     - Sự kiện `sg.sync` (từ `XRegion-BackendEventRule` / `XRegion-NovaStatusRule`) $\rightarrow$ định tuyến thẳng tới Target ARN của Lambda `XRegion-SyncSecurityGroup` (qua hành động `lambda:InvokeFunction`).
+3. **Bước 3 — Bóc tách dữ liệu bằng `InputPath` / `InputTransformer`**:
+   - Trên mỗi Target của EventBridge Rule, thuộc tính **`InputPath: "$.detail"`** được cấu hình để loại bỏ phần vỏ bọc (envelope) của EventBridge, truyền nguyên vẹn phần payload nghiệp vụ (`instance_id`, `nova_id`, `action`, `region`...) thẳng vào đầu vào (`$`) của Step Function hoặc sự kiện (`event`) của Lambda đích.
+   - **Lợi ích kiến trúc**: Triệt tiêu hoàn toàn độ trễ Cold-Start tại lớp tiếp nhận API, giảm 100% chi phí cho hàm điều phối trung gian, hỗ trợ cơ chế Retry mặc định (24 giờ / 185 lần) và Dead-Letter Queue (SQS DLQ) tích hợp sẵn của EventBridge.
+
+---
+
+### 7.2 Phân quyền & Bảo mật Hệ thống (AWS IAM Least-Privilege)
+Hệ thống áp dụng nghiêm ngặt nguyên tắc đặc quyền tối thiểu, cô lập 3 nhóm Role chuyên biệt:
+- **`XRegion-ApiGatewayEventBridgeRole`**: Chỉ tin cậy `apigateway.amazonaws.com`, chỉ được phép thực thi `events:PutEvents` vào đúng `arn:aws:events:ap-southeast-2:291634989063:event-bus/default`.
+- **`XRegion-StepFunctionsExecutionRole`**: Chỉ tin cậy `states.amazonaws.com`, chỉ được phép `lambda:InvokeFunction` trên các hàm có prefix `arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-*`.
+- **`XRegion-LambdaExecutionRole`**: Chỉ tin cậy `lambda.amazonaws.com`, được cấp quyền `AWSLambdaVPCAccessExecutionRole` (tạo ENI kết nối OpenStack nội bộ), quyền đọc/ghi DynamoDB giới hạn trên `table/XRegion-*` và quyền EC2/EBS tối thiểu (`AttachVolume`, `DetachVolume`, `AllocateAddress`, `ReleaseAddress`).
+
+---
+
+### 7.3 Chi tiết Cấu trúc Lưu trữ từng Bảng Amazon DynamoDB
+Dữ liệu toàn hệ thống được phân tách vào **6 bảng nghiệp vụ chính** và **3 bảng điều phối hạ tầng**, tối ưu truy vấn qua Partition Key (`PK`), Sort Key (`SK`) và Global Secondary Index (`GSI`):
+
+| Phân Nhóm | Tên Bảng DynamoDB | Khóa Chính (`PK` / `SK`) | Chỉ Mục Phụ (`GSI`) | Các Trường Dữ Liệu Chính & Mục Đích Lưu Trữ |
+| :--- | :--- | :--- | :--- | :--- |
+| **Nghiệp vụ** | **`XRegion-Instances`** | **PK**: `instance_id` | `username-index` (`username`) | Lưu hồ sơ đầy đủ và trạng thái thời gian thực của từng máy ảo: `instance_name`, `user_id`, `key_id`, `volume_id`, `security_group_id`, `current_region`, `current_status`, `flavor`, `private_ip`, `elastic_ip`, `dns`, **`migration_lock`** (khóa nguyên tử chống xung đột di trú). |
+| **Nghiệp vụ** | **`XRegion-Users`** | **PK**: `user_id` *(ULID `usr-...`)* | `username-index` (`username`) | Lưu thông tin tài khoản người dùng và quản trị viên: `username`, `password` (BCrypt), `full_name`, `role` (`ADMIN`/`USER`), `active`, `created_at`, `api_tokens` (danh sách token dài hạn), `ssh_keys` (danh bạ Public Key). |
+| **Nghiệp vụ** | **`XRegion-Keys`** | **PK**: `key_id` | *(None)* | Lưu trữ cặp khóa SSH công khai theo chuẩn `key-<name>-<uuid8>`: `key_name`, `key_type`, `public_key`, `fingerprint`, `target_regions`, `created_by`, `created_at`. Tuyệt đối không lưu Private Key. |
+| **Nghiệp vụ** | **`XRegion-SecurityGroups`** | **PK**: `group_id` | `instance_id-index` (`instance_id`) | Lưu cấu hình tường lửa 1-1 gắn với máy ảo: `instance_id`, `owner` (`username`), `inbound_rules`, `outbound_rules`, `managed`, **`revision`**, **`applied_revision`**, `sync_status` (`PENDING_SYNC`/`SYNCED`) phục vụ đồng bộ lạc quan. |
+| **Nghiệp vụ** | **`XRegion-Volumes`** | **PK**: `volume_id` | `instance-index` (`instance_id`) | Lưu trữ thông tin ổ đĩa khối EBS và ánh xạ Cinder: `volume_name`, `size_gb`, `volume_type` (`gp3`), `status` (`AVAILABLE`/`IN_USE`), `attached_instance_id`, `cinder_volume_id`, `ebs_volume_id`, `snapshot_id`, `region`. |
+| **Nghiệp vụ** | **`XRegion-Migrations`** | **PK**: `instance_id`<br>**SK**: `migration_id` | *(None)* | Lưu lịch sử và nhật ký kiểm toán các phiên chuyển vùng Live Migration: `source_region`, `dest_region`, `status`, `copy_progress` (0–100%), `started_at`, `completed_at`, `downtime_seconds` (RTO), `step_logs`, `error_message`. |
+| **Điều phối** | **`XRegion-Nova`** | **PK**: `nova_id` | *(None)* | Bảng ánh xạ lớp hạ tầng OpenStack Nova: lưu `instance_id`, trạng thái thực tế quan sát được từ Nova API (`ACTIVE`, `SHUTOFF`), `task_state` phục vụ worker `XRegion-InstanceLifecycle` và `NovaLookup`. |
+| **Điều phối** | **`XRegion-NetworkMappings`** | **PK**: `nova_id` | *(None)* | Lưu ánh xạ định tuyến Linux NAT & Neutron cho từng VM: `neutron_sg_id`, `neutron_port_id`, `private_ip`, `elastic_ip`, `generation`, `applied_generation` dùng bởi `XRegion-Network-*` và `XRegion-SyncSecurityGroup`. |
+| **Điều phối** | **`XRegion-NetworkReservations`** | **PK**: `reservation_id` | *(None)* | Lưu các bản ghi giữ chỗ tạm thời cho Private IP và Elastic IP trong cửa sổ timeout 300s của `LaunchInstance`, giúp `XRegion-EIPPoolManager` không giải phóng nhầm IP đang cấp phát. |
+
+---
+
+### 7.4 Kiến trúc Amazon DynamoDB Global Tables (Multi-Region Active-Active Replication)
+Để bảo đảm tính sẵn sàng cao ở tầng dữ liệu và phục vụ trực tiếp bài toán **Cross-Region** giữa các vùng (ví dụ giữa vùng chính **`ap-southeast-2` Sydney** và vùng dự phòng **`ap-southeast-1` Singapore**), kiến trúc dữ liệu sử dụng **Amazon DynamoDB Global Tables**:
+
+1. **Cơ chế nhân bản Active-Active qua DynamoDB Streams**:
+   - Toàn bộ các bảng dữ liệu cốt lõi được bật **DynamoDB Streams** với chế độ **`NEW_AND_OLD_IMAGES`**.
+   - Khi có bất kỳ thao tác ghi (`PutItem`, `UpdateItem`, `DeleteItem`) xảy ra tại bảng gốc ở Sydney (`ap-southeast-2`), DynamoDB tự động đẩy luồng thay đổi sang các bảng Replica ở vùng đích (`ap-southeast-1`) qua mạng trục nội bộ AWS trong thời gian dưới **1 giây (sub-second replication)** mà không cần code ứng dụng tự đồng bộ.
+2. **Cơ chế xử lý xung đột đồng thời (Conflict Resolution)**:
+   - DynamoDB Global Tables áp dụng chính sách **Last-Writer-Wins** dựa trên dấu thời gian đồng bộ (timestamp) cho các thao tác ghi đồng thời trên cùng một item ở nhiều vùng.
+   - Khi kết hợp với cơ chế **Conditional Writes (`migration_lock` trên `XRegion-Instances` và `revision` trên `XRegion-SecurityGroups`)** tại vùng chủ quản, hệ thống vừa đạt được khả năng đọc cục bộ độ trễ mili-giây tại nhiều vùng, vừa bảo đảm tính nhất quán trạng thái không bị split-brain.
+3. **Bảo vệ dữ liệu toàn diện (PITR & RPO $\approx$ 0)**:
+   - Mỗi bảng replica đều hỗ trợ **Point-in-Time Recovery (PITR)** độc lập, kết hợp với nhân bản Global Tables giúp hệ thống đạt mục tiêu mất mát dữ liệu gần bằng không ($\text{RPO} \approx 0$) khi xảy ra sự cố thảm họa tại một Region.
 
 ---
 
@@ -208,17 +271,19 @@ Bảo đảm khi quản trị viên hủy một máy ảo, toàn bộ các tài 
 
 Để dựng hoàn chỉnh phân hệ Serverless, An ninh và CSDL từ đầu đến khi hệ thống hoạt động ổn định, thực hiện tuần tự **5 bước** dưới đây:
 
-### Bước 1: Khởi tạo Cơ sở dữ liệu Amazon DynamoDB
-Tạo các bảng NoSQL cốt lõi với đúng khóa chính, chỉ mục phụ GSI và kích hoạt sao lưu liên tục (PITR):
+### Bước 1: Khởi tạo Cơ sở dữ liệu Amazon DynamoDB & Kích hoạt Global Tables
+Tạo các bảng NoSQL cốt lõi với đúng khóa chính, chỉ mục phụ GSI, bật **DynamoDB Streams** (`NEW_AND_OLD_IMAGES`), kích hoạt sao lưu liên tục (PITR) và mở rộng thành **Global Tables** đa vùng:
 
 ```powershell
-# 1. Tạo bảng XRegion-Instances (lưu trạng thái VM & khóa migration_lock)
+# 1. Tạo bảng XRegion-Instances (bật DynamoDB Streams để hỗ trợ Global Tables)
 aws dynamodb create-table `
     --table-name XRegion-Instances `
     --attribute-definitions AttributeName=instance_id,AttributeType=S AttributeName=username,AttributeType=S `
     --key-schema AttributeName=instance_id,KeyType=HASH `
     --global-secondary-indexes '[{"IndexName":"username-index","KeySchema":[{"AttributeName":"username","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}]' `
-    --billing-mode PAY_PER_REQUEST --region ap-southeast-2
+    --billing-mode PAY_PER_REQUEST `
+    --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES `
+    --region ap-southeast-2
 
 # 2. Tạo bảng XRegion-SecurityGroups (lưu cấu hình SG 1-1 & số phiên bản revision)
 aws dynamodb create-table `
@@ -226,17 +291,25 @@ aws dynamodb create-table `
     --attribute-definitions AttributeName=group_id,AttributeType=S AttributeName=instance_id,AttributeType=S `
     --key-schema AttributeName=group_id,KeyType=HASH `
     --global-secondary-indexes '[{"IndexName":"instance_id-index","KeySchema":[{"AttributeName":"instance_id","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}]' `
-    --billing-mode PAY_PER_REQUEST --region ap-southeast-2
+    --billing-mode PAY_PER_REQUEST `
+    --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES `
+    --region ap-southeast-2
 
 # 3. Tạo các bảng nghiệp vụ và điều phối mạng/lưu trữ còn lại
-aws dynamodb create-table --table-name XRegion-Volumes --attribute-definitions AttributeName=volume_id,AttributeType=S --key-schema AttributeName=volume_id,KeyType=HASH --billing-mode PAY_PER_REQUEST --region ap-southeast-2
-aws dynamodb create-table --table-name XRegion-Keys --attribute-definitions AttributeName=key_id,AttributeType=S --key-schema AttributeName=key_id,KeyType=HASH --billing-mode PAY_PER_REQUEST --region ap-southeast-2
-aws dynamodb create-table --table-name XRegion-Users --attribute-definitions AttributeName=user_id,AttributeType=S AttributeName=username,AttributeType=S --key-schema AttributeName=user_id,KeyType=HASH --global-secondary-indexes '[{"IndexName":"username-index","KeySchema":[{"AttributeName":"username","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}]' --billing-mode PAY_PER_REQUEST --region ap-southeast-2
-aws dynamodb create-table --table-name XRegion-Migrations --attribute-definitions AttributeName=instance_id,AttributeType=S AttributeName=migration_id,AttributeType=S --key-schema AttributeName=instance_id,KeyType=HASH AttributeName=migration_id,KeyType=RANGE --billing-mode PAY_PER_REQUEST --region ap-southeast-2
+aws dynamodb create-table --table-name XRegion-Volumes --attribute-definitions AttributeName=volume_id,AttributeType=S --key-schema AttributeName=volume_id,KeyType=HASH --billing-mode PAY_PER_REQUEST --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES --region ap-southeast-2
+aws dynamodb create-table --table-name XRegion-Keys --attribute-definitions AttributeName=key_id,AttributeType=S --key-schema AttributeName=key_id,KeyType=HASH --billing-mode PAY_PER_REQUEST --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES --region ap-southeast-2
+aws dynamodb create-table --table-name XRegion-Users --attribute-definitions AttributeName=user_id,AttributeType=S AttributeName=username,AttributeType=S --key-schema AttributeName=user_id,KeyType=HASH --global-secondary-indexes '[{"IndexName":"username-index","KeySchema":[{"AttributeName":"username","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}]' --billing-mode PAY_PER_REQUEST --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES --region ap-southeast-2
+aws dynamodb create-table --table-name XRegion-Migrations --attribute-definitions AttributeName=instance_id,AttributeType=S AttributeName=migration_id,AttributeType=S --key-schema AttributeName=instance_id,KeyType=HASH AttributeName=migration_id,KeyType=RANGE --billing-mode PAY_PER_REQUEST --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES --region ap-southeast-2
 
 # 4. Bật Continuous Backups (PITR) bảo vệ dữ liệu
 aws dynamodb update-continuous-backups --table-name XRegion-Instances --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true --region ap-southeast-2
 aws dynamodb update-continuous-backups --table-name XRegion-SecurityGroups --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true --region ap-southeast-2
+
+# 5. Mở rộng thành DynamoDB Global Tables (tạo Replica tại vùng dự phòng ap-southeast-1 Singapore)
+aws dynamodb update-table `
+    --table-name XRegion-Instances `
+    --replica-updates '[{"Create":{"RegionName":"ap-southeast-1"}}]' `
+    --region ap-southeast-2
 ```
 
 ### Bước 2: Thiết lập AWS IAM Roles & Policies (Least-Privilege)
@@ -245,14 +318,14 @@ Khởi tạo 3 Role thực thi với Trust Policy và Permission Policy cô lậ
 2. **`XRegion-StepFunctionsExecutionRole`**: Tin cậy `states.amazonaws.com`, cấp quyền `lambda:InvokeFunction` trên `arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-*`.
 3. **`XRegion-ApiGatewayEventBridgeRole`**: Tin cậy `apigateway.amazonaws.com`, cấp quyền `events:PutEvents` vào `arn:aws:events:ap-southeast-2:291634989063:event-bus/default`.
 
-### Bước 3: Cấu hình Amazon API Gateway & Amazon EventBridge
-Tạo cổng HTTP API v2 nối thẳng tới EventBridge và thiết lập các Rule định tuyến:
+### Bước 3: Cấu hình Amazon API Gateway & Amazon EventBridge (Zero-Lambda Routing)
+Tạo cổng HTTP API v2 nối thẳng tới EventBridge bằng Direct Integration và gắn trực tiếp các Target (Step Functions / Lambda) cùng `InputPath: "$.detail"` vào EventBridge Rules mà không qua Lambda điều phối:
 
 ```powershell
 # 1. Tạo HTTP API v2 XRegion-EventGateway
 $apiId = (aws apigatewayv2 create-api --name XRegion-EventGateway --protocol-type HTTP --region ap-southeast-2 --query "ApiId" --output text)
 
-# 2. Tạo Direct Service Integration tới EventBridge PutEvents
+# 2. Tạo Direct Service Integration tới EventBridge PutEvents (không qua Lambda)
 $integrationId = (aws apigatewayv2 create-integration `
     --api-id $apiId --integration-type AWS_PROXY --integration-subtype EventBridge-PutEvents `
     --credentials-arn "arn:aws:iam::291634989063:role/XRegion-ApiGatewayEventBridgeRole" `
@@ -262,8 +335,12 @@ $integrationId = (aws apigatewayv2 create-integration `
 # 3. Tạo Route POST /prod/events với xác thực AWS_IAM (SigV4)
 aws apigatewayv2 create-route --api-id $apiId --route-key "POST /prod/events" --target "integrations/$integrationId" --authorization-type AWS_IAM --region ap-southeast-2
 
-# 4. Tạo EventBridge Rule định tuyến sự kiện từ Backend
-aws events put-rule --name XRegion-BackendEventRule --event-bus-name default --event-pattern '{"source":["xregion.backend"],"detail-type":["instance.launch","instance.lifecycle","instance.terminate"]}' --region ap-southeast-2
+# 4. Tạo EventBridge Rule và gắn trực tiếp Target (truyền $.detail thẳng xuống Step Function / Lambda)
+aws events put-rule --name XRegion-LaunchEventRule --event-bus-name default --event-pattern '{"source":["xregion.backend"],"detail-type":["instance.launch"]}' --region ap-southeast-2
+aws events put-targets --rule XRegion-LaunchEventRule --event-bus-name default --targets '[{"Id":"LaunchInstanceSFN","Arn":"arn:aws:states:ap-southeast-2:291634989063:stateMachine:LaunchInstance","RoleArn":"arn:aws:iam::291634989063:role/XRegion-EventBridgeInvokeSFNRole","InputPath":"$.detail"}]' --region ap-southeast-2
+
+aws events put-rule --name XRegion-SGSyncRule --event-bus-name default --event-pattern '{"source":["xregion.backend"],"detail-type":["sg.sync"]}' --region ap-southeast-2
+aws events put-targets --rule XRegion-SGSyncRule --event-bus-name default --targets '[{"Id":"SyncSecurityGroupLambda","Arn":"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup","InputPath":"$.detail"}]' --region ap-southeast-2
 ```
 
 ### Bước 4: Đóng gói & Triển khai các Hàm AWS Lambda
