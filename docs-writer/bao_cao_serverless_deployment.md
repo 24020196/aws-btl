@@ -26,38 +26,6 @@ Thay vì tách rời mô tả kiến trúc và triển khai gây lặp lại, to
 
 ![Sơ đồ AWS Step Function LaunchInstance](img/stepfunction_launch_instance.png)
 
-```mermaid
-flowchart TD
-    Start((Start)) --> CheckPool["1. CheckPool<br/>(Lambda: CheckPool)"]
-    CheckPool --> AllocateResource["2. AllocateResource<br/>(Lambda: AllocateResource)"]
-    AllocateResource --> ReserveNetwork["3. ReserveNetwork<br/>(Lambda: Network-Reserve)"]
-    ReserveNetwork --> ExtendVolume["4. ExtendVolume<br/>(Lambda: ExtendVolume)"]
-    ExtendVolume --> VolStatus{"5. VolumeExtensionStatus<br/>($.volume_extension.status == CONFIRMED?)"}
-    VolStatus -- "Chưa xác nhận" --> WaitVol["WaitVolumeExtension<br/>(Wait 5s)"] --> ExtendVolume
-    VolStatus -- "CONFIRMED" --> BootNovaVM["6. BootNovaVM<br/>(Lambda: BootNova)"]
-    BootNovaVM --> CommitNet["7. CommitNetworkMapping<br/>(Lambda: Network-Commit)"]
-    CommitNet --> AssignSG["8. AssignSecurityGroup<br/>(Lambda: AssignSecurityGroup)"]
-    AssignSG --> ApplyNat["9. ApplyNatMapping<br/>(Lambda: Network-Dispatch)"]
-    ApplyNat --> WaitNat["10. WaitNatCommand<br/>(Wait 3s)"] --> CheckNat["11. CheckNatCommand<br/>(Lambda: Network-CheckCommand)"]
-    CheckNat --> ChoiceNat{"12. ChoiceNatCommand<br/>($.command_status == SUCCEEDED?)"}
-    ChoiceNat -- "Chưa xong" --> WaitNat
-    ChoiceNat -- "SUCCEEDED" --> SyncDDB["13. SyncDynamoDB<br/>(Lambda: SyncDynamoDB)"]
-    SyncDDB --> LaunchSuccess((LaunchSuccess))
-
-    %% Nhánh bắt lỗi & Rollback
-    CheckPool & AllocateResource & ReserveNetwork & ExtendVolume & BootNovaVM & CommitNet & AssignSG & ApplyNat & CheckNat & SyncDDB -. "Catch States.ALL" .-> MarkFail["MarkNetworkFailure<br/>(Lambda: SyncDynamoDB)"]
-    MarkFail --> ChoiceRB{"ChoiceLaunchRollback<br/>(Có $.nova_id & $.generation?)"}
-    ChoiceRB -- "Không" --> Failed((ProvisioningFailed))
-    ChoiceRB -- "Có" --> SetRB["SetLaunchRollback<br/>(Pass: LAUNCH_ROLLBACK)"] --> RBLoad["RollbackLoadNetworkContext<br/>(Network-Release)"]
-    RBLoad --> RBRemoveNat["RollbackRemoveNatMapping<br/>(Network-Dispatch)"] --> RBWaitNat["RollbackWaitNatCommand (3s)"] --> RBCheckNat["RollbackCheckNatCommand<br/>(Network-CheckCommand)"]
-    RBCheckNat --> RBChoiceNat{"RollbackChoiceNatCommand"}
-    RBChoiceNat -- "Chưa xong" --> RBWaitNat
-    RBChoiceNat -- "SUCCEEDED" --> RBDelNova["RollbackDeleteNovaVM<br/>(DeleteNova)"]
-    RBDelNova --> RBFinNet["RollbackFinalizeNetworkRelease<br/>(Network-Release)"] --> RBDelSG["RollbackDeleteSecurityGroup<br/>(DeleteSecurityGroup)"]
-    RBDelSG --> RBDelVol["RollbackDeleteVolume<br/>(DeleteVolume)"] --> RBVolStatus{"RollbackVolumeDeletionStatus"}
-    RBVolStatus -- "Chưa DELETED" --> RBWaitVol["RollbackWaitVolumeDeletion (5s)"] --> RBDelVol
-    RBVolStatus -- "DELETED" --> SetRBComplete["SetRollbackComplete"] --> RecRB["RecordRollbackResult<br/>(SyncDynamoDB)"] --> Failed
-```
 
 *Hình 1.1: Đồ thị luồng thực thi và nhánh Auto-Rollback của State Machine `LaunchInstance`*
 
