@@ -1,15 +1,15 @@
 # SPEC-SF-03: Trình Quản Lý & Tự Bù Đắp Warm Pool (Cinder Pool Manager)
 
-> **Phiên bản**: `1.0.0`  
+> **Phiên bản**: `1.3.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)
 
 ---
 
 ## 1. Tổng Quan Mục Đích & Kiến Trúc Bù Đắp Tự Động
 
-Lambda `XRegion-CinderPoolManager` chịu trách nhiệm duy trì số lượng ổ đĩa boot volume Cinder (chuẩn `aws-ebs-gp3`, 10GB) sẵn sàng ở trạng thái rảnh rỗi (`AVAILABLE`) trong bảng DynamoDB `XRegion-Volumes` để Step Function `LaunchInstance` có thể cấp phát ngay lập tức (CheckPool).
+Lambda `XRegion-CinderPoolManager` chịu trách nhiệm duy trì số lượng ổ đĩa boot volume Cinder (chuẩn `aws-ebs-gp3`, kích thước động `size_gb = max(1, min_disk)`, cụ thể 1 GiB cho CirrOS/Alpine và 10 GiB cho Ubuntu) sẵn sàng ở trạng thái rảnh rỗi (`AVAILABLE`) trong bảng DynamoDB `XRegion-Volumes` để Step Function `LaunchInstance` có thể cấp phát ngay lập tức (CheckPool).
 
 - **Mã nguồn**: `serverless/launch-contract/XRegion-CinderPoolManager/cinder_pool_manager.py`.
 - **Cơ chế kích hoạt kép (Dual Trigger)**:
@@ -21,12 +21,12 @@ Lambda `XRegion-CinderPoolManager` chịu trách nhiệm duy trì số lượng 
 ## 2. Ràng Buộc Dung Lượng Pool Bất Biến (Capacity Mandate)
 
 > [!IMPORTANT]
-> ### GIỚI HẠN WARM POOL TỐI ĐA 2 ĐƠN VỊ (`max(0, 2 - occupied)`)
-> - Số lượng tài nguyên rảnh rỗi (`AVAILABLE` hoặc đang `CREATING`) trong Warm Pool đối với mỗi catalog ảnh (`image_id`) **TẠI MỌI THỜI ĐIỂM TỐI ĐA LÀ 2 ĐƠN VỊ (<= 2)**.
+> ### GIỚI HẠN WARM POOL TỐI ĐA 5 ĐƠN VỊ (`max(0, 5 - occupied)`)
+> - Số lượng tài nguyên rảnh rỗi (`AVAILABLE` hoặc đang `CREATING`) trong Warm Pool đối với mỗi catalog ảnh (`image_id`) **TẠI MỌI THỜI ĐIỂM TỐI ĐA LÀ 5 ĐƠN VỊ (<= 5)**.
 > - Công thức bù đắp trong Lambda bắt buộc phải tuân thủ:
 >   ```python
 >   occupied = sum(r["status"] in ("AVAILABLE", "CREATING") for r in rows)
->   refill_count = max(0, 2 - occupied)
+>   refill_count = max(0, 5 - occupied)
 >   ```
 > - **CẤM TUYỆT ĐỐI**: Không được tăng con số này lên 3 hay bất kỳ giá trị nào khác nếu chưa có sự phê duyệt bằng văn bản của Chủ dự án (để bảo vệ ngân sách chi phí lưu trữ EBS gp3 trên AWS).
 
@@ -68,3 +68,5 @@ Trước khi tính `occupied` slots, Lambda đối soát trực tiếp với h�
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
 | :--- | :--- | :--- | :--- |
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành đặc tả Cinder Pool Manager, chuẩn hóa giới hạn pool <= 2 volume rảnh rỗi, khóa nguyên tử 20 phút và cơ chế chống ambiguous POST. |
+| `2026-11-12` | `1.1.0` | Lead Architect / Product Owner | Cập nhật kích thước pool volume động max(1, min_disk), chuẩn hóa 1 GiB cho CirrOS/Alpine qua xacnhan-skill. |
+| `2026-11-13` | `1.3.0` | Chủ dự án (`xacnhan-skill`) | Đồng bộ công thức `refill_count = max(0, 5 - occupied)` với ngưỡng tối đa `5` Volume rảnh rỗi (phân tách với ngưỡng `2` EIP rảnh rỗi tại `SPEC-02 v1.2.0`). |

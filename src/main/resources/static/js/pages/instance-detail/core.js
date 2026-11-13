@@ -143,10 +143,33 @@ function fmtCountdown(sec) {
 
 // ---------------- Tabs ----------------
 const DET_TABS = ['details', 'monitoring', 'migration'];
-const SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
+const SSH_USERS = {
+  cirros: 'cirros',
+  alpine: 'alpine',
+  debian: 'debian',
+  ubuntu: 'ubuntu',
+  rocky: 'rocky',
+  centos: 'centos',
+  fedora: 'fedora',
+  amazon: 'ec2-user',
+  al2: 'ec2-user'
+};
+
+const KNOWN_IMAGE_MAP = {
+  '831dc24b-9d29-4cb6-8154-9de2d0fd268f': { name: 'CirrOS-0.6.2', user: 'cirros' },
+  'c66c2ab2-68fe-40bb-8f55-d2e5ba1c944d': { name: 'Alpine-Linux-3.20-Cloud', user: 'alpine' },
+  'fd249548-1863-4d30-b809-732108cab057': { name: 'Ubuntu Server 24.04 LTS', user: 'ubuntu' },
+  'img-u22': { name: 'Ubuntu Server 22.04 LTS', user: 'ubuntu' },
+  'img-deb12': { name: 'Debian 12 Bookworm', user: 'debian' },
+  'img-rocky9': { name: 'Rocky Linux 9 Enterprise', user: 'rocky' },
+  'img-alp319': { name: 'Alpine Linux 3.19 Minimal', user: 'alpine' }
+};
 
 function sshUser(inst) {
-  const name = String((inst && (inst.imageName || inst.imageId)) || '').toLowerCase();
+  if (!inst) return 'ubuntu';
+  const rawId = inst.imageId || '';
+  if (rawId && KNOWN_IMAGE_MAP[rawId]) return KNOWN_IMAGE_MAP[rawId].user;
+  const name = String(inst.imageName || rawId || '').toLowerCase();
   const hit = Object.keys(SSH_USERS).find(k => name.includes(k) || (k === 'debian' && name.includes('deb')));
   return hit ? SSH_USERS[hit] : 'ubuntu';
 }
@@ -428,7 +451,7 @@ function renderActions() {
     tabBtn.innerHTML = `${ICON('ui-migrate')} Fast Migrate ${t('sang', 'to')} ${esc(regionLabel(otherRegion(inst.region)))}`;
   }
   setText('migBlockReason', reason || t('Sẵn sàng chuyển vùng.', 'Ready to migrate.'));
-  document.getElementById('migBlockReason').classList.toggle('warn', !!reason);
+  document.getElementById('migBlockReason')?.classList.toggle('warn', !!reason);
 }
 
 async function runDetailAction(id, action) {

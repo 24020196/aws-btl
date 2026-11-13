@@ -25,14 +25,6 @@ const SIDEBAR_ITEMS = [
     fallbackVi: 'Khởi Tạo Máy Ảo (+ Launch VM)',
     fallbackEn: 'Launch Instance (+ Launch VM)',
     icon: 'ui-plus'
-  },
-  {
-    id: 'tokens',
-    href: '/account-tokens.html',
-    titleKey: 'navTokens',
-    fallbackVi: 'Tài Khoản & API Token',
-    fallbackEn: 'Account & API Tokens',
-    icon: 'ui-lock'
   }
 ];
 

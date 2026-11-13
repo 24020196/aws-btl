@@ -1,8 +1,8 @@
 # SPEC-01: Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning)
 
-> **Phiên bản**: `1.7.0`  
+> **Phiên bản**: `1.11.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-11`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -36,7 +36,7 @@
 
 | Thao tác yêu cầu | Trạng thái hợp lệ cho phép thực hiện | Trạng thái BỊ CẤM TUYỆT ĐỐI | Mã lỗi trả về |
 | :--- | :--- | :--- | :--- |
-| **Launch (Tạo mới)** | Không áp dụng (Tạo mới) | Trùng lặp `instance_id` | `HTTP 409 Conflict` |
+| **Launch (Tạo mới)** | Không áp dụng (Tạo mới), tổng máy thuộc `{PENDING, RUNNING, STOPPED, REBOOTING, STOPPING, MIGRATING}` của user `< 5` | Trùng lặp `instance_id` hoặc user đã đạt tối đa `5` máy | `HTTP 409 Conflict` |
 | **Start (Bật máy)** | `STOPPED` | `RUNNING`, `MIGRATING`, `PENDING`, `CREATING`, `SHUTTING_DOWN` | `HTTP 400 Bad Request` |
 | **Stop (Tắt máy)** | `RUNNING` | `STOPPED`, `MIGRATING`, `PENDING`, `CREATING`, `SHUTTING_DOWN` | `HTTP 400 Bad Request` |
 | **Reboot (Soft/Hard)**| `RUNNING` | `STOPPED`, `MIGRATING`, `PENDING`, `CREATING`, `SHUTTING_DOWN` | `HTTP 400 Bad Request` |
@@ -83,18 +83,29 @@ Hệ thống phân định ranh giới trách nhiệm rõ ràng giữa hai bản
 
 ### 5.1. Hợp đồng Giao Tiếp Backend (Backend Contract)
 1. **Tiếp nhận & Xét duyệt**:
-   - Quản trị viên gửi yêu cầu tạo VM từ UI -> `POST /api/instances`.
-   - `LaunchAdmissionService` (quy định tại [SPEC-05](SPEC-05-LAUNCH-ADMISSION-AND-STORAGE.md)) kiểm tra Admission Gate SSM Parameter `/xregion/ap-southeast-2/launch/admission` (`open` vs `maintenance`) và đối soát ImageId UUID, Flavor, KeyPair.
+   - Quản trị viên gửi yêu cầu tạo VM từ UI -> `POST /api/instances` với payload `LaunchInstanceRequest`:
+     - `name`: Bắt buộc, chuỗi tên máy ảo.
+     - `region`: Bắt buộc, thuộc danh mục vùng hỗ trợ: **`us-east-1` (Region A - N. Virginia)** hoặc **`ap-southeast-2` (Region B - Sydney)**.
+     - `flavor`: Bắt buộc, hợp lệ trong `XRegion-Flavors`.
+     - `imageId`: Bắt buộc, UUID chuẩn 36 ký tự tồn tại trong `XRegion-Images`.
+     - `ebsSizeGb`: Kiểu `int`, mặc định `1`, bắt buộc `>= 1` (`@Min(1)`).
+     - `keyPairName` (`keyId`): Bắt buộc, ID cặp khóa đã đăng ký.
+     - `inboundRules`, `outboundRules`: Danh sách quy tắc tường lửa tùy chỉnh từ Wizard.
+     - *Tuyệt đối không sử dụng trường `securityGroup` (cấm truyền hoặc nhận `sg-default`).*
+   - **Quy chuẩn Giao diện Launch Wizard (`launch.html`)**: Cung cấp tùy chọn rõ ràng giữa 2 vùng mục tiêu:
+     - **Region A (N. Virginia)**: Mã vùng `us-east-1`.
+     - **Region B (Sydney)**: Mã vùng `ap-southeast-2` (nơi máy chủ OpenStack trên EC2 `RegionB-tempEC2` đang vận hành).
+   - `LaunchAdmissionService` (quy định tại [SPEC-05](SPEC-05-LAUNCH-ADMISSION-AND-STORAGE.md)) kiểm tra Admission Gate SSM Parameter `/xregion/{region}/launch/admission` (`open` vs `maintenance`) theo đúng vùng được chọn, đối soát ImageId UUID, Flavor, KeyPair, dung lượng đĩa `>= 1`.
    - Nếu vi phạm -> Trả lỗi đồng bộ `HTTP 400 Bad Request` hoặc `HTTP 503 Service Unavailable` ngay tại Controller.
 2. **Khởi tạo trạng thái ban đầu & Tự động sinh Security Group 1-1**:
-   - Backend sinh UUID ngẫu nhiên cho `instance_id`.
+   - Backend sinh định dạng chuẩn `instance_id` là `i-<8 hex chars>` (ví dụ: `i-a1b2c3d4`, trích từ 8 ký tự đầu của UUID ngẫu nhiên).
    - **RÀNG BUỘC CỐT LÕI**: Backend tự động gán và ánh xạ **Security Group 1-1 riêng biệt** cho máy ảo này (`owner = currentUser`). Tuyệt đối cấm dùng chung Security Group mẫu (`sg-default`, `sg-web-public`) giữa các máy ảo.
    - Backend ghi bản ghi ban đầu vào DynamoDB `XRegion-Instances` với trạng thái `PENDING`.
-   - Bắn sự kiện `instance.launch` tới API Gateway `XRegion-EventGateway` (`POST /prod/events`) với chữ ký AWS IAM SigV4.
+   - **Định tuyến sự kiện API Gateway động**: Backend sử dụng `RegionEventGatewayClients` để bắn sự kiện `instance.launch` tới API Gateway EventBridge đích của đúng vùng được chọn (`us-east-1` hoặc `ap-southeast-2`), kèm chữ ký số AWS SigV4 theo vùng tương ứng. Không dùng fallback UUID cũ cho `imageId`.
    - **Phản hồi ngay lập tức**: Trả về **`HTTP 202 Accepted`** kèm payload JSON:
      ```json
      {
-       "instanceId": "i-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+       "instanceId": "i-a1b2c3d4",
        "status": "PENDING"
      }
      ```
@@ -156,3 +167,7 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
 | `2026-11-10` | `1.5.0` | Lead Architect / Product Owner | Xóa sạch UI instance-edit.html và menu sửa máy ảo; Quy định trải nghiệm UI khi Terminate (hiển thị SHUTTING_DOWN rồi biến mất hoàn toàn); Loại bỏ triệt để VolumeController & VolumeService khỏi backend; Xác nhận không giới hạn quota ở tầng backend. |
 | `2026-11-11` | `1.6.0` | Chủ dự án (yêu cầu trực tiếp) | Đồng bộ với SPEC-SF-01 `1.5.0`: bước 6 lưu Security Group kèm `instance_id` và rule nguyên văn từ payload với `sync_status = PENDING_SYNC`; bước 7 đổi `VerifyNetwork` thành `CheckNatCommand` (khớp SPEC-04 `1.2.0`). |
 | `2026-11-11` | `1.7.0` | Chủ dự án (yêu cầu trực tiếp) | Chuyển đổi cơ chế đồng bộ sau khi TerminateInstance từ Xóa cứng (Hard Delete) sang Soft Delete: cập nhật bản ghi trong XRegion-Instances và XRegion-Nova về trạng thái TERMINATED kèm timestamp terminated_at, lưu vết lịch sử trên UI. |
+| `2026-11-12` | `1.8.0` | Chủ dự án (xacnhan-skill) | Chuẩn hóa DTO LaunchInstanceRequest (đĩa tối thiểu 1 GiB, loại bỏ securityGroup mẫu, bỏ fallback UUID cũ), chuẩn hóa định dạng instance_id là i-<8 hex chars>. |
+| `2026-11-12` | `1.9.0` | Chủ dự án (xacnhan-skill) | Ẩn hoàn toàn panel Target Region trên launch.html, ngầm định truyền region=ap-southeast-2 để đồng bộ 100% với SPEC-05. |
+| `2026-11-12` | `1.10.0` | Chủ dự án (xacnhan-skill) | Chuẩn hóa định danh 2 vùng (Region A = us-east-1, Region B = ap-southeast-2), định tuyến sự kiện động qua RegionEventGatewayClients theo vùng được chọn trên UI. |
+| `2026-11-13` | `1.11.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung Pre-condition Launch: giới hạn tối đa 5 máy ảo thuộc `{PENDING, RUNNING, STOPPED, REBOOTING, STOPPING, MIGRATING}` cho mỗi user (kể cả `admin`, `HTTP 409 Conflict`). |

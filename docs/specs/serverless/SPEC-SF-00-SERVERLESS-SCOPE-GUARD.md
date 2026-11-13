@@ -47,6 +47,8 @@ Agent **BẮT BUỘC PHẢI TẠM NGƯNG NGAY LẬP TỨC (PAUSE)**:
 | **`SPEC-SF-04`** | [Instance Fault Recovery](SPEC-SF-04-INSTANCE-RECOVERY.md) | `XRegion-InstanceRecovery`, Quét lỗi bền vững (>=3 sweeps, >=30m), Xử lý tuần tự | `1.0.0` |
 | **`SPEC-SF-05`** | [Security Group Synchronizer](SPEC-SF-05-SECURITY-GROUP-SYNC.md) | `XRegion-SyncSecurityGroup`, Khóa lạc quan `revision`, Đồng bộ Neutron SG | `1.0.0` |
 | **`SPEC-SF-06`** | [Lifecycle Pipeline Step Function](SPEC-SF-06-LIFECYCLE-PIPELINE.md) | `LifecycleInstance.asl.json`, `XRegion-InstanceLifecycle`, STOP/START/REBOOT observe-before-write | `1.0.0` |
+| **`SPEC-SF-08`** | [Migration Pipeline Step Function](SPEC-SF-08-MIGRATION-PIPELINE.md) | `MigrateInstance`, snapshot/copy polling, `TriggerTargetLaunch`, Compensating Rollback | `1.2.0` |
+| **`SPEC-SF-09`** | [Migrate Target Boot Step Function](SPEC-SF-09-MIGRATE-TARGET-BOOT.md) | `MigrateTargetBoot`, boot Nova VM từ `dest_snapshot_id` theo cơ chế `LaunchInstance`, giữ nguyên SG rules, Rollback 2 tầng | `1.2.0` |
 
 ---
 

@@ -1,8 +1,8 @@
 # SPEC-SF-02: Quy Trình Hủy Máy Ảo Step Function (Terminate Pipeline)
 
-> **Phiên bản**: `1.2.0`  
+> **Phiên bản**: `1.4.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-11`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)
 
 ---
@@ -63,7 +63,9 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
 5. **Bước 5: Xóa Lưu Trữ Boot Volume (`DeleteVolume`)**:
    - Gọi OpenStack Cinder API `DELETE /volumes/{id}` và xác nhận AWS EBS Volume liên kết đã chuyển sang trạng thái biến mất vật lý (`InvalidVolume.NotFound`).
    - Cập nhật trạng thái bản ghi trong `XRegion-Volumes` sang `DELETED`.
-6. **Bước 6: Đồng Bộ Bản Ghi tại `SyncDynamoDB` sang `TERMINATED` (Soft Delete)**:
+6. **Bước 6: Đồng Bộ Bản Ghi tại `SyncDynamoDB` sang `TERMINATED` (Soft Delete — Global Table)**:
+   - Tại một thời điểm, mỗi máy ảo chỉ có **duy nhất 1 Nova VM active (`active_nova_id`) tại `current_region`** (ngoại trừ khoảnh khắc chuyển tiếp ngắn trước khi `MigrateSourceCleanup` xóa xong Nova VM nguồn cũ).
+   - Các bảng `XRegion-Instances`, `XRegion-Nova`, `XRegion-Volumes`, `XRegion-SecurityGroups` là **DynamoDB Global Tables (`2019.11.21`)** tự động replicate giữa `ap-southeast-2` và `us-east-1`, nên `TerminateSync` chỉ cần ghi 1 lần tại vùng đang thực thi Step Function:
    - Gọi DynamoDB API `update_item` cập nhật bản ghi máy ảo trong bảng `XRegion-Instances`:
      - `current_status = 'TERMINATED'`
      - `terminated_at = now` (timestamp ms)
@@ -72,9 +74,7 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
      - `public_ip = 'Chưa gán'`
      - `migration_lock = false`
      - `REMOVE current_nova_id`
-   - Gọi DynamoDB API `update_item` cập nhật toàn bộ các bản ghi Nova liên quan trong bảng `XRegion-Nova` (duyệt qua danh sách `nova_ids`):
-     - `status = 'TERMINATED'`
-     - `terminated_at = now`
+   - Gọi DynamoDB API `update_item` cập nhật bản ghi `XRegion-Nova` của Nova VM đang terminate (`active_nova_id` / `event.nova_id`) sang `status = 'TERMINATED'`, `terminated_at = now` (bỏ qua an toàn nếu các `nova_id` lịch sử trong `nova_ids` đã `TERMINATED` hoặc không còn tồn tại, không để lỗi `ConditionalCheckFailedException` làm fail pipeline).
    - **Trải nghiệm UI Dashboard**: Máy ảo hiển thị trong danh sách với badge xám `TERMINATED` để người dùng và quản trị viên tra cứu lịch sử.
 
 ---
@@ -97,3 +97,5 @@ Chuỗi dọn dẹp bắt buộc phải thực thi theo đúng thứ tự 7 bư�
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành đặc tả Step Function TerminateInstance, chuẩn hóa thứ tự 7 bước dọn dẹp tuần tự, fail-closed và Hard Delete trong DynamoDB. |
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Xác nhận qua xacnhan-skill: Loại bỏ hoàn toàn nhánh Legacy trong workflows.py và ASL, bắt buộc 100% linux_nat_v1; xác nhận xóa Nova trước FinalizeNetworkRelease; timeout 300s; xóa cứng delete_item toàn diện. |
 | `2026-11-11` | `1.2.0` | Chủ dự án (yêu cầu trực tiếp) | Chuyển đổi cơ chế đồng bộ sau khi TerminateInstance từ Xóa cứng (Hard Delete) sang Soft Delete: bước 6 update_item cập nhật current_status = TERMINATED và status = TERMINATED kèm timestamp terminated_at, lưu vết lịch sử trên UI. |
+| `2026-11-13` | `1.3.0` | Chủ dự án (`xacnhan-skill`) | Xác nhận qua `xacnhan-skill`: `TerminateSync` (Bước 6) đồng bộ trạng thái `TERMINATED` của `XRegion-Instances` và `XRegion-Nova` (`nova_ids`) sang cả 2 vùng (`ap-southeast-2` và `us-east-1`), khớp cơ chế đọc ưu tiên `XRegion-Instances` / `XRegion-Nova` của `InstanceService.mapToResponse`. |
+| `2026-11-13` | `1.4.0` | Chủ dự án (`xacnhan-skill`) | Đính chính theo kiến trúc thực tế qua `xacnhan-skill`: (1) Các bảng DynamoDB là Global Tables (`2019.11.21`) tự replicate nên `TerminateSync` chỉ ghi 1 lần tại vùng thực thi; (2) Mỗi instance chỉ có 1 Nova VM active tại `current_region` (trừ lúc chuyển tiếp chờ `MigrateSourceCleanup`); (3) Cập nhật `XRegion-Nova` cho VM đang terminate và bỏ qua an toàn các `nova_id` lịch sử đã `TERMINATED` hoặc không tồn tại. |

@@ -21,6 +21,11 @@ aws:
   secretAccessKey: ${AWS_SECRET_ACCESS_KEY:}
   apigateway:
     eventEndpoint: ${AWS_APIGATEWAY_EVENT_ENDPOINT:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
+    # Mỗi vùng có một API Gateway EventBridge riêng (AWS_IAM): sự kiện phải được ký SigV4
+    # bằng đúng region của gateway đích, nếu không API Gateway trả 403.
+    eventEndpoints:
+      ap-southeast-2: ${AWS_APIGATEWAY_EVENT_ENDPOINT_AP_SOUTHEAST_2:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
+      us-east-1: ${AWS_APIGATEWAY_EVENT_ENDPOINT_US_EAST_1:https://dawfyj0692.execute-api.us-east-1.amazonaws.com/prod/events}
 
 # DynamoDB Live Cloud Configuration via Table ARN
 dynamodb:

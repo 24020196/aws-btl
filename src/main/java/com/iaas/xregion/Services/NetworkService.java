@@ -1091,7 +1091,10 @@ public class NetworkService {
                 throw new IllegalStateException("EventBridge Gateway client chưa được cấu hình");
             }
             int ruleCount = ((List<?>) sg.get("inboundRules")).size() + ((List<?>) sg.get("outboundRules")).size();
-            eventBridgeGatewayClient.sendSecurityGroupSyncEvent(groupId, instanceId, novaId, revision, ruleCount, user);
+            String targetRegion = (inst != null && inst.getCurrentRegion() != null && !inst.getCurrentRegion().isBlank())
+                    ? inst.getCurrentRegion().trim()
+                    : "ap-southeast-2";
+            eventBridgeGatewayClient.sendSecurityGroupSyncEvent(targetRegion, groupId, instanceId, novaId, revision, ruleCount, user);
             sg.put("syncStatus", SecurityGroupSyncStatus.PENDING_SYNC);
             sg.put("lastEventId", revision);
             sg.remove("syncError");

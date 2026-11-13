@@ -1,8 +1,8 @@
 # SPEC-02: Quản Lý Pool Tài Nguyên & Dọn Dẹp Mồ Côi (Resource Pool Cleaner)
 
-> **Phiên bản**: `1.0.0`  
+> **Phiên bản**: `1.2.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -23,12 +23,14 @@ Tài nguyên được xác định là nằm trong Pool rảnh rỗi khi thỏa 
 ## 2. Quy Tắc Dung Lượng Pool & Tiêu Chuẩn Dọn Dẹp (Pool Retention Limit)
 
 > [!IMPORTANT]
-> ### QUY TẮC BẤT BIẾN VỀ POOL: GIỚI HẠN TỐI ĐA 2 TÀI NGUYÊN RẢNH RỖI
-> - **Dung lượng tối đa cho phép của Warm Pool**: **2 tài nguyên rảnh rỗi** (áp dụng độc lập cho Pool EIP và Pool Volume).
+> ### QUY TẮC BẤT BIẾN VỀ POOL: PHÂN TÁCH NGƯỠNG TỐI ĐA CHO EIP (`<= 2`) VÀ VOLUME (`<= 5`)
+> - **Dung lượng tối đa cho phép của Warm Pool**:
+>   - **Pool EIP rảnh rỗi**: Tối đa **2 EIP** (tránh chạm giới hạn 5 EIP/region của AWS).
+>   - **Pool EBS/Cinder Volume rảnh rỗi**: Tối đa **5 Volume** (đồng bộ với `SPEC-SF-03`).
 > - **Quy định về thời gian an toàn (Grace Period)**: **KHÔNG ÁP DỤNG GRACE PERIOD**. Cứ tài nguyên ở trạng thái `available` / `unattached` là được tính ngay vào tổng số lượng của Pool.
-> - **Nguyên tắc xử lý khi vượt ngưỡng (Pool Size > 2)**:
->   - Nếu tổng số tài nguyên rảnh rỗi trong Pool **lớn hơn 2** (`PoolCount > 2`), hệ thống **BẮT BUỘC PHẢI XÓA VĨNH VIỄN** các tài nguyên thừa trên hạ tầng AWS/OpenStack.
->   - **Tiêu chí lựa chọn để xóa**: Áp dụng nguyên tắc **FIFO (First In - First Out)**: Tài nguyên nào có thời gian nhàn rỗi lâu nhất (dựa trên timestamp disassociate / detach) sẽ bị giải phóng/xóa trước, cho đến khi số lượng tài nguyên rảnh rỗi trong Pool còn lại **chính xác 2 tài nguyên**.
+> - **Nguyên tắc xử lý khi vượt ngưỡng (`EIP > 2` hoặc `Volume > 5`)**:
+>   - Nếu tổng số EIP rảnh rỗi **lớn hơn 2** (`EIPCount > 2`) hoặc tổng số Volume rảnh rỗi **lớn hơn 5** (`VolumeCount > 5`), hệ thống **BẮT BUỘC PHẢI XÓA VĨNH VIỄN** các tài nguyên thừa trên hạ tầng AWS/OpenStack.
+>   - **Tiêu chí lựa chọn để xóa**: Áp dụng nguyên tắc **FIFO (First In - First Out)**: Tài nguyên nào có thời gian nhàn rỗi lâu nhất (dựa trên timestamp disassociate / detach / create) sẽ bị giải phóng/xóa trước, cho đến khi EIP còn lại **tối đa 2** và Volume còn lại **tối đa 5**.
 
 ---
 
@@ -50,9 +52,9 @@ flowchart TD
     RunCleaner1 --> ExecPool[Đếm số lượng Unattached EIP & Available Volume]
     RunCleaner2 --> ExecPool
 
-    ExecPool --> CheckCount{Pool Size > 2?}
-    CheckCount -- Không (<= 2) --> KeepWarm[Giữ nguyên tài nguyên dự phòng Warm Pool]
-    CheckCount -- Có (> 2) --> PurgeFIFO[Xóa tài nguyên cũ nhất theo FIFO về mốc 2]
+    ExecPool --> CheckCount{EIP > 2 hoặc Vol > 5?}
+    CheckCount -- Không --> KeepWarm[Giữ nguyên tài nguyên dự phòng Warm Pool]
+    CheckCount -- Có --> PurgeFIFO[Xóa tài nguyên cũ nhất theo FIFO về mốc 2 EIP / 5 Vol]
     PurgeFIFO --> CWLog[Ghi CloudWatch Logs kết quả dọn dẹp]
 ```
 
@@ -95,3 +97,4 @@ flowchart TD
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
 | :--- | :--- | :--- | :--- |
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành tài liệu chuẩn hóa quy tắc quản trị Pool và dọn dẹp mồ côi. |
+| `2026-11-13` | `1.2.0` | Chủ dự án (`xacnhan-skill`) | Phân tách rõ ngưỡng Warm Pool qua `xacnhan-skill`: tối đa `2` EIP rảnh rỗi (tránh chạm limit 5 EIP/region) và tối đa `5` EBS/Cinder Volume rảnh rỗi (đồng bộ `SPEC-SF-03`). |

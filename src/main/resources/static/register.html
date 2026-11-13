@@ -32,7 +32,7 @@
   </header>
 
   <!-- Main 2-Column Wrapper -->
-  <main class="xr-main-wrapper">
+  <main class="xr-main-wrapper" style="grid-template-columns: minmax(0, 460px); justify-content: center;">
     <!-- Left Column: Sign up Form -->
     <div class="xr-card">
       <h1 class="xr-card-title" data-i18n="regHeading">Đăng ký người dùng</h1>
@@ -44,11 +44,6 @@
       <div id="registerErrorBox" class="xr-error-alert"></div>
 
       <form id="authRegisterForm" onsubmit="handleRegisterPageSubmit(event)">
-        <div class="xr-field-group">
-          <label class="xr-label" for="regFullName" data-i18n="labelFullName">Họ và tên</label>
-          <input type="text" class="xr-input" id="regFullName" required data-i18n-placeholder="placeholderFullName" placeholder="VD: Nguyễn Văn A">
-        </div>
-
         <div class="xr-field-group">
           <label class="xr-label" for="regUsername" data-i18n="labelUsername">Tên đăng nhập *</label>
           <input type="text" class="xr-input" id="regUsername" required data-i18n-placeholder="placeholderUsername" placeholder="VD: alex_dev" autocomplete="username">
@@ -84,38 +79,6 @@
           Quay lại đăng nhập
         </a>
       </form>
-    </div>
-
-    <!-- Right Column: Clean Promo Card -->
-    <div class="xr-promo-box">
-      <div class="xr-promo-badge">
-        <span class="xr-promo-badge-dot"></span>
-        <span>XRegion Cloud</span>
-      </div>
-      <h2 class="xr-promo-headline" data-i18n="promoHeadline">
-        Không gian hạ tầng máy ảo độc lập cho từng tài khoản.
-      </h2>
-      <p class="xr-promo-subtext" data-i18n="promoSubtext">
-        Sau khi tạo tài khoản, bạn có thể sử dụng đầy đủ các tính năng:
-      </p>
-      <ul class="xr-promo-checklist">
-        <li>
-          <svg class="ico ico-xs ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check"></use></svg>
-          <span data-i18n="feat1">Quản lý danh sách máy ảo riêng biệt theo tài khoản</span>
-        </li>
-        <li>
-          <svg class="ico ico-xs ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check"></use></svg>
-          <span data-i18n="feat2">Tạo cặp khóa bảo mật SSH (tự động tải file .pem)</span>
-        </li>
-        <li>
-          <svg class="ico ico-xs ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check"></use></svg>
-          <span data-i18n="feat3">Di chuyển máy ảo liên vùng không gián đoạn</span>
-        </li>
-        <li>
-          <svg class="ico ico-xs ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check"></use></svg>
-          <span data-i18n="feat4">Cấp phát và quản lý mã API Token cá nhân</span>
-        </li>
-      </ul>
     </div>
   </main>
 

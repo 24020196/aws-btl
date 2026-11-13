@@ -72,6 +72,21 @@ class LaunchAdmissionServiceTest {
         config("{\"mode\":\"open\"}"); catalogs(); service.validate(request, "lam");
         verify(keys).getKeyPair("my-key");
     }
+    @Test void virginiaRegionAllowedAndChecksCatalog() {
+        request.setRegion("us-east-1");
+        config("{\"mode\":\"open\"}"); catalogs(); service.validate(request, "lam");
+        verify(keys).getKeyPair("my-key");
+    }
+    @Test void unsupportedRegionRejected() {
+        request.setRegion("eu-west-1");
+        assertThatThrownBy(() -> service.validate(request, "lam")).isInstanceOf(AppException.class)
+                .hasMessageContaining("Unsupported launch region");
+    }
+    @Test void invalidDiskSizeZeroRejected() {
+        request.setEbsSizeGb(0);
+        assertThatThrownBy(() -> service.validate(request, "lam")).isInstanceOf(AppException.class)
+                .hasMessageContaining("invalid disk size");
+    }
     @Test void exactCanaryExceptionStillChecksCatalog() {
         config("{\"mode\":\"maintenance\",\"canary\":{\"username\":\"lam\",\"name\":\"test\",\"key_id\":\"my-key\"}}");
         catalogs(); service.validate(request, "lam"); verifyNoInteractions(keys);
@@ -79,5 +94,41 @@ class LaunchAdmissionServiceTest {
     @Test void wrongCanaryUserRejected() {
         config("{\"mode\":\"maintenance\",\"canary\":{\"username\":\"lam\",\"name\":\"test\",\"key_id\":\"my-key\"}}");
         assertThatThrownBy(() -> service.validate(request, "other")).isInstanceOf(LaunchUnavailableException.class);
+    }
+
+    @Test void multiRegionSsmResolverRoutesByRegion() {
+        SsmClient ssmVirginia = mock(SsmClient.class);
+        SsmClient ssmSydney = mock(SsmClient.class);
+        java.util.Map<String, SsmClient> map = java.util.Map.of(
+                "us-east-1", ssmVirginia,
+                "ap-southeast-2", ssmSydney
+        );
+        LaunchAdmissionService multiService = new LaunchAdmissionService(
+                map::get, new ObjectMapper(), images, flavors, keys
+        );
+
+        when(ssmVirginia.getParameter(any(Consumer.class))).thenReturn(GetParameterResponse.builder()
+                .parameter(Parameter.builder().value("{\"mode\":\"open\"}").build()).build());
+        when(ssmSydney.getParameter(any(Consumer.class))).thenReturn(GetParameterResponse.builder()
+                .parameter(Parameter.builder().value("{\"mode\":\"open\"}").build()).build());
+
+        catalogs();
+        request.setRegion("us-east-1");
+        multiService.validate(request, "lam");
+        verify(ssmVirginia, times(1)).getParameter(any(Consumer.class));
+        verify(ssmSydney, never()).getParameter(any(Consumer.class));
+
+        catalogs();
+        request.setRegion("ap-southeast-2");
+        multiService.validate(request, "lam");
+        verify(ssmSydney, times(1)).getParameter(any(Consumer.class));
+    }
+
+    @Test void rejectsDiskSizeExceeding5Gb() {
+        request.setEbsSizeGb(6);
+        assertThatThrownBy(() -> service.validate(request, "lam"))
+                .isInstanceOf(AppException.class)
+                .hasMessageContaining("5 GiB");
+        verifyNoInteractions(ssm, images, flavors, keys);
     }
 }

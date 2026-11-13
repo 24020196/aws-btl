@@ -74,7 +74,7 @@ async function handleRegisterPageSubmit(e) {
 
   const username = document.getElementById('regUsername').value.trim();
   const payload = {
-    fullName: document.getElementById('regFullName').value.trim(),
+    fullName: document.getElementById('regFullName')?.value.trim() || document.getElementById('regUsername').value.trim(),
     username: username,
     password: pass,
     role: 'ROLE_USER'

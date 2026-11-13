@@ -140,12 +140,12 @@ function tickCooldown() {
   if (left > 0) {
     setText('migCooldown', fmtCountdown(left));
     setText('migCooldownHint', t(`Mỗi máy phải nghỉ ${Math.round(total / 60)} phút giữa hai lần chuyển.`, `Each instance waits ${Math.round(total / 60)} minutes between migrations.`));
-    document.getElementById('migCooldown').classList.add('active');
+    document.getElementById('migCooldown')?.classList.add('active');
     if (bar) bar.style.width = `${Math.min(100, (left / total) * 100)}%`;
   } else {
     setText('migCooldown', t('Sẵn sàng', 'Ready'));
     setText('migCooldownHint', t(`Cooldown ${Math.round(total / 60)} phút, tính từ lần chuyển hoàn tất gần nhất.`, `${Math.round(total / 60)}-minute cooldown after the last completed migration.`));
-    document.getElementById('migCooldown').classList.remove('active');
+    document.getElementById('migCooldown')?.classList.remove('active');
     if (bar) bar.style.width = '0%';
     if (det.cooldownTimer && !det.running) {
       clearInterval(det.cooldownTimer);

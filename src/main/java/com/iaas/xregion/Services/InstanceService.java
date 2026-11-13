@@ -15,13 +15,18 @@ import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Entity.InstanceStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
@@ -39,6 +44,9 @@ public class InstanceService {
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final AuthService authService;
     private final LaunchAdmissionService launchAdmissionService;
+
+    @Autowired(required = false)
+    private DynamoDbEnhancedClient enhancedClient;
 
     /**
      * Ma trận điều kiện tiên quyết của SPEC-01 (mục 2) và trạng thái chuyển tiếp tương ứng.
@@ -177,15 +185,60 @@ public class InstanceService {
         }
     }
 
+    private Map<String, NovaEntity> batchLoadNova(Collection<String> novaIds) {
+        Map<String, NovaEntity> result = new HashMap<>();
+        if (enhancedClient == null || novaTable == null || novaIds == null || novaIds.isEmpty()) {
+            return result;
+        }
+        List<String> distinctIds = novaIds.stream()
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        for (int i = 0; i < distinctIds.size(); i += 100) {
+            List<String> chunk = distinctIds.subList(i, Math.min(i + 100, distinctIds.size()));
+            ReadBatch.Builder<NovaEntity> batchBuilder = ReadBatch.builder(NovaEntity.class)
+                    .mappedTableResource(novaTable);
+            for (String nid : chunk) {
+                batchBuilder.addGetItem(Key.builder().partitionValue(nid).build());
+            }
+            enhancedClient.batchGetItem(BatchGetItemEnhancedRequest.builder()
+                            .addReadBatch(batchBuilder.build())
+                            .build())
+                    .resultsForTable(novaTable)
+                    .forEach(nova -> {
+                        if (nova != null && nova.getNovaId() != null) {
+                            result.put(nova.getNovaId(), nova);
+                        }
+                    });
+        }
+        return result;
+    }
+
     public List<InstanceResponse> getAllInstances() {
         String currentUser = getCurrentUsername();
         try {
-            return instancesTable.scan()
+            List<InstanceEntity> owned = instancesTable.scan()
                     .items()
                     .stream()
                     .filter(entity -> isOwner(entity, currentUser))
-                    .peek(this::autoLinkNovaIfAvailable)
-                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            owned.parallelStream().forEach(this::autoLinkNovaIfAvailable);
+
+            Map<String, NovaEntity> novaMap = (enhancedClient != null)
+                    ? batchLoadNova(owned.stream().map(InstanceEntity::getActiveNovaId).collect(Collectors.toList()))
+                    : Collections.emptyMap();
+
+            return owned.stream()
+                    .map(entity -> {
+                        if (enhancedClient != null) {
+                            NovaEntity preloaded = entity.getActiveNovaId() != null
+                                    ? novaMap.get(entity.getActiveNovaId())
+                                    : null;
+                            return mapToResponse(entity, preloaded);
+                        }
+                        return mapToResponse(entity);
+                    })
                     .sorted((a, b) -> Long.compare(b.getUpdatedAt(), a.getUpdatedAt()))
                     .collect(Collectors.toList());
         } catch (Exception e) {
@@ -198,7 +251,10 @@ public class InstanceService {
         String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
-            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+            entity = instancesTable.getItem(GetItemEnhancedRequest.builder()
+                    .key(Key.builder().partitionValue(id).build())
+                    .consistentRead(true)
+                    .build());
         } catch (Exception e) {
             log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
@@ -210,9 +266,26 @@ public class InstanceService {
         return mapToResponse(entity);
     }
 
+    public static final int MAX_INSTANCES_PER_USER = 5;
+    private static final Set<String> QUOTA_COUNTED_STATUSES = Set.of(
+            "PENDING", "RUNNING", "STOPPED", "REBOOTING", "STOPPING", "MIGRATING"
+    );
+
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
         String currentUser = getCurrentUsername();
         launchAdmissionService.validate(request, currentUser);
+
+        UserEntity currentUserEntity = authService.findUserByUsername(currentUser);
+        String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
+                ? currentUserEntity.getUserId()
+                : ("usr-" + currentUser);
+
+        long activeCount = countActiveQuotaInstances(userId, currentUser);
+        if (activeCount >= MAX_INSTANCES_PER_USER) {
+            throw new ConflictException("Bạn đã đạt giới hạn tối đa " + MAX_INSTANCES_PER_USER
+                    + " máy ảo đang hoạt động. Vui lòng xóa bớt máy ảo trước khi tạo mới.");
+        }
+
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
         long nowSec = TimeSyncUtil.nowEpochSeconds();
 
@@ -220,18 +293,11 @@ public class InstanceService {
         String keyId = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
-        String securityGroup = (request.getSecurityGroup() != null && !request.getSecurityGroup().trim().isEmpty())
-                ? request.getSecurityGroup().trim()
-                : "sg-default";
         String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
-        UserEntity currentUserEntity = authService.findUserByUsername(currentUser);
-        String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
-                ? currentUserEntity.getUserId()
-                : ("usr-" + currentUser);
-        int initialEbsGb = (request.getEbsSizeGb() > 0) ? request.getEbsSizeGb() : 10;
+        int initialEbsGb = request.getEbsSizeGb();
 
         // 1. Initial Streamlined Instance record in XRegion-Instances with PENDING status (active_nova_id not yet assigned)
         InstanceEntity entity = InstanceEntity.builder()
@@ -262,21 +328,22 @@ public class InstanceService {
 
         // Bắn sự kiện qua API Gateway vào EventBridge để Step Function LaunchInstance tự động cấp phát và đồng bộ DynamoDB
         try {
-            int ebsSize = request.getEbsSizeGb() > 0 ? request.getEbsSizeGb() : 10;
+            int ebsSize = request.getEbsSizeGb();
             String volType = (request.getEbsVolumeType() != null && !request.getEbsVolumeType().trim().isEmpty())
                     ? request.getEbsVolumeType().trim() : "gp3";
-            String imageId = (request.getImageId() != null && !request.getImageId().trim().isEmpty())
-                    ? request.getImageId().trim() : "72e9830a-53ef-4c36-8b5c-fae3b96a3fd0";
+            String imageId = (request.getImageId() != null) ? request.getImageId().trim() : "";
+            String instName = (request.getName() != null) ? request.getName().trim() : "";
 
             eventBridgeGatewayClient.sendInstanceLaunchEvent(
                     id,
-                    request.getName().trim(),
+                    instName,
                     ebsSize,
                     volType,
                     request.getFlavor(),
                     imageId,
                     keyId,
                     currentUser,
+                    region,
                     request.getInboundRules(),
                     request.getOutboundRules());
         } catch (Exception e) {
@@ -295,6 +362,23 @@ public class InstanceService {
         }
 
         return mapToResponse(entity);
+    }
+
+    private long countActiveQuotaInstances(String userId, String currentUser) {
+        var page = instancesTable.scan();
+        if (page == null || page.items() == null) {
+            return 0;
+        }
+        return page.items().stream()
+                .filter(e -> {
+                    if (userId != null && userId.equalsIgnoreCase(e.getUserId())) {
+                        return true;
+                    }
+                    return currentUser != null && currentUser.equalsIgnoreCase(e.getUsername());
+                })
+                .filter(e -> e.getCurrentStatus() != null
+                        && QUOTA_COUNTED_STATUSES.contains(e.getCurrentStatus().toUpperCase(Locale.ROOT)))
+                .count();
     }
 
     private void markFailed(String id, String status, String reason, Exception cause) {
@@ -317,7 +401,10 @@ public class InstanceService {
         String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
-            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+            entity = instancesTable.getItem(GetItemEnhancedRequest.builder()
+                    .key(Key.builder().partitionValue(id).build())
+                    .consistentRead(true)
+                    .build());
         } catch (Exception e) {
             log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
@@ -388,6 +475,10 @@ public class InstanceService {
                 log.warn("Could not fetch active Nova [{}] for instance [{}]: {}", entity.getActiveNovaId(), entity.getInstanceId(), e.getMessage());
             }
         }
+        return mapToResponse(entity, activeNova);
+    }
+
+    public InstanceResponse mapToResponse(InstanceEntity entity, NovaEntity activeNova) {
 
         String regionCode = (activeNova != null && activeNova.getRegion() != null)
                 ? activeNova.getRegion()

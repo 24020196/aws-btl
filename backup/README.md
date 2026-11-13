@@ -1,15 +1,18 @@
-# Backup AWS XRegion - Sydney
+# Backup AWS XRegion - Đa Vùng (Virginia `us-east-1` & Sydney `ap-southeast-2`)
 
-Phạm vi: tài nguyên của XRegion trong `ap-southeast-2`, account `291634989063`, cùng IAM role/policy toàn cục được chúng sử dụng. **Không backup EBS** theo yêu cầu. Mã lấy từ AWS đang triển khai, không lấy bản sửa phase 1 chưa deploy.
+Phạm vi: tài nguyên của XRegion trong cả 2 vùng `us-east-1` (Region A - N. Virginia) và `ap-southeast-2` (Region B - Sydney), account `291634989063`, cùng IAM role/policy toàn cục được chúng sử dụng. **Không backup EBS** theo yêu cầu. Mã lấy từ AWS đang triển khai.
 
-Snapshot hiện tại: [`snapshots/sydney-20261108T125515Z`](snapshots/sydney-20261108T125515Z).
+Snapshot mới nhất:
+- Region A (`us-east-1`): [`snapshots/virginia-20261112T213510Z`](snapshots/virginia-20261112T213510Z)
+- Region B (`ap-southeast-2`): [`snapshots/sydney-20261112T213522Z`](snapshots/sydney-20261112T213522Z)
 
 ## Nội dung
 
 - `lambda/<tên>/deployed.zip`: gói AWS gốc, đối chiếu `CodeSha256`; `source/` là mã giải nén. Có cấu hình, policy, version, alias, trigger và concurrency hiện có.
-- `stepfunctions/`: ASL và cấu hình workflow.
+- `stepfunctions/`: ASL và cấu hình workflow (`LaunchInstance`, `TerminateInstance`, `InstanceLifecycle`, `XRegion-InstanceRecovery`).
 - `dynamodb/`: schema, index, TTL và cấu hình continuous backup; không chứa item.
-- `eventbridge/`, `apigateway/`, `sqs/`, `cloudwatch/`: rule/target, API Swagger đang deploy và stage, cấu hình queue, log group và resource policy.
+- `eventbridge/`, `apigateway/`, `sqs/`, `cloudwatch/`: rule/target, schedule (`XRegion-InstanceRecovery-Schedule`), API Swagger đang deploy và stage, cấu hình queue, log group và resource policy.
+- `ssm/`: SSM Document (`XRegion-NetworkGateway`) và SSM Parameter (`/xregion/<region>/launch/admission`).
 - `iam/`, `ec2/`: role, trust/permission policy, instance profile và cấu hình EC2/VPC/subnet/SG/route/NAT/EIP/ENI liên quan. IAM credentials và private SSH key không được xuất.
 - `resource-models/`, `resource-schemas/`: mô hình resource và schema CloudFormation đọc trực tiếp từ AWS.
 - `restore/template.json`: mã CloudFormation tái tạo hạ tầng và ứng dụng; không có EBS Volume, VolumeAttachment hoặc snapshot.
@@ -23,9 +26,15 @@ Thư mục `snapshots/` được `.gitignore` riêng loại khỏi Git vì chứ
 Cần Python cùng `boto3`, `jsonschema` và AWS credentials có quyền đọc các dịch vụ tương ứng.
 
 ```powershell
-python -B backup/export_sydney.py
-python -B backup/build_restore_template.py backup/snapshots/<snapshot-moi>
-python -B backup/validate_snapshot.py backup/snapshots/<snapshot-moi> --fetch-schemas
+# Region A (us-east-1)
+python -B backup/export_sydney.py --region us-east-1
+python -B backup/build_restore_template.py backup/snapshots/<virginia-snapshot-moi>
+python -B backup/validate_snapshot.py backup/snapshots/<virginia-snapshot-moi> --fetch-schemas
+
+# Region B (ap-southeast-2)
+python -B backup/export_sydney.py --region ap-southeast-2
+python -B backup/build_restore_template.py backup/snapshots/<sydney-snapshot-moi>
+python -B backup/validate_snapshot.py backup/snapshots/<sydney-snapshot-moi> --fetch-schemas
 ```
 
 Exporter chỉ đọc AWS, kiểm tra account và ghi snapshot mới. `--resume --output <thu-muc>` chỉ dùng để tiếp tục snapshot chưa hoàn thành. Không có lệnh triển khai trong exporter/builder/validator. Không chỉnh sửa snapshot đã chốt checksum; tạo bản mới khi cập nhật.
@@ -33,7 +42,8 @@ Exporter chỉ đọc AWS, kiểm tra account và ghi snapshot mới. `--resume 
 Kiểm tra tính toàn vẹn mà không gọi AWS hoặc sửa file:
 
 ```powershell
-python -B backup/validate_snapshot.py backup/snapshots/sydney-20261108T125515Z --verify-only
+python -B backup/validate_snapshot.py backup/snapshots/virginia-20261112T213510Z --verify-only
+python -B backup/validate_snapshot.py backup/snapshots/sydney-20261112T213522Z --verify-only
 ```
 
 ## Chuẩn bị khôi phục
