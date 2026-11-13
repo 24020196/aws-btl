@@ -84,8 +84,19 @@ const det = {
   pollTimer: null,
   running: false,
   statusTimer: null,
-  actionsKey: ''
+  actionsKey: '',
+  dataReady: false
 };
+
+function ensureDynamoDataReady() {
+  if (det.dataReady) return true;
+  if (typeof showDynamoLoadingPopup === 'function') {
+    showDynamoLoadingPopup();
+  } else {
+    showToast(t('Đang tải dữ liệu từ DynamoDB, vui lòng đợi...', 'Loading data from DynamoDB, please wait...'), 'info');
+  }
+  return false;
+}
 
 function esc(value) {
   if (value === null || value === undefined) return '';
@@ -142,7 +153,7 @@ function fmtCountdown(sec) {
 }
 
 // ---------------- Tabs ----------------
-const DET_TABS = ['details', 'monitoring', 'migration'];
+const DET_TABS = ['migration'];
 const SSH_USERS = {
   cirros: 'cirros',
   alpine: 'alpine',
@@ -202,7 +213,7 @@ document.addEventListener('click', e => {
   if (btn) copyText(btn.dataset.copy);
 });
 function switchDetailTab(tab) {
-  if (!DET_TABS.includes(tab)) tab = 'details';
+  if (!DET_TABS.includes(tab)) tab = 'migration';
   document.querySelectorAll('.det-tab').forEach(b => {
     const on = b.dataset.tab === tab;
     b.classList.toggle('active', on);
@@ -240,10 +251,12 @@ async function initInstanceDetail() {
   setText('breadcrumbInstanceId', det.id);
   setText('detInstanceId', det.id);
 
+  det.dataReady = false;
   const ok = await loadInstance();
   if (!ok) return;
 
   await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
+  det.dataReady = true;
   const tabNow = (location.hash || '').replace('#', '');
   if (tabNow === 'monitoring') loadMetrics();
   await resumeRunningMigration();
@@ -335,7 +348,7 @@ function renderInstance() {
   setText('sumPrivateIp', inst.privateIp || '–');
   setText('sumFlavor', inst.flavor + (spec ? ` · ${spec.vcpu} vCPU` : ''));
   setHtml('sumRegion', regionTag(inst.region));
-  setText('sumDns', inst.dnsDomain || '–');
+  setText('sumDns', inst.publicDns || inst.dnsDomain || '–');
   setText('sumKey', inst.keyName || '–');
   setHtml('sumChecks', statusChecks(inst.status));
   setText('sumAmi', inst.imageName || inst.imageId || '–');
@@ -377,10 +390,12 @@ function statusChecks(status) {
 async function refreshAll() {
   const btn = document.getElementById('btnRefresh');
   if (btn) btn.disabled = true;
+  det.dataReady = false;
   try {
     const ok = await loadInstance();
     if (ok) {
       await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
+      det.dataReady = true;
       const tab = (location.hash || '').replace('#', '');
       if (tab === 'monitoring') loadMetrics();
       showToast(t('Đã làm mới thông tin máy ảo', 'Instance refreshed'), 'success');
@@ -407,10 +422,11 @@ function renderActions() {
   if (!inst) return;
   const busy = inst.status === 'MIGRATING' || det.running || isTransitional(inst.status) || isGone(inst.status);
   const running = isRunningStatus(inst.status);
+  const canEditSg = typeof sgeCanEdit === 'function' ? sgeCanEdit(inst) : false;
   const reason = migrationBlockReason();
   const id = esc(inst.id);
   // tickCooldown() calls this every second: only rebuild buttons when something changed
-  const key = [inst.status, busy, reason.replace(/\d{2}:\d{2}/, '')].join('|');
+  const key = [inst.status, busy, canEditSg, reason.replace(/\d{2}:\d{2}/, '')].join('|');
   if (key === det.actionsKey) {
     setText('migBlockReason', reason || t('Sẵn sàng chuyển vùng.', 'Ready to migrate.'));
     setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');
@@ -429,6 +445,7 @@ function renderActions() {
   setHtml('detailActionButtons', `
     <button class="btn btn-secondary btn-sm" id="btnRefresh" onclick="refreshAll()">${ICON('ui-refresh', 'ico-sm')} ${tk('actRefresh')}</button>
     <button class="btn btn-secondary btn-sm" onclick="openConnectModal()" ${running ? '' : `disabled title="${t('Máy phải đang chạy mới kết nối được', 'Instance must be running to connect')}"`}>${ICON('ui-terminal', 'ico-sm')} ${tk('actConnect')}</button>
+    <button class="btn btn-secondary btn-sm" id="btnEditSecurityGroup" onclick="if (ensureDynamoDataReady()) openSgEditor(det.inst)" ${canEditSg ? `title="${esc(tk('sgeBtnTitle'))}"` : `disabled title="${esc(tk('sgeWaitLaunch'))}"`}>${ICON('svc-security-group', 'ico-sm')} ${tk('sgeBtn')}</button>
     <div class="state-menu" id="stateMenu">
       <button type="button" class="btn btn-secondary btn-sm" id="stateMenuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="stateMenuList"
         onclick="toggleStateMenu()" ${isGone(inst.status) ? 'disabled' : ''}>${ICON('ui-power', 'ico-sm')} ${tk('actInstanceState')} ${ICON('ui-chevron-down', 'ico-sm')}</button>
@@ -440,7 +457,7 @@ function renderActions() {
         ${item('TERMINATE', ICON('ui-trash') + ' ' + t('Xóa máy ảo', 'Terminate instance'), busy, 'danger', busyHint)}
       </div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openMigrateModal()" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region</button>
+    <button class="btn btn-primary btn-sm" onclick="if (!ensureDynamoDataReady()) return; if ((det.scenario && det.scenario.status === 'ACTIVE') || (det.inst && det.inst.scenarioStatus === 'ACTIVE')) { showScenarioFreezePopup(det.id, true); } else { openMigrateModal(); }" ${reason ? 'disabled' : ''} title="${esc(reason || t('Chuyển sang ', 'Migrate to ') + regionLabel(otherRegion(inst.region)))}">${ICON('ui-migrate', 'ico-sm')} Fast Migrate X-Region</button>
   `);
 
   setText('detActionHint', reason ? t('Fast Migrate tạm khóa: ', 'Fast Migrate unavailable: ') + reason : '');
@@ -455,6 +472,11 @@ function renderActions() {
 }
 
 async function runDetailAction(id, action) {
+  if (!ensureDynamoDataReady()) return;
+  if ((det.scenario && det.scenario.status === 'ACTIVE') || (det.inst && det.inst.scenarioStatus === 'ACTIVE')) {
+    showScenarioFreezePopup(id, true);
+    return;
+  }
   const name = (det.inst && det.inst.name) || id;
   if (action === 'TERMINATE' && !(await confirmDialog({
     title: t('Xóa (terminate) máy ảo?', 'Terminate instance?'),

@@ -18,26 +18,31 @@ public class DynamoDbTableInitializer implements ApplicationRunner {
     private final String migrationsTableName;
     private final String usersTableName;
     private final String novaTableName;
+    private final String migrationScenariosTableName;
 
     public DynamoDbTableInitializer(DynamoDbClient dynamoDbClient,
                                     @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}") String instancesTableArn,
                                     @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}") String migrationsTableArn,
                                     @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}") String usersTableArn,
-                                    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}") String novaTableArn) {
+                                    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}") String novaTableArn,
+                                    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-MigrationScenarios}") String migrationScenariosTableArn) {
         this.dynamoDbClient = dynamoDbClient;
         this.instancesTableName = DynamoDbConfig.parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
         this.migrationsTableName = DynamoDbConfig.parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");
         this.usersTableName = DynamoDbConfig.parseTableNameFromArn(usersTableArn, "XRegion-Users");
         this.novaTableName = DynamoDbConfig.parseTableNameFromArn(novaTableArn, "XRegion-Nova");
+        this.migrationScenariosTableName = DynamoDbConfig.parseTableNameFromArn(migrationScenariosTableArn, "XRegion-MigrationScenarios");
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}], [{}] and [{}]", instancesTableName, migrationsTableName, usersTableName, novaTableName);
+        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}], [{}], [{}] and [{}]",
+                instancesTableName, migrationsTableName, usersTableName, novaTableName, migrationScenariosTableName);
         verifyTable(instancesTableName);
         verifyTable(migrationsTableName);
         verifyTable(usersTableName);
         verifyTable(novaTableName);
+        verifyTable(migrationScenariosTableName);
     }
 
     private void verifyTable(String tableName) {

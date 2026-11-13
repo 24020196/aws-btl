@@ -101,7 +101,7 @@ async function loadMigrationHistory() {
     startCooldownTimer();
     loadInstanceScenarios();
   } catch (err) {
-    setHtml('historyBody', `<tr><td colspan="8" class="empty-cell">${t('Không tải được lịch sử chuyển vùng.', 'Could not load migration history.')}</td></tr>`);
+    setHtml('historyBody', `<tr><td colspan="7" class="empty-cell">${t('Không tải được lịch sử chuyển vùng.', 'Could not load migration history.')}</td></tr>`);
     loadInstanceScenarios();
   }
 }
@@ -135,6 +135,7 @@ function startCooldownTimer() {
 
 function tickCooldown() {
   const left = Math.max(0, Math.ceil((det.cooldownDeadline - Date.now()) / 1000));
+  det.migCooldownRemaining = left;
   const total = det.cooldownTotal || 300;
   const bar = document.getElementById('migCooldownBar');
   if (left > 0) {
@@ -153,6 +154,7 @@ function tickCooldown() {
     }
   }
   renderActions();
+  if (typeof updateScenarioCooldownState === 'function') updateScenarioCooldownState();
 }
 
 const HISTORY_STATUS = {
@@ -165,7 +167,7 @@ const HISTORY_STATUS = {
 function renderHistory() {
   const rows = (det.history && det.history.history) || [];
   setHtml('historyBody', rows.length
-    ? rows.map((r, i) => `<tr class="hist-row" tabindex="0" data-idx="${i}" aria-label="${t('Xem log lần chuyển vùng', 'View migration log')} ${esc(r.migrationId)}">
+    ? rows.map(r => `<tr>
         <td class="mono">${esc(r.migrationId)}</td>
         <td>${regionTag(r.sourceRegion)} <span class="muted">→</span> ${regionTag(r.destRegion)}</td>
         <td>${esc(fmtTime(r.startedAt))}</td>
@@ -173,9 +175,8 @@ function renderHistory() {
         <td>${esc(fmtDuration(r.durationSeconds))}</td>
         <td>${r.downtimeSeconds ? `<strong class="rto">${esc(r.downtimeSeconds)}s</strong>` : '<span class="muted">–</span>'}</td>
         <td><span class="ec2-state ${HISTORY_STATUS[r.status] || 'state-stopped'}">${esc(r.status)}</span>${r.errorMessage ? `<div class="err-text">${esc(r.errorMessage)}</div>` : ''}</td>
-        <td class="rule-actions"><span class="link-accent hist-open">Xem log →</span></td>
       </tr>`).join('')
-    : `<tr><td colspan="8" class="empty-cell">${t('Máy ảo này chưa chuyển vùng lần nào.', 'This instance has not been migrated yet.')}</td></tr>`);
+    : `<tr><td colspan="7" class="empty-cell">${t('Máy ảo này chưa chuyển vùng lần nào.', 'This instance has not been migrated yet.')}</td></tr>`);
 }
 
 const MIG_STEP_NAMES = [
@@ -219,15 +220,6 @@ function openMigrationLog(idx) {
   openModal('migLogModal');
 }
 
-document.addEventListener('click', e => {
-  const row = e.target.closest('#historyBody .hist-row');
-  if (row) openMigrationLog(Number(row.dataset.idx));
-});
-document.addEventListener('keydown', e => {
-  const row = e.target.closest && e.target.closest('#historyBody .hist-row');
-  if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openMigrationLog(Number(row.dataset.idx)); }
-});
-
 // ---------------- Migration: trigger + live pipeline ----------------
 // Sau khi bấm chuyển vùng: cuộn để khung 6 bước nằm giữa màn hình (nếu cao hơn màn hình thì đặt ngay dưới header).
 function focusPipelineCard() {
@@ -249,6 +241,7 @@ function focusPipelineCard() {
 }
 
 function openMigrateModal() {
+  if (typeof ensureDynamoDataReady === 'function' && !ensureDynamoDataReady()) return;
   const reason = migrationBlockReason();
   if (reason) {
     showToast(esc(reason), 'error');
@@ -261,8 +254,8 @@ function openMigrateModal() {
   const rto = h.expectedDowntimeSeconds;
   setHtml('migrateModalFacts', `
     <div class="mig-fact"><span class="mig-sum-label">${t('Downtime dự kiến', 'Expected downtime')}</span>
-      <strong class="rto">${rto ? '≈ ' + esc(rto) + t(' giây', ' s') : t('≈ 10–15 giây', '≈ 10–15 s')}</strong>
-      <span class="muted">${rto ? t('trung bình các lần trước của máy này', 'average of previous migrations') : t('chưa có lần chuyển nào để ước tính', 'no previous migration to estimate from')}</span></div>
+      <strong class="rto">${rto ? '≈ ' + esc(rto) + t(' giây', ' s') : t('≈ 2–4 phút', '≈ 2–4 min')}</strong>
+      ${rto ? `<span class="muted">${t('trung bình các lần trước của máy này', 'average of previous migrations')}</span>` : ''}</div>
     <div class="mig-fact"><span class="mig-sum-label">Elastic IP</span>
       <strong class="mono">${esc(inst.publicIp || '–')} → ${t('IP mới', 'new IP')}</strong>
       <span class="muted">${inst.dnsDomain ? t('Truy cập qua ' + esc(inst.dnsDomain) + ' tự chuyển sau ≤ 60 giây (TTL)', esc(inst.dnsDomain) + ' follows within ≤ 60 s (TTL)') : t('Nên dùng tên miền Route 53 để không phải đổi IP', 'Use the Route 53 domain to avoid changing IPs')}</span></div>
@@ -386,97 +379,14 @@ function renderPipeline(p) {
 // TỰ CHUYỂN VÙNG BẰNG TAY (MANUAL FAST MIGRATE) HOẶC ĐỊNH KỲ (SCHEDULED)
 // ============================================================
 
-const SCENARIO_STORAGE_KEY_PREFIX = 'xregion_scenario_';
-
-function getStoredScenario() {
-  if (!det.id) return null;
-  try {
-    const raw = localStorage.getItem(SCENARIO_STORAGE_KEY_PREFIX + det.id);
-    if (raw) return JSON.parse(raw);
-    // Backward compatibility: fallback to array storage key if present
-    const legacyRaw = localStorage.getItem('xregion_scenarios_' + det.id);
-    if (legacyRaw) {
-      const arr = JSON.parse(legacyRaw);
-      if (Array.isArray(arr) && arr.length > 0) return arr[0];
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function saveStoredScenario(scenario) {
-  if (!det.id) return;
-  try {
-    if (scenario) {
-      localStorage.setItem(SCENARIO_STORAGE_KEY_PREFIX + det.id, JSON.stringify(scenario));
-    } else {
-      localStorage.removeItem(SCENARIO_STORAGE_KEY_PREFIX + det.id);
-    }
-  } catch (e) {
-    console.error('Failed to save scenario to localStorage:', e);
-  }
-}
-
 async function loadInstanceScenarios() {
   if (!det.id) return;
-  let backendScen = null;
   try {
-    const res = await apiRequest('/migrations/scenarios');
-    if (Array.isArray(res)) {
-      backendScen = res.find(s => s.targetInstanceId === det.id) || null;
-    }
+    const scen = await apiRequest(`/migrations/scenarios/instance/${encodeURIComponent(det.id)}`);
+    det.scenario = scen && scen.scenarioId ? scen : null;
   } catch (err) {
-    // Backend endpoint might be unreachable or empty, fallback gracefully
+    det.scenario = null;
   }
-
-  const localScen = getStoredScenario();
-
-  if (localScen) {
-    det.scenario = localScen;
-  } else if (backendScen) {
-    det.scenario = {
-      id: backendScen.id,
-      name: backendScen.name || `AutoMigrate-${det.inst ? det.inst.name : det.id}`,
-      targetInstanceId: det.id,
-      sourceRegion: backendScen.sourceRegion || (det.inst ? det.inst.region : 'ap-southeast-2'),
-      destRegion: backendScen.destRegion || otherRegion(det.inst ? det.inst.region : 'ap-southeast-2'),
-      triggerType: backendScen.triggerType || 'SCHEDULED',
-      preset: 'shift',
-      dayTime: '07:00',
-      nightTime: '19:00',
-      dailyTime: '02:00',
-      cronExpression: backendScen.cronExpression || '0 7,19 * * *',
-      cooldownMinutes: backendScen.cooldownMinutes || 60,
-      status: backendScen.status || 'ACTIVE',
-      notifyDashboard: true,
-      notifyEmail: true
-    };
-    saveStoredScenario(det.scenario);
-  } else {
-    // Khởi tạo kịch bản mặc định duy nhất cho máy ảo
-    const defaultScen = {
-      id: 'sc-' + Math.random().toString(36).substring(2, 10),
-      name: `AutoMigrate-${det.inst && det.inst.name ? det.inst.name : (det.id || 'VM')}`,
-      targetInstanceId: det.id,
-      sourceRegion: det.inst ? det.inst.region : 'ap-southeast-2',
-      destRegion: otherRegion(det.inst ? det.inst.region : 'ap-southeast-2'),
-      triggerType: 'SCHEDULED',
-      preset: 'shift',
-      dayTime: '07:00',
-      nightTime: '19:00',
-      dailyTime: '02:00',
-      cronExpression: '0 7,19 * * *',
-      cooldownMinutes: 60,
-      status: 'ACTIVE',
-      notifyDashboard: true,
-      notifyEmail: true,
-      createdAt: Date.now()
-    };
-    det.scenario = defaultScen;
-    saveStoredScenario(defaultScen);
-  }
-
   renderScenarioCard();
 }
 
@@ -485,16 +395,24 @@ function renderScenarioCard() {
   const detailsBox = document.getElementById('scenDetailsView');
   const emptyBox = document.getElementById('scenEmptyView');
   const badgeEl = document.getElementById('scenStatusBadge');
+  const headerActions = document.getElementById('scenHeaderActions');
 
   if (!scen) {
     if (detailsBox) detailsBox.style.display = 'none';
     if (emptyBox) emptyBox.style.display = 'block';
-    if (badgeEl) badgeEl.style.display = 'none';
+    if (headerActions) headerActions.style.display = 'none';
+    if (badgeEl) {
+      badgeEl.style.display = 'inline-flex';
+      badgeEl.className = 'scen-badge paused';
+      badgeEl.textContent = 'OFF';
+    }
+    updateScenarioCooldownState();
     return;
   }
 
   if (detailsBox) detailsBox.style.display = 'block';
   if (emptyBox) emptyBox.style.display = 'none';
+  if (headerActions) headerActions.style.display = 'flex';
 
   const isActive = scen.status === 'ACTIVE';
   if (badgeEl) {
@@ -504,8 +422,6 @@ function renderScenarioCard() {
       ? `<span class="tab-dot" style="margin:0 4px 0 0; width:6px; height:6px;"></span> ACTIVE`
       : `PAUSED`;
   }
-
-  setText('scenValName', scen.name || `AutoMigrate-${det.id}`);
 
   const isSched = scen.triggerType === 'SCHEDULED';
   const triggerHtml = isSched
@@ -555,6 +471,57 @@ function renderScenarioCard() {
       toggleBtn.title = t('Kích hoạt lại kịch bản', 'Resume scenario');
     }
   }
+  updateScenarioCooldownState();
+}
+
+function scenarioMigratingBlockReason() {
+  const instStatus = String(det.inst?.status || '').toUpperCase();
+  if (det.migLock || det.running || instStatus === 'MIGRATING') {
+    return t(
+      'Máy ảo đang chuyển vùng (MIGRATING). Không thể tạo, chỉnh sửa hoặc kích hoạt kịch bản chuyển vùng lúc này.',
+      'Instance is currently migrating (MIGRATING). Cannot create, edit, or activate a migration scenario right now.'
+    );
+  }
+  return null;
+}
+
+function scenarioCooldownBlockReason() {
+  const left = det.migCooldownRemaining || 0;
+  if (left > 0) {
+    return t(
+      `Đang trong thời gian cooldown bảo vệ (${left} giây). Không thể chỉnh sửa hoặc kích hoạt kịch bản.`,
+      `Cooldown active (${left}s remaining). Cannot edit or activate scenario.`
+    );
+  }
+  return null;
+}
+
+function scenarioActionBlockReason() {
+  return scenarioMigratingBlockReason() || scenarioCooldownBlockReason();
+}
+
+function updateScenarioCooldownState() {
+  const blockReason = scenarioActionBlockReason();
+  const isBlocked = Boolean(blockReason);
+  const createBtn = document.getElementById('btnCreateFirstScenario');
+  if (createBtn) {
+    createBtn.disabled = isBlocked;
+    createBtn.title = blockReason || '';
+  }
+  const reconfigBtn = document.getElementById('btnReconfigScenario');
+  if (reconfigBtn) {
+    reconfigBtn.disabled = isBlocked;
+    reconfigBtn.title = blockReason || '';
+  }
+  const toggleBtn = document.getElementById('btnToggleScenario');
+  if (toggleBtn) {
+    const isActive = det.scenario && det.scenario.status === 'ACTIVE';
+    const blockActivate = isBlocked && !isActive;
+    toggleBtn.disabled = blockActivate;
+    if (blockActivate) {
+      toggleBtn.title = blockReason;
+    }
+  }
 }
 
 function renderScenarios() {
@@ -579,45 +546,27 @@ function describeCron(expr) {
   return expr;
 }
 
-function runManualMigrationNow() {
-  const reason = migrationBlockReason();
-  if (reason) {
-    showToast(esc(reason), 'error');
-    return;
-  }
-  openMigrateModal();
-}
-
 async function toggleCurrentScenario() {
-  if (!det.scenario) return;
+  if (typeof ensureDynamoDataReady === 'function' && !ensureDynamoDataReady()) return;
+  if (!det.scenario || !det.scenario.id) return;
   const isNowActive = det.scenario.status === 'ACTIVE';
-  det.scenario.status = isNowActive ? 'PAUSED' : 'ACTIVE';
-  saveStoredScenario(det.scenario);
-  renderScenarioCard();
-
-  if (isNowActive) {
-    showToast(t(`Đã tạm dừng kịch bản "${det.scenario.name}"`, `Paused scenario "${det.scenario.name}"`), 'info');
-  } else {
-    showToast(t(`Đã kích hoạt kịch bản "${det.scenario.name}"`, `Activated scenario "${det.scenario.name}"`), 'success');
+  const nextStatus = isNowActive ? 'PAUSED' : 'ACTIVE';
+  if (nextStatus === 'ACTIVE') {
+    const blockReason = scenarioActionBlockReason();
+    if (blockReason) {
+      showToast(esc(blockReason), 'error');
+      return;
+    }
   }
 
   try {
-    await apiRequest('/migrations/scenarios', {
-      method: 'POST',
-      body: JSON.stringify({
-        id: det.scenario.id,
-        name: det.scenario.name,
-        targetInstanceId: det.id,
-        sourceRegion: det.inst ? det.inst.region : 'ap-southeast-2',
-        destRegion: det.scenario.destRegion,
-        triggerType: det.scenario.triggerType,
-        cronExpression: det.scenario.cronExpression,
-        cooldownMinutes: det.scenario.cooldownMinutes,
-        status: det.scenario.status
-      })
+    await apiRequest(`/migrations/scenarios/${encodeURIComponent(det.scenario.id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: nextStatus })
     });
+    window.location.reload();
   } catch (err) {
-    // Non-blocking fallback
+    showToast(err.message || t('Không cập nhật được trạng thái kịch bản', 'Failed to update scenario status'), 'error');
   }
 }
 
@@ -653,11 +602,17 @@ function onRegionATimeChange() {
 }
 
 function openScenarioModal() {
+  if (typeof ensureDynamoDataReady === 'function' && !ensureDynamoDataReady()) return;
+  if (det.scenario && det.scenario.status === 'ACTIVE') {
+    showScenarioFreezePopup(det.id, true);
+    return;
+  }
+  const blockReason = scenarioActionBlockReason();
+  if (blockReason) {
+    showToast(esc(blockReason), 'error');
+    return;
+  }
   const scen = det.scenario || {};
-  const vmName = det.inst && det.inst.name ? det.inst.name : (det.id || 'VM');
-
-  const nameInput = document.getElementById('scenName');
-  if (nameInput) nameInput.value = scen.name || `AutoMigrate-${vmName}`;
 
   const regA = det.inst ? det.inst.region : (scen.sourceRegion || 'ap-southeast-2');
   const regB = scen.destRegion || otherRegion(regA);
@@ -688,7 +643,12 @@ function openScenarioModal() {
 async function submitScenario(e) {
   e.preventDefault();
 
-  const name = document.getElementById('scenName')?.value.trim();
+  const blockReason = scenarioActionBlockReason();
+  if (blockReason) {
+    showToast(esc(blockReason), 'error');
+    return;
+  }
+
   const regA = det.inst ? det.inst.region : (det.scenario?.sourceRegion || 'ap-southeast-2');
   const regB = otherRegion(regA);
 
@@ -701,55 +661,35 @@ async function submitScenario(e) {
   const notifyDash = document.getElementById('scenNotifyDashboard')?.checked ?? true;
   const notifyEmail = document.getElementById('scenNotifyEmail')?.checked ?? true;
 
-  if (!name) {
-    showToast(t('Vui lòng nhập tên kịch bản', 'Please enter scenario name'), 'error');
-    return;
-  }
-
-  const scenarioId = (det.scenario && det.scenario.id) ? det.scenario.id : ('sc-' + Math.random().toString(36).substring(2, 10));
-  const updatedScen = {
-    id: scenarioId,
-    name: name,
-    targetInstanceId: det.id,
-    sourceRegion: regA,
-    destRegion: regB,
-    triggerType: 'SCHEDULED',
-    preset: 'shift',
-    dayTime: timeA,
-    nightTime: timeB,
-    cronExpression: cronExpr,
-    cooldownMinutes: cooldownMin,
-    status: (det.scenario && det.scenario.status) ? det.scenario.status : 'ACTIVE',
-    notifyDashboard: notifyDash,
-    notifyEmail: notifyEmail,
-    updatedAt: Date.now()
-  };
+  const nextStatus = 'ACTIVE';
 
   try {
-    await apiRequest('/migrations/scenarios', {
+    const saved = await apiRequest('/migrations/scenarios', {
       method: 'POST',
       body: JSON.stringify({
-        id: scenarioId,
-        name: name,
         targetInstanceId: det.id,
         sourceRegion: regA,
         destRegion: regB,
         triggerType: 'SCHEDULED',
+        dayTime: timeA,
+        nightTime: timeB,
         cronExpression: cronExpr,
         cooldownMinutes: cooldownMin,
-        status: updatedScen.status
+        status: nextStatus
       })
     });
+    det.scenario = saved;
+    if (det.inst) {
+      det.inst.scenarioId = saved.id || saved.scenarioId;
+      det.inst.scenarioStatus = saved.status;
+    }
+    closeModal('scenarioModal');
+    renderScenarioCard();
+    if (typeof renderActions === 'function') renderActions();
+    showToast(t('Đã lưu kịch bản luân phiên thành công!', 'Alternating migration scenario saved successfully!'), 'success');
   } catch (err) {
-    // Non-blocking fallback
+    showToast(err.message || t('Không lưu được kịch bản lên hệ thống', 'Failed to save scenario'), 'error');
   }
-
-  det.scenario = updatedScen;
-  saveStoredScenario(updatedScen);
-
-  closeModal('scenarioModal');
-  renderScenarioCard();
-  showToast(t('Đã lưu kịch bản luân phiên thành công!', 'Alternating migration scenario saved successfully!'), 'success');
 }
 
 // Re-render scenario card when language switches

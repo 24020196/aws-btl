@@ -6,6 +6,8 @@
   <title>Instance summary - XRegion-EC2 Cloud Console</title>
   <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/pages/launch-firewall.css">
+  <link rel="stylesheet" href="/css/pages/instances-sg-editor.css">
 </head>
 <body>
 
@@ -82,41 +84,11 @@
 
     <!-- Tabs -->
     <div class="det-tabs" role="tablist" aria-label="Instance details">
-      <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-info"></use></svg><span data-i18n="tabDetails">Chi tiết</span></button>
-      <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg><span data-i18n="tabMigration">Chuyển vùng</span> <span class="tab-dot" id="migTabDot" hidden></span></button>
+      <button class="det-tab active" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg><span data-i18n="tabMigration">Chuyển vùng</span> <span class="tab-dot" id="migTabDot" hidden></span></button>
     </div>
 
-    <!-- TAB 1: Hardware & identity -->
-    <section class="det-panel active" id="tab-details" role="tabpanel" aria-labelledby="tabBtn-details">
-      <div class="detail-grid">
-        <div class="card" style="margin-bottom: 0;">
-          <div class="card-header"><div class="card-title" data-i18n="detHwTitle">Phần cứng &amp; Hệ điều hành</div></div>
-          <table class="kv-table">
-            <tr><td class="kv-label">Flavor</td><td class="kv-value"><span class="badge badge-flavor" id="detFlavor">--</span> <span class="muted" id="detSeries"></span></td></tr>
-            <tr><td class="kv-label">vCPU / RAM</td><td class="kv-value" id="detSpecs">--</td></tr>
-            <tr><td class="kv-label" data-i18n="detOs">Hệ điều hành</td><td class="kv-value" id="detImageName">--</td></tr>
-            <tr><td class="kv-label">Glance Image ID</td><td class="kv-value"><code id="detImageId">--</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detVirt">Ảo hóa</td><td class="kv-value" data-i18n="detVirtValue">KVM (OpenStack Nova) trên EC2 Bare Metal</td></tr>
-          </table>
-        </div>
-
-        <div class="card" style="margin-bottom: 0;">
-          <div class="card-header"><div class="card-title" data-i18n="detIdTitle">Định danh &amp; Truy cập</div></div>
-          <table class="kv-table">
-            <tr><td class="kv-label" data-i18n="detName">Tên máy ảo</td><td class="kv-value" id="detName">--</td></tr>
-            <tr><td class="kv-label">Instance ID</td><td class="kv-value"><code id="detId">--</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detOwner">Chủ sở hữu</td><td class="kv-value" id="detOwner">--</td></tr>
-            <tr><td class="kv-label" data-i18n="detCurrentState">Trạng thái hiện tại</td><td class="kv-value" id="detState">--</td></tr>
-            <tr><td class="kv-label">SSH Key Pair</td><td class="kv-value"><span class="badge badge-key" id="detKeyName">--</span></td></tr>
-            <tr><td class="kv-label" data-i18n="detLoginUser">User đăng nhập</td><td class="kv-value"><code id="detSshUser">--</code></td></tr>
-            <tr><td class="kv-label" data-i18n="detConnect">Kết nối</td><td class="kv-value"><button class="link-btn" onclick="openConnectModal()" data-i18n="detViewSsh">Xem lệnh SSH</button> · <a href="#" id="detConsoleLink" target="_blank" rel="noopener" class="link-accent">Web Terminal (VNC)</a></td></tr>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 3: Cross-region migration -->
-    <section class="det-panel" id="tab-migration" role="tabpanel" aria-labelledby="tabBtn-migration">
+    <!-- TAB: Cross-region migration -->
+    <section class="det-panel active" id="tab-migration" role="tabpanel" aria-labelledby="tabBtn-migration">
       <!-- CARD: Kịch bản chuyển vùng duy nhất của máy ảo (Chức năng số 5) -->
       <div class="card scenario-card" id="scenarioCard">
         <div class="card-header">
@@ -124,10 +96,10 @@
             <div class="card-title ico-label">
               <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-migration"></use></svg>
               <span data-i18n="detScenTitle">Kịch bản chuyển vùng</span>
-              <span class="scen-badge active" id="scenStatusBadge">ACTIVE</span>
+              <span class="scen-badge paused" id="scenStatusBadge">OFF</span>
             </div>
           </div>
-          <div class="scen-header-actions" id="scenHeaderActions">
+          <div class="scen-header-actions" id="scenHeaderActions" style="display: none;">
             <button class="btn btn-secondary btn-sm ico-label" id="btnEditScenario" onclick="openScenarioModal()">
               <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-edit"></use></svg>
               <span data-i18n="detScenEditBtn">Chỉnh sửa kịch bản</span>
@@ -136,34 +108,24 @@
         </div>
 
         <!-- Khung chi tiết kịch bản duy nhất -->
-        <div id="scenDetailsView" class="scen-view-box">
+        <div id="scenDetailsView" class="scen-view-box" style="display: none;">
           <div class="scen-info-grid">
             <div class="scen-info-item">
-              <div class="scen-info-label" data-i18n="detScenColName">Tên kịch bản</div>
-              <div class="scen-info-val" id="scenValName">AutoMigrate-VM</div>
-            </div>
-            <div class="scen-info-item">
               <div class="scen-info-label" data-i18n="detScenColTrigger">Loại kích hoạt</div>
-              <div class="scen-info-val" id="scenValTrigger">
-                <span class="ec2-state state-running"><svg class="ico ico-xs" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-clock"></use></svg> Theo lịch</span>
-              </div>
+              <div class="scen-info-val" id="scenValTrigger">--</div>
             </div>
             <div class="scen-info-item">
               <div class="scen-info-label" data-i18n="detScenColSchedule">Lịch trình thực thi</div>
-              <div class="scen-info-val" id="scenValSchedule" style="color:var(--accent-cyan);">07:00 (ban ngày) &amp; 19:00 (ban đêm)</div>
+              <div class="scen-info-val" id="scenValSchedule" style="color:var(--accent-cyan);">--</div>
             </div>
             <div class="scen-info-item">
               <div class="scen-info-label" data-i18n="detScenColDest">Hướng chuyển vùng</div>
-              <div class="scen-info-val" id="scenValRoute">Sydney → N. Virginia</div>
+              <div class="scen-info-val" id="scenValRoute">--</div>
             </div>
           </div>
 
           <!-- Thanh thao tác chính -->
           <div class="scen-action-bar">
-            <button class="btn btn-primary ico-label" id="btnManualMigrateNow" onclick="runManualMigrationNow()">
-              <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg>
-              <strong data-i18n="detScenManualRunBtn">Chuyển vùng bằng tay ngay</strong>
-            </button>
             <button class="btn btn-secondary btn-sm ico-label" id="btnToggleScenario" onclick="toggleCurrentScenario()">
               <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-stop"></use></svg>
               <span id="btnToggleScenarioText" data-i18n="scenPause">Tạm dừng kịch bản</span>
@@ -176,7 +138,7 @@
         </div>
 
         <!-- Trạng thái khi chưa có kịch bản -->
-        <div id="scenEmptyView" class="scen-empty-box" style="display: none;">
+        <div id="scenEmptyView" class="scen-empty-box">
           <div class="muted" data-i18n="detScenNoConfig">Máy ảo này chưa được thiết lập kịch bản chuyển vùng.</div>
           <button class="btn btn-primary btn-sm ico-label" style="margin-top: 10px;" onclick="openScenarioModal()">
             <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-plus"></use></svg>
@@ -187,12 +149,12 @@
 
       <div class="card">
         <div class="card-header">
-          <div><div class="card-title" data-i18n="detHistTitle">Lịch sử chuyển vùng</div><div class="card-sub" data-i18n="detHistSub">Bấm vào một dòng để xem lại log 6 bước của lần đó.</div></div>
+          <div><div class="card-title" data-i18n="detHistTitle">Lịch sử chuyển vùng</div></div>
           <button class="btn btn-secondary btn-sm" onclick="loadMigrationHistory()" data-i18n="actRefresh">Làm mới</button>
         </div>
         <div class="table-scroll">
           <table class="data-table">
-            <thead><tr><th>migration_id</th><th data-i18n="detHistRoute">Vùng nguồn → Vùng đích</th><th data-i18n="detHistStart">Bắt đầu</th><th data-i18n="detHistEnd">Hoàn tất</th><th data-i18n="detHistDuration">Thời lượng</th><th title="Thời gian dịch vụ gián đoạn: từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới" data-i18n-title="detHistRtoTitle">Downtime (RTO)</th><th data-i18n="detColState">Trạng thái</th><th><span class="sr-only">Log</span></th></tr></thead>
+            <thead><tr><th>migration_id</th><th data-i18n="detHistRoute">Vùng nguồn → Vùng đích</th><th data-i18n="detHistStart">Bắt đầu</th><th data-i18n="detHistEnd">Hoàn tất</th><th data-i18n="detHistDuration">Thời lượng</th><th title="Thời gian dịch vụ gián đoạn: từ lúc dừng VM nguồn tới khi Route 53 trỏ sang IP mới" data-i18n-title="detHistRtoTitle">Downtime (RTO)</th><th data-i18n="detColState">Trạng thái</th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
         </div>
@@ -229,11 +191,6 @@
       <p class="modal-text" data-i18n="modalScenDesc">Cấu hình thời gian máy ảo tự động chuyển vùng luân phiên giữa 2 khu vực theo chu kỳ 24h.</p>
 
       <form id="scenarioForm" onsubmit="submitScenario(event)">
-        <div class="form-row">
-          <label class="form-label" for="scenName" data-i18n="modalScenName">Tên kịch bản</label>
-          <input type="text" id="scenName" class="form-input" required placeholder="Ví dụ: Night-Shift Cost Optimization" data-i18n-placeholder="modalScenNamePh">
-        </div>
-
         <!-- Khối cấu hình Lịch luân phiên 2 dòng x 2 cột -->
         <div class="scen-schedule-box">
           <div class="form-label" data-i18n="modalScenScheduleTitle">Lịch trình luân phiên (2 dòng x 2 cột)</div>
@@ -391,7 +348,12 @@
       <h2 class="modal-title" id="connectTitle" data-i18n="detConnTitle">Kết nối tới máy ảo</h2>
       <ol class="connect-steps">
         <li><span data-i18n="detConnStep1a">Mở terminal ở thư mục chứa file khóa</span> <code id="connKeyFile">--</code> <span data-i18n="detConnStep1b">đã tải lúc tạo Key Pair.</span></li>
-        <li><span data-i18n="detConnStep2">Trên Linux/macOS, giới hạn quyền đọc file khóa:</span> <code id="connChmod">--</code></li>
+        <li>
+          <span data-i18n="detConnStep2">Trên Linux/macOS, giới hạn quyền đọc file khóa (tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!):</span>
+          <div class="cmd-box" style="margin-top: 6px;"><code id="connChmod">--</code><button class="copy-btn" data-copy="connChmod" aria-label="Sao chép lệnh phân quyền" data-i18n-aria="detConnCopyPermAria"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+          <div style="margin-top: 8px;" data-i18n="detConnStep2Win">Trên Windows (PowerShell), chạy lệnh sau để tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!:</div>
+          <div class="cmd-box" style="margin-top: 6px;"><code id="connIcacls">--</code><button class="copy-btn" data-copy="connIcacls" aria-label="Sao chép lệnh phân quyền" data-i18n-aria="detConnCopyPermAria"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+        </li>
         <li data-i18n="detConnStep3">Kết nối bằng Elastic IP:</li>
       </ol>
       <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" data-copy="connCmdIp" aria-label="Sao chép lệnh SSH" data-i18n-aria="detConnCopyAria"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
@@ -413,6 +375,8 @@
   <script src="/js/core/i18n.js"></script>
   <script src="/js/core/sidebar.js"></script>
   <script src="/js/pages/instance-actions-menu.js"></script>
+  <script src="/js/pages/launch-firewall.js"></script>
+  <script src="/js/pages/instances-sg-editor.js"></script>
   <script src="/js/pages/instance-detail/core.js"></script>
   <script src="/js/pages/instance-detail/migration.js"></script>
   <script src="/js/pages/instance-detail/dialogs.js"></script>

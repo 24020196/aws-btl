@@ -1,8 +1,8 @@
 # SPEC-04: Hạ Tầng Mạng NAT & Điều Tuyến L2 (Network NAT & Routing)
 
-> **Phiên bản**: `1.3.0`  
+> **Phiên bản**: `1.4.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -121,6 +121,19 @@ flowchart TD
 
 ---
 
+## 5.1. Quy Chuẩn Public DNS Theo `instance_id` (Route 53 `xregion-iaas.online`)
+
+- **Hosted Zone ID**: `Z06312743V4JPQHUPYQDW` (`xregion-iaas.online.`).
+- **Quy tắc tên miền**: `<instance_id>.xregion-iaas.online` (`Type = A`, `TTL = 60` giây).
+- **`XRegion-EIPPoolManager`**: Giữ nguyên vai trò quản lý Warm Pool EIP dự phòng (`<= 2` EIP/region), không tự tạo A record khi chưa gắn máy ảo.
+- **Vòng đời cập nhật / xóa A Record (Fail-open sau 2 lần retry, log warning nếu Route 53 lỗi tạm thời)**:
+  1. **`LaunchInstance` (`XRegion-LaunchInstance-SyncDynamoDB`)**: `UPSERT` A record `<instance_id>.xregion-iaas.online` trỏ về `public_ip` mới và lưu `public_dns = "<instance_id>.xregion-iaas.online"` vào `XRegion-Instances` (và `XRegion-Nova`).
+  2. **`MigrateTargetBoot` (`XRegion-MigrateTarget-SyncDynamoDB`)**: `UPSERT` A record `<instance_id>.xregion-iaas.online` trỏ về Elastic IP mới tại vùng đích và cập nhật `public_dns` vào `XRegion-Instances` (và `XRegion-Nova`).
+  3. **`TerminateInstance` (`XRegion-TerminateInstance-SyncDynamoDB`)**: `DELETE` A record `<instance_id>.xregion-iaas.online` khỏi Route 53 (bỏ qua nếu không tồn tại).
+- **Hiển thị UI**: Chỉ hiển thị trường `Public DNS` trên trang chi tiết máy ảo (`instance-detail.html`) ngay cạnh/dưới `Public IPv4 (Elastic IP)` kèm nút Copy.
+
+---
+
 ## 6. Ràng Buộc Kiểm Thử & Chống Sai Lệch Cho Agent (Testing Constraints)
 
 > [!WARNING]
@@ -145,3 +158,4 @@ flowchart TD
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Loại bỏ hoàn toàn endpoint GET /api/network và hàm getNetworkOverview() khỏi Backend để triệt tiêu dead code và tham chiếu sai lệch Virginia. |
 | `2026-11-10` | `1.2.0` | Chủ dự án (yêu cầu trực tiếp) | Loại bỏ `VerifyNetwork` khỏi pipeline launch theo cùng quyết định với SPEC-SF-01 `1.4.0`; cập nhật ràng buộc kiểm thử sang `test_launch_success_without_verify_network`. Lệnh kiểm tra reachability chỉ còn dùng để chẩn đoán thủ công. |
 | `2026-11-11` | `1.3.0` | Chủ dự án (yêu cầu trực tiếp) | Bổ sung ràng buộc chain `forward` của `xregion_filter`: bắt buộc accept `ct status dnat` (gói NEW inbound) và `ct state established,related` (gói hồi đáp của DNAT và SNAT). Sửa lỗi outbound mất toàn bộ gói trả lời do rule `drop` cuối cùng. |
+| `2026-11-13` | `1.4.0` | Chủ dự án (`xacnhan-skill`) | Chuẩn hóa Public DNS `<instance_id>.xregion-iaas.online` (`Z06312743V4JPQHUPYQDW`, `TTL = 60s`): `UPSERT` tại `SyncDynamoDB` của `LaunchInstance` & `MigrateTargetBoot`, lưu `public_dns` vào `XRegion-Instances`, `DELETE` khi `TerminateInstance` (fail-open sau 2 lần retry) và hiển thị trên `instance-detail.html`. |

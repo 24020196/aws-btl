@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
@@ -69,11 +70,13 @@ public class MigrationEntity {
     }
 
     @DynamoDbAttribute("started_at")
+    @DynamoDbConvertedBy(FlexibleEpochTimestampConverter.class)
     public Long getStartedAt() {
         return startedAt;
     }
 
     @DynamoDbAttribute("completed_at")
+    @DynamoDbConvertedBy(FlexibleEpochTimestampConverter.class)
     public Long getCompletedAt() {
         return completedAt;
     }

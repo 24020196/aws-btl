@@ -26,6 +26,7 @@ public class InstanceResponse {
     private String errorMessage;
     private String privateIp;
     private String publicIp;
+    private String publicDns;
     private String dnsDomain;
     private String imageId;
     private String imageName;
@@ -40,4 +41,6 @@ public class InstanceResponse {
     private String securityGroupId;
     private Integer cooldownSeconds;
     private String securityGroup;
+    private String scenarioId;
+    private String scenarioStatus;
 }

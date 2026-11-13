@@ -448,4 +448,100 @@ class NetworkServiceTest {
                 .isInstanceOfAny(ResourceNotFoundException.class);
         verify(securityGroupsTable, never()).putItem(any(PutItemEnhancedRequest.class));
     }
+
+    @Test
+    void staleMigratedGroupDeletedFromDynamoDbIsPrunedFromCache() throws Exception {
+        SecurityGroupEntity oldSg = SecurityGroupEntity.builder()
+                .groupId("0efc9696-old").name("0efc9696-old").instanceId(INSTANCE_ID)
+                .region("us-east-1").owner("lam")
+                .inboundRulesJson("[]").outboundRulesJson("[]").createdAt(1L).revision(1L).build();
+        SecurityGroupEntity newSg = SecurityGroupEntity.builder()
+                .groupId("c8c009e8-new").name("c8c009e8-new").instanceId(INSTANCE_ID)
+                .region("ap-southeast-2").owner("lam")
+                .inboundRulesJson("[]").outboundRulesJson("[]").createdAt(2L).revision(1L).build();
+        existingGroups(List.of(oldSg, newSg));
+        when(securityGroupsTable.getItem(any(Key.class))).thenAnswer(inv -> {
+            Key k = inv.getArgument(0);
+            String id = k.partitionKeyValue().s();
+            return "c8c009e8-new".equals(id) ? newSg : null;
+        });
+        InstanceEntity inst = instance("lam", "RUNNING", "c8c009e8-new");
+        inst.setCurrentRegion("ap-southeast-2");
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+
+        List<java.util.Map<String, Object>> result = service.getSecurityGroups(INSTANCE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("groupId")).isEqualTo("c8c009e8-new");
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> cache = (java.util.Map<String, Object>) ReflectionTestUtils.getField(service, "securityGroups");
+        assertThat(cache).doesNotContainKey("0efc9696-old");
+    }
+
+    @Test
+    void transientDuplicateGroupsDuringMigrationPreferActiveNovaId() throws Exception {
+        SecurityGroupEntity oldSg = SecurityGroupEntity.builder()
+                .groupId("0efc9696-old").name("0efc9696-old").instanceId(INSTANCE_ID)
+                .region("us-east-1").owner("lam")
+                .inboundRulesJson("[]").outboundRulesJson("[]").createdAt(1L).revision(1L).build();
+        SecurityGroupEntity newSg = SecurityGroupEntity.builder()
+                .groupId("c8c009e8-new").name("c8c009e8-new").instanceId(INSTANCE_ID)
+                .region("ap-southeast-2").owner("lam")
+                .inboundRulesJson("[]").outboundRulesJson("[]").createdAt(2L).revision(1L).build();
+        existingGroups(List.of(oldSg, newSg));
+        when(securityGroupsTable.getItem(any(Key.class))).thenAnswer(inv -> {
+            Key k = inv.getArgument(0);
+            String id = k.partitionKeyValue().s();
+            if ("0efc9696-old".equals(id)) return oldSg;
+            if ("c8c009e8-new".equals(id)) return newSg;
+            return null;
+        });
+        InstanceEntity inst = instance("lam", "RUNNING", "c8c009e8-new");
+        inst.setCurrentRegion("ap-southeast-2");
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+
+        List<java.util.Map<String, Object>> result = service.getSecurityGroups(INSTANCE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("groupId")).isEqualTo("c8c009e8-new");
+    }
+
+    @Test
+    void newMigratedGroupNotInCacheIsLoadedByActiveNovaId() throws Exception {
+        SecurityGroupEntity newSg = SecurityGroupEntity.builder()
+                .groupId("c8c009e8-new").name("c8c009e8-new").instanceId(INSTANCE_ID)
+                .region("ap-southeast-2").owner("lam")
+                .inboundRulesJson("[]").outboundRulesJson("[]").createdAt(2L).revision(1L).build();
+        existingGroups(List.of());
+        when(securityGroupsTable.getItem(any(Key.class))).thenAnswer(inv -> {
+            Key k = inv.getArgument(0);
+            return "c8c009e8-new".equals(k.partitionKeyValue().s()) ? newSg : null;
+        });
+        InstanceEntity inst = instance("lam", "RUNNING", "c8c009e8-new");
+        inst.setCurrentRegion("ap-southeast-2");
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+
+        List<java.util.Map<String, Object>> result = service.getSecurityGroups(INSTANCE_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("groupId")).isEqualTo("c8c009e8-new");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void activeScenarioBlocksSecurityGroupRuleModification() throws Exception {
+        existingGroup("lam");
+        software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable<com.iaas.xregion.Entity.MigrationScenarioEntity> scenTable =
+                mock(software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable.class);
+        ReflectionTestUtils.setField(service, "migrationScenariosTable", scenTable);
+        InstanceEntity inst = instance("lam", "RUNNING", "nova-1");
+        inst.setScenarioId("scen-active");
+        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(scenTable.getItem(Key.builder().partitionValue("scen-active").build()))
+                .thenReturn(com.iaas.xregion.Entity.MigrationScenarioEntity.builder()
+                        .scenarioId("scen-active").status("ACTIVE").build());
+
+        assertThatThrownBy(() -> service.replaceInstanceRules(INSTANCE_ID, rules(rule("tcp", 80, 80))))
+                .isInstanceOf(ConflictException.class);
+    }
 }

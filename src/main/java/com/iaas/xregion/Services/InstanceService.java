@@ -1,8 +1,10 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Client.MigrationSchedulerClient;
 import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.RegionType;
 import com.iaas.xregion.Entity.UserEntity;
@@ -47,6 +49,36 @@ public class InstanceService {
 
     @Autowired(required = false)
     private DynamoDbEnhancedClient enhancedClient;
+
+    @Autowired(required = false)
+    private DynamoDbTable<MigrationScenarioEntity> migrationScenariosTable;
+
+    @Autowired(required = false)
+    private MigrationSchedulerClient migrationSchedulerClient;
+
+    private String resolveScenarioStatus(InstanceEntity entity) {
+        if (entity == null || entity.getScenarioId() == null || entity.getScenarioId().isBlank()
+                || migrationScenariosTable == null) {
+            return null;
+        }
+        try {
+            MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                    Key.builder().partitionValue(entity.getScenarioId()).build());
+            return scen != null ? scen.getStatus() : null;
+        } catch (Exception e) {
+            log.warn("Failed to read scenario status [{}] for instance [{}]: {}",
+                    entity.getScenarioId(), entity.getInstanceId(), e.getMessage());
+            return null;
+        }
+    }
+
+    private void assertNoActiveScenario(InstanceEntity entity) {
+        if ("ACTIVE".equalsIgnoreCase(resolveScenarioStatus(entity))) {
+            throw new ConflictException(
+                    "Máy ảo [" + entity.getInstanceId()
+                            + "] đang kích hoạt Kịch bản chuyển vùng tự động (ACTIVE). Vui lòng tạm dừng kịch bản trước khi sửa hoặc xóa máy ảo.");
+        }
+    }
 
     /**
      * Ma trận điều kiện tiên quyết của SPEC-01 (mục 2) và trạng thái chuyển tiếp tương ứng.
@@ -293,9 +325,10 @@ public class InstanceService {
         String keyId = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
+        String publicDns = id + ".xregion-iaas.online";
         String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
                 ? request.getDomainName().trim()
-                : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
+                : publicDns;
 
         int initialEbsGb = request.getEbsSizeGb();
 
@@ -311,6 +344,7 @@ public class InstanceService {
                 .userId(userId)
                 .currentStatus(InstanceStatus.PENDING.name())
                 .dns(dns)
+                .publicDns(publicDns)
                 .migrationLock(false)
                 .lastMigrationTimestamp(nowSec)
                 .build();
@@ -415,6 +449,9 @@ public class InstanceService {
         }
 
         String action = request.getAction().toUpperCase(Locale.ROOT);
+        if (!"CONSOLE".equals(action)) {
+            assertNoActiveScenario(entity);
+        }
         String previousStatus = entity.getCurrentStatus();
         requireActionPrecondition(action, previousStatus);
 
@@ -461,6 +498,21 @@ public class InstanceService {
                 }
             }
             throw new AppException("Không gửi được yêu cầu " + action + ": " + e.getMessage(), e);
+        }
+
+        if ("TERMINATE".equals(action) || "DELETE".equals(action)) {
+            if (migrationSchedulerClient != null) {
+                migrationSchedulerClient.deleteDualSchedules(id);
+            }
+            if (entity.getScenarioId() != null && !entity.getScenarioId().isBlank()
+                    && migrationScenariosTable != null) {
+                try {
+                    migrationScenariosTable.deleteItem(Key.builder().partitionValue(entity.getScenarioId()).build());
+                } catch (Exception ex) {
+                    log.warn("Failed to delete linked migration scenario [{}] for instance [{}]: {}",
+                            entity.getScenarioId(), id, ex.getMessage());
+                }
+            }
         }
 
         return mapToResponse(entity);
@@ -565,11 +617,16 @@ public class InstanceService {
                 .errorMessage(entity.getFailureMessage())
                 .privateIp(privateIp)
                 .publicIp(elasticIp)
+                .publicDns(entity.getPublicDns())
                 .securityGroup(entity.getSecurityGroup() != null ? entity.getSecurityGroup() : "sg-default")
-                .dnsDomain((entity.getDns() != null && !entity.getDns().trim().isEmpty())
-                        ? entity.getDns()
-                        : (instName != null ? instName.toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net"
-                                : "app.xregion.net"))
+                .scenarioId(entity.getScenarioId())
+                .scenarioStatus(resolveScenarioStatus(entity))
+                .dnsDomain((entity.getPublicDns() != null && !entity.getPublicDns().trim().isEmpty())
+                        ? entity.getPublicDns()
+                        : (entity.getDns() != null && !entity.getDns().trim().isEmpty())
+                                ? entity.getDns()
+                                : (instName != null ? instName.toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net"
+                                        : "app.xregion.net"))
                 .imageId(entity.getImageId())
                 .imageName(null)
                 // SPEC-01: quản trị máy ảo chỉ qua SSH terminal, không còn Web VNC console.

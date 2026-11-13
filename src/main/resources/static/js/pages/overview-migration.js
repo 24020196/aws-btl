@@ -46,8 +46,8 @@ async function loadMigrationSummary() {
   try {
     s = await apiRequest('/migrations/summary');
   } catch (err) {
-    document.getElementById('migSumLatest').textContent = tr('Không tải được dữ liệu chuyển vùng.', 'Failed to load migration summary.');
-    document.getElementById('migSumLocked').textContent = '–';
+    const latestEl = document.getElementById('migSumLatest');
+    if (latestEl) latestEl.textContent = tr('Không tải được dữ liệu chuyển vùng.', 'Failed to load migration summary.');
     return;
   }
   const now = s.serverTime || Date.now();
@@ -56,7 +56,6 @@ async function loadMigrationSummary() {
   set('migSumFailed', s.failed);
   set('migSumRunning', s.inProgress);
   set('migSumRate', s.successRate == null ? tr('Chưa có lần nào kết thúc', 'No completed migrations yet') : tr(`Tỉ lệ thành công ${s.successRate}%`, `Success rate ${s.successRate}%`));
-  set('migSumRto', s.avgDowntimeSeconds == null ? '–' : `${s.avgDowntimeSeconds}s`);
   set('migSumLockedCount', tr(`${s.locked.length} máy đang khóa`, `${s.locked.length} locked instance(s)`));
   set('migSumUpdated', tr(`Cập nhật ${new Date(now).toLocaleTimeString('vi-VN')}.`, `Updated ${new Date(now).toLocaleTimeString('en-US', { hour12: false })}.`));
 
@@ -79,20 +78,6 @@ async function loadMigrationSummary() {
       </div>
       <div class="mig-sum-route">${ovRegionTag(l.sourceRegion)} <span class="muted">→</span> ${ovRegionTag(l.destRegion)}</div>
       <div class="muted">${tr('Bắt đầu', 'Started')} ${ovEsc(ovTime(l.startedAt))} (${ovAgo(l.startedAt, now)})${l.downtimeSeconds ? ` · downtime ${l.downtimeSeconds}s` : ''}</div>`;
-  }
-
-  const locked = document.getElementById('migSumLocked');
-  if (!s.locked.length) {
-    locked.className = 'muted';
-    locked.innerHTML = `<span class="lock-free">${ICON('ui-unlock', 'ico-sm')} ${tr('Không có máy nào đang khóa.', 'No instances currently locked.')}</span>`;
-  } else {
-    locked.className = '';
-    locked.innerHTML = `<ul class="mig-sum-locks">${s.locked.map(i => `
-      <li>
-        <a class="link-accent" href="/instance-detail.html?id=${encodeURIComponent(i.instanceId)}#migration">${ICON('ui-lock', 'ico-sm')} ${ovEsc(i.instanceName || i.instanceId)}</a>
-        <span class="muted">${ovEsc(i.instanceId)} · ${ovRegionTag(i.currentRegion)}</span>
-        <span class="${i.stale ? 'sync-bad' : 'muted'}">${i.stale ? tr('khóa treo, sẽ tự nhả ở lần chuyển tiếp theo', 'stale lock, will auto-release on next migration') : (i.lockAcquiredAt ? tr('khóa ', 'locked ') + ovAgo(i.lockAcquiredAt, now) : '')}</span>
-      </li>`).join('')}</ul>`;
   }
 
   // Có lần chuyển vùng đang chạy thì cập nhật nhanh hơn để thấy nó kết thúc

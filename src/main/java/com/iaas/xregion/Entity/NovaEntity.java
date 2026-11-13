@@ -31,6 +31,7 @@ public class NovaEntity {
     private String privateIp;
     private String elasticIp;
     private String volumeId;
+    private String ebsVolumeId;
     private String keyId;
     private String securityGroupId;
     private Long createdAt;
@@ -92,6 +93,11 @@ public class NovaEntity {
     @DynamoDbAttribute("volume_id")
     public String getVolumeId() {
         return volumeId;
+    }
+
+    @DynamoDbAttribute("ebs_volume_id")
+    public String getEbsVolumeId() {
+        return ebsVolumeId;
     }
 
     @DynamoDbAttribute("key_id")

@@ -128,7 +128,10 @@ function checkAndTriggerStatePolling() {
 }
 
 // 4. Tải danh sách máy ảo từ API
+let instancesDataReady = false;
+
 async function loadInstances() {
+  instancesDataReady = false;
   const tbody = document.getElementById('instanceTableBody');
   const btnRefresh = document.getElementById('btnRefreshInstances');
 
@@ -152,6 +155,7 @@ async function loadInstances() {
     }
     const instances = await apiRequest('/instances');
     cachedInstances = instances || [];
+    instancesDataReady = true;
     notifyLaunchStatus(cachedInstances);
     // Loại bỏ các ID không còn tồn tại khỏi selectedInstanceIds
     const currentIds = new Set(cachedInstances.map(i => i.id));
@@ -472,6 +476,15 @@ function updateStateMenuItems() {
 // 7. Thao tác hàng loạt (Bulk Actions)
 async function handleBulkAction(action) {
   closeAllDropdowns();
+  if (!instancesDataReady) {
+    if (typeof showDynamoLoadingPopup === 'function') showDynamoLoadingPopup();
+    return;
+  }
+  const frozen = cachedInstances.find(i => selectedInstanceIds.has(i.id) && String(i.scenarioStatus || '').toUpperCase() === 'ACTIVE');
+  if (frozen) {
+    showScenarioFreezePopup(frozen.id, false);
+    return;
+  }
   // Chỉ gửi lệnh cho máy đang ở trạng thái hợp lệ; máy khác bỏ qua và báo lại
   const eligible = selectedInstancesFor(action);
   const skipped = selectedInstanceIds.size - eligible.length;
@@ -813,6 +826,11 @@ function migrateSelectedInstance() {
   closeAllDropdowns();
   if (selectedInstanceIds.size !== 1) return;
   const id = Array.from(selectedInstanceIds)[0];
+  const inst = cachedInstances.find(i => i.id === id);
+  if (inst && String(inst.scenarioStatus || '').toUpperCase() === 'ACTIVE') {
+    showScenarioFreezePopup(id, false);
+    return;
+  }
   window.location.href = `/instance-detail.html?id=${encodeURIComponent(id)}&action=migrate`;
 }
 
@@ -878,6 +896,10 @@ function resolveInstanceImageInfo(inst) {
 }
 
 function openConnectModal() {
+  if (!instancesDataReady) {
+    if (typeof showDynamoLoadingPopup === 'function') showDynamoLoadingPopup();
+    return;
+  }
   if (selectedInstanceIds.size !== 1) return;
   const id = Array.from(selectedInstanceIds)[0];
   const inst = cachedInstances.find(i => i.id === id);
@@ -893,12 +915,14 @@ function openConnectModal() {
   set('connectTitle', t('Kết nối tới máy ảo', 'Connect to instance'));
   set('connStep1a', t('Mở terminal ở thư mục chứa file khóa', 'Open a terminal in the folder with the key file'));
   set('connStep1b', t('đã tải lúc tạo Key Pair.', 'downloaded when the key pair was created.'));
-  set('connStep2', t('Trên Linux/macOS, giới hạn quyền đọc file khóa:', 'On Linux/macOS, restrict the key file permissions:'));
+  set('connStep2', t('Trên Linux/macOS, giới hạn quyền đọc file khóa (tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!):', 'On Linux/macOS, restrict key file permissions (avoids WARNING: UNPROTECTED PRIVATE KEY FILE!):'));
+  set('connStep2Win', t('Trên Windows (PowerShell), chạy lệnh sau để tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!:', 'On Windows (PowerShell), run this command to avoid WARNING: UNPROTECTED PRIVATE KEY FILE!:'));
   set('connStep3', t('Kết nối bằng Elastic IP:', 'Connect with the Elastic IP:'));
   set('connDnsText', t('Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:', 'Or use the Route 53 domain, which keeps working after a migration:'));
   set('connCloseBtn', t('Đóng', 'Close'));
   set('connKeyFile', key);
   set('connChmod', `chmod 400 "${key}"`);
+  set('connIcacls', `icacls "${key}" /inheritance:r /grant:r "$($env:USERNAME):R"`);
   set('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
   set('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
   set('connNote', t(`User mặc định của ${imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,

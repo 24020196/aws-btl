@@ -1,6 +1,6 @@
 # SPEC-SF-09: Step Function Boot Nova VM Tại Vùng Đích & Rollback 2 Tầng (MigrateTargetBoot)
 
-> **Phiên bản**: `1.10.0`  
+> **Phiên bản**: `1.11.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
 > **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)  
@@ -17,7 +17,7 @@ Tài liệu này chuẩn hóa máy trạng thái AWS Step Functions **`MigrateTa
    - Cấp phát EIP tại `dest_region`: ưu tiên lấy EIP rảnh từ Warm Pool (`XRegion-EIPPoolManager`); **nếu hết EIP rảnh thì tự động gọi `ec2.allocate_address(Domain="vpc")` cấp mới EIP** để không làm nghẽn Migration.
    - Chạy `BootNovaVM` từ Cinder Volume của `dest_snapshot_id`, `CommitNetworkMapping`, `AssignSecurityGroup`, và `ApplyNatMapping` (`WaitNatCommand` -> `CheckNatCommand` -> `ChoiceNatCommand` theo đúng `LaunchInstance` `SPEC-SF-01`, không có bước `VerifyNetwork`).
 3. **Bảo toàn 100% Security Group Rules**: Tạo Neutron Security Group 1-1 mới tại `dest_region`, parse chuẩn danh sách `inbound_rules` và `outbound_rules` từ payload (hoặc `XRegion-SecurityGroups` của `source_nova_id`), lưu vào `XRegion-SecurityGroups` và **đồng bộ rule thực tế xuống Neutron SG mới**.
-4. **Đồng bộ DynamoDB (Không dùng Route 53 Cutover)**: Cập nhật `XRegion-Nova`, `XRegion-SecurityGroups`, `XRegion-Instances` (`current_region = dest_region`, `current_status = RUNNING`, `active_nova_id = target_nova_id`, `public_ip`/`elastic_ip`, `migration_lock = false`) và `XRegion-Migrations` (`status = COMPLETED`). Bỏ qua cập nhật Route 53 DNS.
+4. **Đồng bộ DynamoDB & Route 53 DNS**: Cập nhật `XRegion-Nova`, `XRegion-SecurityGroups`, `XRegion-Instances` (`current_region = dest_region`, `current_status = RUNNING`, `active_nova_id = target_nova_id`, `public_ip`/`elastic_ip`, `public_dns = "<instance_id>.xregion-iaas.online"`, `migration_lock = false`) và `XRegion-Migrations` (`status = COMPLETED`), đồng thời `UPSERT` Route 53 A record `<instance_id>.xregion-iaas.online` (`TTL = 60s`, Hosted Zone `Z06312743V4JPQHUPYQDW`, fail-open sau 2 lần retry).
 5. **Dọn dẹp Nova VM nguồn qua Step Function mới (`TriggerSourceCleanup`)**: Sau khi `SyncDynamoDB` thành công, gửi sự kiện ký AWS IAM SigV4 tới API Gateway `source_region` để kích hoạt Step Function mới **`MigrateSourceCleanup`** terminate Nova VM nguồn cũ và **trả EIP vùng nguồn về lại Warm Pool** (giữ `AllocationId` theo `SPEC-02`, không hủy EIP khỏi AWS account).
 6. **Compensating Rollback 2 tầng (chia 2 nhánh rõ ràng theo trạng thái mạng)**:
    - **Tầng 1 (Vùng đích)**: Phân nhánh rõ ràng giữa trường hợp **đã `CommitNetworkMapping`/`APPLY` NAT** (SSM `REMOVE` $\rightarrow$ xóa SG/Nova $\rightarrow$ `FINALIZE` disassociate EIP, xóa port, unassign IP, gỡ tag EIP, xóa `EIP#`/`PRIVATEIP#`/`LEASE#`) và trường hợp **lỗi trước `CommitNetworkMapping`** (bỏ qua SSM `REMOVE`, dọn trực tiếp theo `LEASE#` trong `XRegion-NetworkReservations`: xóa port, unassign IP, gỡ tag EIP trả về pool, xóa `LEASE#`/`EIP#`/`PRIVATEIP#`), sau đó xóa Cinder + EBS Volume và `dest_snapshot_id`.
@@ -194,3 +194,4 @@ flowchart TD
 | `2026-11-13` | `1.8.0` | Chủ dự án | Bỏ bước `VerifyNetwork` trong `MigrateTargetBoot` để đồng bộ 100% theo cơ chế `LaunchInstance` (`SPEC-SF-01`): `ChoiceNatCommand` (`SUCCEEDED`) chuyển thẳng sang `SyncDynamoDB`. |
 | `2026-11-13` | `1.9.0` | Chủ dự án (`xacnhan-skill`) | Đồng bộ với `TerminateInstance` (`SPEC-SF-02 v1.3.0`): `SyncDynamoDB` (Bước 7) ghi bản ghi `XRegion-Volumes` tại `dest_region` (`status = IN_USE`, `attached_instance_id = instance_id`) để `TerminateInstance` ở vùng đích xóa sạch Cinder/EBS volume; `MigrateSourceCleanup` (Bước 8) cập nhật bản ghi `XRegion-Volumes` của volume nguồn sang `DELETED`. |
 | `2026-11-13` | `1.10.0` | Chủ dự án (`xacnhan-skill`) | Xác nhận 100% quy trình `MigrateSourceCleanup` qua `xacnhan-skill`: chuẩn hóa `TimeoutSeconds = 300s`, `Retry` 2 lần lỗi Lambda, `Catch -> SourceCleanupFailed`, và polling xác nhận xóa Cinder/EBS volume nguồn + cập nhật `XRegion-Volumes = DELETED`. |
+| `2026-11-13` | `1.11.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung cập nhật Route 53 A record `<instance_id>.xregion-iaas.online` (`TTL = 60s`, fail-open sau 2 lần retry) và lưu `public_dns` vào `XRegion-Instances` / `XRegion-Nova` tại `SyncDynamoDB`. |

@@ -1,16 +1,20 @@
 package com.iaas.xregion.Services;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Client.MigrationSchedulerClient;
 import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Entity.MigrationStep;
+import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateScenarioRequest;
 import com.iaas.xregion.Model.Response.MigrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -35,6 +39,23 @@ public class MigrationService {
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final NovaLookup novaLookup;
 
+    @Autowired(required = false)
+    private DynamoDbTable<MigrationScenarioEntity> migrationScenariosTable;
+
+    @Autowired(required = false)
+    private AuthService authService;
+
+    @Autowired(required = false)
+    private MigrationSchedulerClient migrationSchedulerClient;
+
+    public void setMigrationScenariosTable(DynamoDbTable<MigrationScenarioEntity> migrationScenariosTable) {
+        this.migrationScenariosTable = migrationScenariosTable;
+    }
+
+    public void setMigrationSchedulerClient(MigrationSchedulerClient migrationSchedulerClient) {
+        this.migrationSchedulerClient = migrationSchedulerClient;
+    }
+
     /** Trạng thái chuyển tiếp kiểu EC2: máy đang đổi trạng thái thì không được chuyển vùng. */
     private static final Set<String> TRANSITIONAL_STATES = Set.of("PENDING", "STOPPING", "SHUTTING_DOWN", "TERMINATING", "REBOOTING");
 
@@ -52,30 +73,48 @@ public class MigrationService {
         return "admin";
     }
 
+    private boolean isOwner(InstanceEntity inst, String currentUser) {
+        if (inst == null || currentUser == null) {
+            return false;
+        }
+        if ("admin".equalsIgnoreCase(currentUser)) {
+            return true;
+        }
+        if (currentUser.equalsIgnoreCase(inst.getUsername())) {
+            return true;
+        }
+        if (authService != null && inst.getUserId() != null) {
+            try {
+                UserEntity user = authService.findUserByUsername(currentUser);
+                if (user != null && user.getUserId() != null && user.getUserId().equalsIgnoreCase(inst.getUserId())) {
+                    return true;
+                }
+            } catch (Exception e) {
+                log.debug("Auth service user check failed for [{}]: {}", currentUser, e.getMessage());
+            }
+        }
+        return false;
+    }
+
     public List<Map<String, Object>> getAllScenarios() {
         String currentUser = getCurrentUsername();
         List<Map<String, Object>> scenarios = new ArrayList<>();
+        if (migrationScenariosTable == null) {
+            return scenarios;
+        }
         try {
-            Set<String> userInstanceIds = instancesTable.scan().items().stream()
-                    .filter(i -> currentUser.equalsIgnoreCase(i.getUsername()))
-                    .map(InstanceEntity::getInstanceId)
-                    .collect(Collectors.toSet());
-
-            List<MigrationEntity> migrations = migrationsTable.scan().items().stream()
-                    .filter(m -> userInstanceIds.contains(m.getInstanceId()))
+            List<InstanceEntity> userInstances = instancesTable.scan().items().stream()
+                    .filter(i -> isOwner(i, currentUser))
+                    .filter(i -> i.getScenarioId() != null && !i.getScenarioId().isBlank())
                     .collect(Collectors.toList());
-            for (MigrationEntity m : migrations) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", m.getMigrationId());
-                map.put("name", "Migration " + m.getMigrationId());
-                map.put("targetInstanceId", m.getInstanceId());
-                map.put("sourceRegion", m.getSourceRegion());
-                map.put("destRegion", m.getDestRegion());
-                map.put("triggerType", "MANUAL");
-                map.put("status", m.getStatus());
-                map.put("progressPercent", m.getCopyProgress() != null ? m.getCopyProgress() : 100);
-                map.put("cooldownMinutes", 5);
-                scenarios.add(map);
+
+            for (InstanceEntity inst : userInstances) {
+                MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                        Key.builder().partitionValue(inst.getScenarioId()).build());
+                if (scen != null) {
+                    autoPauseScenarioIfMigrating(inst, scen);
+                    scenarios.add(toScenarioMap(scen, inst));
+                }
             }
         } catch (Exception e) {
             log.error("Failed to read migration scenarios: {}", e.getMessage());
@@ -83,18 +122,208 @@ public class MigrationService {
         return scenarios;
     }
 
+    public Map<String, Object> getScenarioByInstanceId(String instanceId) {
+        String currentUser = getCurrentUsername();
+        InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
+        if (inst == null || !isOwner(inst, currentUser)) {
+            throw new ResourceNotFoundException("Instance not found: " + instanceId);
+        }
+        if (inst.getScenarioId() == null || inst.getScenarioId().isBlank() || migrationScenariosTable == null) {
+            return null;
+        }
+        MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                Key.builder().partitionValue(inst.getScenarioId()).build());
+        if (scen == null) {
+            return null;
+        }
+        autoPauseScenarioIfMigrating(inst, scen);
+        return toScenarioMap(scen, inst);
+    }
+
     public Map<String, Object> createScenario(CreateScenarioRequest request) {
-        String id = "sc-" + UUID.randomUUID().toString().substring(0, 8);
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", id);
-        data.put("name", request.getName());
-        data.put("targetInstanceId", request.getTargetInstanceId());
-        data.put("sourceRegion", request.getSourceRegion());
-        data.put("destRegion", request.getDestRegion());
-        data.put("triggerType", request.getTriggerType());
-        data.put("cronExpression", request.getCronExpression());
-        data.put("cooldownMinutes", request.getCooldownMinutes());
-        return data;
+        String currentUser = getCurrentUsername();
+        InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(request.getTargetInstanceId()).build());
+        if (inst == null || !isOwner(inst, currentUser)) {
+            throw new ResourceNotFoundException("Instance not found: " + request.getTargetInstanceId());
+        }
+        if (migrationScenariosTable == null) {
+            throw new IllegalStateException("MigrationScenarios table is not configured");
+        }
+
+        String scenarioId = (inst.getScenarioId() != null && !inst.getScenarioId().isBlank())
+                ? inst.getScenarioId()
+                : UUID.randomUUID().toString();
+
+        MigrationScenarioEntity existing = (inst.getScenarioId() != null && !inst.getScenarioId().isBlank())
+                ? migrationScenariosTable.getItem(Key.builder().partitionValue(inst.getScenarioId()).build())
+                : null;
+
+        if (isActivelyMigrating(inst)) {
+            autoPauseScenarioIfMigrating(inst, existing);
+            throw new ConflictException(
+                    "Máy ảo [" + inst.getInstanceId() + "] đang chuyển vùng (MIGRATING). Không thể tạo hoặc kích hoạt kịch bản chuyển vùng lúc này.");
+        }
+
+        if (existing != null && "ACTIVE".equalsIgnoreCase(existing.getStatus())) {
+            throw new ConflictException(
+                    "Kịch bản chuyển vùng của máy [" + inst.getInstanceId()
+                            + "] đang kích hoạt (ACTIVE). Hãy tạm dừng kịch bản trước khi chỉnh sửa.");
+        }
+
+        long remainingCooldown = getRemainingCooldownSeconds(inst, findMigrations(inst.getInstanceId()));
+        if (remainingCooldown > 0) {
+            throw new ConflictException(
+                    "Máy ảo [" + inst.getInstanceId() + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm "
+                            + remainingCooldown + " giây trước khi chỉnh sửa kịch bản.");
+        }
+
+        String status = "PAUSED".equalsIgnoreCase(request.getStatus()) ? "PAUSED" : "ACTIVE";
+        String scenarioName = (request.getName() != null && !request.getName().isBlank())
+                ? request.getName().trim()
+                : null;
+        MigrationScenarioEntity entity = MigrationScenarioEntity.builder()
+                .scenarioId(scenarioId)
+                .name(scenarioName)
+                .status(status)
+                .triggerType(request.getTriggerType() != null && !request.getTriggerType().isBlank()
+                        ? request.getTriggerType().trim().toUpperCase(Locale.ROOT)
+                        : "SCHEDULED")
+                .dayTime(request.getDayTime() != null ? request.getDayTime().trim() : "07:00")
+                .nightTime(request.getNightTime() != null ? request.getNightTime().trim() : "19:00")
+                .cronExpression(request.getCronExpression() != null ? request.getCronExpression().trim() : "0 7,19 * * *")
+                .cooldownMinutes(request.getCooldownMinutes() > 0 ? request.getCooldownMinutes() : 60)
+                .updatedAt(TimeSyncUtil.nowEpochSeconds())
+                .build();
+
+        migrationScenariosTable.putItem(entity);
+
+        if (!scenarioId.equals(inst.getScenarioId())) {
+            InstanceEntity patch = new InstanceEntity();
+            patch.setInstanceId(inst.getInstanceId());
+            patch.setScenarioId(scenarioId);
+            instancesTable.updateItem(UpdateItemEnhancedRequest.builder(InstanceEntity.class)
+                    .item(patch)
+                    .ignoreNulls(true)
+                    .build());
+            inst.setScenarioId(scenarioId);
+        }
+
+        if (migrationSchedulerClient != null) {
+            String srcRegion = inst.getCurrentRegion() != null ? inst.getCurrentRegion() : "ap-southeast-2";
+            String dstRegion = "ap-southeast-2".equals(srcRegion) ? "us-east-1" : "ap-southeast-2";
+            migrationSchedulerClient.upsertDualSchedules(
+                    inst.getInstanceId(),
+                    scenarioId,
+                    srcRegion,
+                    dstRegion,
+                    entity.getDayTime(),
+                    entity.getNightTime(),
+                    "ACTIVE".equalsIgnoreCase(status));
+        }
+
+        return toScenarioMap(entity, inst);
+    }
+
+    public Map<String, Object> toggleScenarioStatus(String scenarioId, String requestedStatus) {
+        String currentUser = getCurrentUsername();
+        if (migrationScenariosTable == null) {
+            throw new IllegalStateException("MigrationScenarios table is not configured");
+        }
+        InstanceEntity ownerInst = instancesTable.scan().items().stream()
+                .filter(i -> isOwner(i, currentUser) && scenarioId.equals(i.getScenarioId()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Scenario not found: " + scenarioId));
+
+        MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                Key.builder().partitionValue(scenarioId).build());
+        if (scen == null) {
+            throw new ResourceNotFoundException("Scenario not found: " + scenarioId);
+        }
+
+        String nextStatus;
+        if (requestedStatus != null && !requestedStatus.isBlank()) {
+            String upper = requestedStatus.trim().toUpperCase(Locale.ROOT);
+            if (!"ACTIVE".equals(upper) && !"PAUSED".equals(upper)) {
+                throw new IllegalArgumentException("Invalid scenario status: " + requestedStatus);
+            }
+            nextStatus = upper;
+        } else {
+            nextStatus = "ACTIVE".equalsIgnoreCase(scen.getStatus()) ? "PAUSED" : "ACTIVE";
+        }
+
+        if ("ACTIVE".equalsIgnoreCase(nextStatus)) {
+            if (isActivelyMigrating(ownerInst)) {
+                autoPauseScenarioIfMigrating(ownerInst, scen);
+                throw new ConflictException(
+                        "Máy ảo [" + ownerInst.getInstanceId()
+                                + "] đang chuyển vùng (MIGRATING). Không thể kích hoạt kịch bản chuyển vùng lúc này.");
+            }
+            long remainingCooldown = getRemainingCooldownSeconds(ownerInst, findMigrations(ownerInst.getInstanceId()));
+            if (remainingCooldown > 0) {
+                throw new ConflictException(
+                        "Máy ảo [" + ownerInst.getInstanceId() + "] đang trong thời gian Cooldown bảo vệ. Vui lòng đợi thêm "
+                                + remainingCooldown + " giây trước khi kích hoạt kịch bản.");
+            }
+        }
+
+        scen.setStatus(nextStatus);
+        scen.setUpdatedAt(TimeSyncUtil.nowEpochSeconds());
+        migrationScenariosTable.putItem(scen);
+
+        if (migrationSchedulerClient != null) {
+            migrationSchedulerClient.setSchedulesEnabled(ownerInst.getInstanceId(), "ACTIVE".equalsIgnoreCase(nextStatus));
+        }
+
+        return toScenarioMap(scen, ownerInst);
+    }
+
+    private boolean isActivelyMigrating(InstanceEntity inst) {
+        if (inst == null) {
+            return false;
+        }
+        if ("MIGRATING".equalsIgnoreCase(inst.getCurrentStatus())) {
+            return true;
+        }
+        return Boolean.TRUE.equals(inst.getMigrationLock()) && !isLockStale(inst);
+    }
+
+    private void autoPauseScenarioIfMigrating(InstanceEntity inst, MigrationScenarioEntity scen) {
+        if (scen == null || !isActivelyMigrating(inst) || !"ACTIVE".equalsIgnoreCase(scen.getStatus())) {
+            return;
+        }
+        scen.setStatus("PAUSED");
+        scen.setUpdatedAt(TimeSyncUtil.nowEpochSeconds());
+        migrationScenariosTable.putItem(scen);
+        if (migrationSchedulerClient != null) {
+            try {
+                migrationSchedulerClient.setSchedulesEnabled(inst.getInstanceId(), false);
+            } catch (Exception e) {
+                log.warn("Failed to disable EventBridge schedules while auto-pausing scenario [{}] for [{}]: {}",
+                        scen.getScenarioId(), inst.getInstanceId(), e.getMessage());
+            }
+        }
+        log.info("Auto-paused ACTIVE scenario [{}] because instance [{}] is MIGRATING",
+                scen.getScenarioId(), inst.getInstanceId());
+    }
+
+    private Map<String, Object> toScenarioMap(MigrationScenarioEntity scen, InstanceEntity inst) {
+        String srcRegion = inst.getCurrentRegion() != null ? inst.getCurrentRegion() : "ap-southeast-2";
+        String dstRegion = "ap-southeast-2".equals(srcRegion) ? "us-east-1" : "ap-southeast-2";
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", scen.getScenarioId());
+        map.put("scenarioId", scen.getScenarioId());
+        map.put("name", scen.getName());
+        map.put("targetInstanceId", inst.getInstanceId());
+        map.put("sourceRegion", srcRegion);
+        map.put("destRegion", dstRegion);
+        map.put("triggerType", scen.getTriggerType());
+        map.put("dayTime", scen.getDayTime());
+        map.put("nightTime", scen.getNightTime());
+        map.put("cronExpression", scen.getCronExpression());
+        map.put("cooldownMinutes", scen.getCooldownMinutes());
+        map.put("status", scen.getStatus());
+        map.put("updatedAt", scen.getUpdatedAt());
+        return map;
     }
 
     public MigrationResponse triggerMigration(String targetId) {
@@ -120,8 +349,18 @@ public class MigrationService {
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
         novaLookup.fill(instance);
-        if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
+        if (!isOwner(instance, currentUser)) {
             throw new ResourceNotFoundException(msg(lang, "Không tìm thấy máy ảo " + instanceId + ".", "Instance not found: " + instanceId));
+        }
+
+        if (instance.getScenarioId() != null && !instance.getScenarioId().isBlank() && migrationScenariosTable != null) {
+            MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                    Key.builder().partitionValue(instance.getScenarioId()).build());
+            if (scen != null && "ACTIVE".equalsIgnoreCase(scen.getStatus())) {
+                throw new ConflictException(msg(lang,
+                        "Máy ảo [" + instanceId + "] đang kích hoạt kịch bản chuyển vùng tự động (ACTIVE). Hãy tạm dừng kịch bản trước khi chuyển vùng bằng tay.",
+                        "Instance [" + instanceId + "] has an ACTIVE migration scenario. Pause the scenario before manual migration."));
+            }
         }
 
         // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp hoặc đã xóa (hỗ trợ đầy đủ linux_nat_v1)
@@ -184,6 +423,9 @@ public class MigrationService {
         String migrationId = "mig_" + startEpochSec;
         String srcRegion = instance.getCurrentRegion() != null ? instance.getCurrentRegion() : "ap-southeast-2";
         String dstRegion = srcRegion.contains("southeast") ? "us-east-1" : "ap-southeast-2";
+        String sourceVolumeId = (instance.getEbsVolumeId() != null && !instance.getEbsVolumeId().isBlank())
+                ? instance.getEbsVolumeId()
+                : instance.getVolumeId();
 
         List<String> logs = new ArrayList<>();
         logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Migration initiated for instance " + instanceId);
@@ -195,7 +437,7 @@ public class MigrationService {
                 .migrationId(migrationId)
                 .sourceRegion(srcRegion)
                 .destRegion(dstRegion)
-                .volumeId(instance.getVolumeId())
+                .volumeId(sourceVolumeId)
                 .status("IN_PROGRESS")
                 .copyProgress(15)
                 .startedAt(startEpochSec)
@@ -211,7 +453,7 @@ public class MigrationService {
                     migrationId,
                     instanceId,
                     instance.getActiveNovaId(),
-                    instance.getVolumeId(),
+                    sourceVolumeId,
                     srcRegion,
                     dstRegion,
                     "START",
@@ -350,9 +592,14 @@ public class MigrationService {
     }
 
     private List<MigrationEntity> findMigrations(String instanceId) {
-        return migrationsTable.query(QueryConditional.keyEqualTo(Key.builder().partitionValue(instanceId).build()))
-                .items().stream()
-                .collect(Collectors.toList());
+        if (migrationsTable == null) {
+            return List.of();
+        }
+        var pages = migrationsTable.query(QueryConditional.keyEqualTo(Key.builder().partitionValue(instanceId).build()));
+        if (pages == null) {
+            return List.of();
+        }
+        return pages.items().stream().collect(Collectors.toList());
     }
 
     private int effectiveCooldown(InstanceEntity instance) {
@@ -377,7 +624,7 @@ public class MigrationService {
         String currentUser = getCurrentUsername();
         InstanceEntity instance = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
         novaLookup.fill(instance);
-        if (instance == null || !currentUser.equalsIgnoreCase(instance.getUsername())) {
+        if (!isOwner(instance, currentUser)) {
             throw new ResourceNotFoundException("Instance not found: " + instanceId);
         }
 

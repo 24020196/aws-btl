@@ -3,9 +3,11 @@ package com.iaas.xregion.service;
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.InstanceStatus;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
+import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
@@ -194,6 +196,8 @@ class InstanceServiceTest {
         assertThat(response.getImageName()).isNull();
         assertThat(response.getPrivateIp()).isNull();
         assertThat(response.getPublicIp()).isNull();
+        assertThat(response.getPublicDns()).isEqualTo(response.getId() + ".xregion-iaas.online");
+        assertThat(response.getDnsDomain()).isEqualTo(response.getId() + ".xregion-iaas.online");
         assertThat(response.getVolumeId()).isNull();
         assertThat(response.getSecurityGroupId()).isNull();
         verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
@@ -514,6 +518,49 @@ class InstanceServiceTest {
         assertThat(res.getFlavor()).isEqualTo("m1.tiny");
         assertThat(res.getStatus()).isEqualTo("PENDING");
         verify(instancesTable).putItem(any(InstanceEntity.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void activeScenarioBlocksLifecycleActions() {
+        DynamoDbTable<MigrationScenarioEntity> scenTable = mock(DynamoDbTable.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(instanceService, "migrationScenariosTable", scenTable);
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-frozen")
+                .username("testuser")
+                .currentStatus("RUNNING")
+                .scenarioId("scen-active")
+                .build();
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
+        when(scenTable.getItem(Key.builder().partitionValue("scen-active").build()))
+                .thenReturn(MigrationScenarioEntity.builder().scenarioId("scen-active").status("ACTIVE").build());
+
+        InstanceActionRequest stopReq = new InstanceActionRequest();
+        stopReq.setAction("STOP");
+        assertThatThrownBy(() -> instanceService.executeAction("i-frozen", stopReq))
+                .isInstanceOf(ConflictException.class);
+
+        InstanceActionRequest termReq = new InstanceActionRequest();
+        termReq.setAction("TERMINATE");
+        assertThatThrownBy(() -> instanceService.executeAction("i-frozen", termReq))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    @DisplayName("mapToResponse maps public_dns to publicDns and dnsDomain")
+    void mapToResponsePrefersPublicDnsOverLegacyDns() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-dns12345")
+                .instanceName("Web VM")
+                .username("testuser")
+                .dns("legacy.xregion.net")
+                .publicDns("i-dns12345.xregion-iaas.online")
+                .currentStatus("RUNNING")
+                .build();
+
+        InstanceResponse response = instanceService.mapToResponse(inst);
+        assertThat(response.getPublicDns()).isEqualTo("i-dns12345.xregion-iaas.online");
+        assertThat(response.getDnsDomain()).isEqualTo("i-dns12345.xregion-iaas.online");
     }
 }
 
