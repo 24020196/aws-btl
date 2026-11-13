@@ -1,6 +1,6 @@
 # SPEC-03: Chuyển Vùng Xuyên Vùng Trực Tiếp (Cross-Region Live Migration)
 
-> **Phiên bản**: `1.2.0`  
+> **Phiên bản**: `1.7.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
 > **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
@@ -14,12 +14,12 @@ Hệ thống XRegion cung cấp giải pháp chuyển vùng máy ảo an toàn g
 > [!IMPORTANT]
 > ### NGUYÊN TẮC MÔ HÌNH: CUTOVER & DỌN DẸP SOURCE VM SAU KHI ĐỒNG BỘ ĐÍCH (SPEC-SF-09 v1.5.0)
 > - Sau khi quá trình di trú chuyển vùng hoàn tất thành công tại vùng đích (`SyncDynamoDB` chuyển `current_region = dest_region`, `current_status = RUNNING`, `migration_lock = false`):
->   - **Máy ảo đích (Target VM)**: Trở thành máy ảo chính (**Active**), gắn Elastic IP mới và cập nhật trên `XRegion-Instances` / `XRegion-Nova` (không sử dụng Route 53 DNS Cutover).
+>   - **Máy ảo đích (Target VM)**: Trở thành máy ảo chính (**Active**), gắn Elastic IP mới, cập nhật `UPSERT` Route 53 A record `<instance_id>.xregion-iaas.online` (`TTL = 60s`, Hosted Zone `Z06312743V4JPQHUPYQDW`) trỏ về EIP mới và cập nhật `public_dns` trên `XRegion-Instances` / `XRegion-Nova` (`SPEC-04 v1.4.0`).
 >   - **Máy ảo nguồn (Source VM)**: `MigrateTargetBoot` kích hoạt bước `TriggerSourceCleanup` gửi sự kiện qua API Gateway về `source_region` để chạy Step Function **`MigrateSourceCleanup`** terminate Nova VM nguồn cũ và giải phóng tài nguyên vùng nguồn (EIP, NAT, SG, Volume, Snapshot) mà không ảnh hưởng bản ghi `XRegion-Instances` đang `RUNNING` tại vùng đích.
 > - **Khi di trú thất bại trước khi hoàn tất**: Source VM được giữ nguyên và phục hồi qua `TriggerSourceRollback` (gửi API Gateway về `source_region` kích hoạt Step Function `LifecycleInstance` với `action = START`).
 
 ### Phân Định Lộ Trình Kiến Trúc (Architecture Transition Note)
-- **Hiện trạng Chuẩn Hóa (`MigrationService.java` -> `SPEC-SF-08`)**: Backend Spring Boot không còn chạy luồng giả lập `Thread.sleep` trong RAM. `MigrationService.triggerMigration()` thực hiện khóa nguyên tử trên DynamoDB, ghi nhận bản ghi khởi đầu vào `XRegion-Migrations`, và phát sự kiện thật qua API Gateway (`EventBridgeGatewayClient`) theo `sourceRegion` để kích hoạt Step Function `MigrateInstance` (`SPEC-SF-08`). Hỗ trợ đầy đủ cho cả máy ảo dùng `linux_nat_v1`.
+- **Hiện trạng Chuẩn Hóa (`MigrationService.java` -> `SPEC-SF-08`)**: Backend Spring Boot không còn chạy luồng giả lập `Thread.sleep` trong RAM. `MigrationService.triggerMigration()` thực hiện khóa nguyên tử trên DynamoDB, ghi nhận bản ghi khởi đầu vào `XRegion-Migrations`, và phát sự kiện thật qua API Gateway (`EventBridgeGatewayClient`) theo `sourceRegion` để kích hoạt Step Function `MigrateInstance` (`SPEC-SF-08`). Khi phát sự kiện, Backend **bắt buộc ưu tiên truyền `ebs_volume_id` (`vol-...`)** từ `XRegion-Nova` làm `source_volume_id` (chỉ fallback về Cinder `volume_id` khi `ebs_volume_id` trống) để bước `ec2:CreateSnapshot` không bị từ chối. Hỗ trợ đầy đủ cho cả máy ảo dùng `linux_nat_v1`.
 - **Theo dõi tiến độ (`getProgress`)**: `MigrationService.getProgress(instanceId)` đọc trực tiếp bản ghi mới nhất từ bảng DynamoDB `XRegion-Migrations` (`status`, `copy_progress`, `step_logs`, `started_at`, `completed_at`) để đồng bộ thời gian thực với Step Function/Lambda trên AWS.
 
 ---
@@ -118,7 +118,43 @@ flowchart TD
 
 ---
 
-## 5. Ràng Buộc Kiểm Thử & Chống Sai Lệch Cho Agent (Testing Constraints)
+## 5. Quản Lý Kịch Bản Chuyển Vùng (`XRegion-MigrationScenarios`)
+
+1. **Lưu trữ DynamoDB (`XRegion-MigrationScenarios`)**:
+   - **Khóa chính (PK)**: `scenario_id` (`String` - UUID 36 ký tự chuẩn).
+   - **Thuộc tính**: `scenario_id`, `status` (`ACTIVE` | `PAUSED`), `trigger_type`, `day_time`, `night_time`, `cron_expression`, `cooldown_minutes`, `updated_at`, và `name` (tùy chọn/nullable — không bắt buộc nhập trên modal Lịch chuyển vùng luân phiên).
+2. **Liên kết với `XRegion-Instances`**:
+   - Bảng `XRegion-Instances` lưu khóa ngoại `scenario_id` (nullable).
+   - Khi máy ảo mới được khởi tạo: `scenario_id = null` (chưa gắn kịch bản).
+3. **Hành vi mặc định trên UI (`instance-detail.html?id`)**:
+   - Khi `scenario_id` là `null` (hoặc không tìm thấy bản ghi): phần **Kịch bản chuyển vùng** ở trạng thái **tắt / chưa thiết lập** và **không có tên kịch bản** (cấm tự sinh tên giả `AutoMigrate-...` hoặc lưu mock trong `localStorage`).
+   - Khi người dùng lưu cấu hình lần đầu: Backend tạo mới `scenario_id` (UUID 36 ký tự), lưu vào `XRegion-MigrationScenarios` và cập nhật khóa ngoại `scenario_id` trên `XRegion-Instances`.
+4. **Lập lịch AWS EventBridge Scheduler 2 Vùng & Kích hoạt qua API Gateway**:
+   - Khi người dùng bấm **Lưu & Kích hoạt kịch bản** (hoặc kích hoạt lại), hệ thống đồng bộ **2 EventBridge Schedule cố định hằng ngày** theo múi giờ **`Asia/Ho_Chi_Minh` (`UTC+7`)** tại cả 2 vùng (`us-east-1` và `ap-southeast-2`):
+     - Schedule tại vùng `sourceRegion` (Vùng A lúc cấu hình): chạy theo giờ bắt đầu hoạt động của vùng đối ứng (`night_time`, ví dụ `19:00`) để chuyển `sourceRegion → destRegion`.
+     - Schedule tại vùng `destRegion` (Vùng B lúc cấu hình): chạy theo giờ bắt đầu hoạt động của vùng A (`day_time`, ví dụ `07:00`) để chuyển `destRegion → sourceRegion`.
+   - **Luồng thực thi khi Schedule kích hoạt**:
+     1. EventBridge Schedule tại vùng tương ứng gọi Lambda Trigger (`XRegion-ScheduledMigrationTrigger`) của chính vùng đó.
+     2. Lambda Trigger kiểm tra: kịch bản trong `XRegion-MigrationScenarios` có `status = ACTIVE`, máy ảo trong `XRegion-Instances` có `current_region` trùng với vùng hiện tại của Lambda, trạng thái hợp lệ (không `MIGRATING`/`TERMINATED`) và không trong `cooldown_minutes` / `300s`. Nếu máy không ở vùng này, bỏ qua an toàn (`NOOP`).
+     3. Lambda Trigger chiếm khóa nguyên tử `migration_lock = true` (DynamoDB Conditional Write), đọc `active_nova_id` và `ebs_volume_id` mới nhất từ `XRegion-Nova`, ghi bản ghi khởi đầu vào `XRegion-Migrations`.
+     4. Lambda Trigger gửi sự kiện `Migration Lifecycle Event` (`source = "xregion.backend.migration"`) tới **API Gateway `/events` của chính vùng đó** để kích hoạt Step Function `MigrateInstance` (`SPEC-SF-08`).
+5. **Tạm dừng, Sửa & Dọn dẹp khi Terminate**:
+   - **Tạm dừng (`PAUSED`)**: Cập nhật `status = PAUSED` trên `XRegion-MigrationScenarios` và chuyển cả 2 EventBridge Schedule ở 2 vùng sang `State = DISABLED` (giữ nguyên `scenario_id` trên `XRegion-Instances` và 2 Schedule).
+   - **Kích hoạt lại (`ACTIVE`)**: Cập nhật `status = ACTIVE` và bật lại cả 2 EventBridge Schedule sang `State = ENABLED`.
+   - **Chỉnh sửa cấu hình**: Chỉ cho phép sửa giờ/cấu hình kịch bản khi kịch bản đang ở trạng thái `PAUSED`; sau khi sửa xong và kích hoạt lại, cập nhật biểu thức cron của cả 2 Schedule.
+   - **Khi Terminate VM**: Xóa cả 2 EventBridge Schedule ở 2 vùng và xóa bản ghi kịch bản liên kết (nếu `scenario_id != null`) trong `XRegion-MigrationScenarios`.
+6. **Khóa Bảo Vệ Máy Ảo Khi Kịch Bản `ACTIVE` (Strict Freeze Guard)**:
+   - Khi máy ảo có kịch bản liên kết đang `ACTIVE`, hệ thống **CẤM TUYỆT ĐỐI** mọi thao tác làm thay đổi hoặc xóa máy ảo (cả ở Backend `HTTP 409 Conflict` lẫn trên UI):
+     - Khóa toàn bộ thao tác lifecycle (`START`, `STOP`, `REBOOT`, `TERMINATE`/`DELETE`).
+     - Khóa Resize Volume (`POST /api/volumes/{id}/extend`).
+     - Khóa sửa Security Group (`PUT /api/network/security-groups/instances/{id}`, thêm/xóa rule).
+     - Khóa sửa cấu hình kịch bản (`POST /api/migrations/scenarios` khi kịch bản đang `ACTIVE`).
+     - Khóa Chuyển vùng bằng tay (`POST /api/migrations/trigger`).
+   - **Thông báo Pop-up hướng dẫn trên UI**: Khi người dùng bấm vào bất kỳ thao tác bị khóa nào của máy đang có kịch bản `ACTIVE`, UI phải hiển thị **pop-up nhắc nhở** rõ ràng nguyên nhân và hướng dẫn người dùng truy cập trang chi tiết (`instance-detail.html?id=<id>#migration`) để bấm **Tạm dừng kịch bản** (`PAUSED`) trước khi sửa hoặc xóa.
+
+---
+
+## 6. Ràng Buộc Kiểm Thử & Chống Sai Lệch Cho Agent (Testing Constraints)
 
 > [!WARNING]
 > Khi Agent lập trình hoặc viết Test Suite cho tính năng Live Migration:
@@ -134,10 +170,15 @@ flowchart TD
 
 ---
 
-## 6. Lịch Sử Phiên Bản (Changelog)
+## 7. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
 | :--- | :--- | :--- | :--- |
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành tài liệu chuẩn hóa quy trình Live Migration 7 bước Active-Passive và Redis Distributed Lock. |
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Phân định lộ trình kiến trúc chuyển tiếp: MigrationService.java hiện tại là Mock UI giai đoạn 1, SPEC-03 là kiến trúc đích bắt buộc. Đồng bộ enum RUNNING/STOPPED. |
 | `2026-11-13` | `1.2.0` | Chủ dự án (`xacnhan-skill`) | Chuẩn hóa kích hoạt thật qua API Gateway (`SPEC-SF-08`), mở chặn `linux_nat_v1`, thay Redis/SQS bằng DynamoDB Conditional Lock + Stale Lock `900s`, thống nhất Cooldown `300s`, và đọc `getProgress` trực tiếp từ `XRegion-Migrations`. |
+| `2026-11-13` | `1.3.0` | Chủ dự án (`xacnhan-skill`) | Chuẩn hóa bảng `XRegion-MigrationScenarios` (`scenario_id` UUID 36 ký tự), khóa ngoại `scenario_id` trên `XRegion-Instances`, trạng thái mặc định tắt không có tên kịch bản trên `instance-detail.html?id`, và quy tắc `PAUSED`/xóa khi Terminate. |
+| `2026-11-13` | `1.4.0` | Chủ dự án (`backend-skill`) | Chuẩn hóa ưu tiên truyền `ebs_volume_id` (`vol-...`) từ `XRegion-Nova` làm `source_volume_id` khi kích hoạt `MigrateInstance` để tránh lỗi `InvalidParameterValue` tại bước `CreateSnapshot`. |
+| `2026-11-13` | `1.5.0` | Chủ dự án | Bỏ trường bắt buộc `name` (Tên kịch bản) trên panel/modal Lịch chuyển vùng luân phiên (`instance-detail.html`); `name` trên `XRegion-MigrationScenarios` chuyển sang tùy chọn (`nullable`). |
+| `2026-11-13` | `1.6.0` | Chủ dự án (`xacnhan-skill`) | Chuẩn hóa tạo 2 EventBridge Schedule 2 vùng (`Asia/Ho_Chi_Minh`) gọi Lambda Trigger → API Gateway `/events` của chính vùng đó; `PAUSED` chuyển Schedule sang `DISABLED`; khóa toàn bộ thao tác lifecycle, Resize Volume, sửa SG, sửa kịch bản và chuyển vùng tay khi kịch bản `ACTIVE` kèm pop-up nhắc nơi tạm dừng trên UI. |
+| `2026-11-13` | `1.7.0` | Chủ dự án (`xacnhan-skill`) | Cập nhật `SyncDynamoDB` ở vùng đích `UPSERT` Route 53 A record `<instance_id>.xregion-iaas.online` (`TTL = 60s`) và lưu `public_dns` vào `XRegion-Instances` (`SPEC-04 v1.4.0`). |

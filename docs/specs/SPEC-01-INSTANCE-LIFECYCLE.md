@@ -1,6 +1,6 @@
 # SPEC-01: Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning)
 
-> **Phiên bản**: `1.11.0`  
+> **Phiên bản**: `1.13.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
 > **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
@@ -70,11 +70,11 @@
 Hệ thống phân định ranh giới trách nhiệm rõ ràng giữa hai bảng DynamoDB:
 
 1. **Bảng `XRegion-Instances` (Lớp Quản Trị Vòng Đời & Người Dùng)**:
-   - Quản lý các thuộc tính: `instance_id` (PK), `instance_name`, `user_id`, `username`, `current_status`, `migration_lock`, `last_migration_timestamp`.
+   - Quản lý các thuộc tính: `instance_id` (PK), `instance_name`, `user_id`, `username`, `current_status`, `migration_lock`, `last_migration_timestamp`, `scenario_id` (FK nullable trỏ tới `XRegion-MigrationScenarios.scenario_id`, mặc định `null` khi khởi tạo VM).
    - Lưu trữ con trỏ máy ảo hiện hành: `active_nova_id`.
    - Lưu trữ danh sách toàn bộ các máy ảo OpenStack lịch sử từng phục vụ instance này: `nova_ids` (List chuỗi).
 2. **Bảng `XRegion-Nova` (Lớp Hạ Tầng Vật Lý OpenStack)**:
-   - Quản lý các thuộc tính kỹ thuật thực tế: `nova_id` (PK), `instance_id` (GSI: `instance_id-index`), `region`, `flavor`, `private_ip`, `elastic_ip`, `volume_id`, `key_id`, `network_mode`, `status`, `created_at`, `terminated_at`.
+   - Quản lý các thuộc tính kỹ thuật thực tế: `nova_id` (PK), `instance_id` (GSI: `instance_id-index`), `region`, `flavor`, `private_ip`, `elastic_ip`, `volume_id` (Cinder UUID), `ebs_volume_id` (AWS EBS `vol-...`), `key_id`, `network_mode`, `status`, `created_at`, `terminated_at`.
    - Lớp `NovaLookup.java` trên Backend chịu trách nhiệm tra cứu và nạp (fill) dữ liệu từ `XRegion-Nova` vào đối tượng `InstanceEntity` khi phục vụ các API Controller hoặc giao diện.
 
 ---
@@ -171,3 +171,5 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
 | `2026-11-12` | `1.9.0` | Chủ dự án (xacnhan-skill) | Ẩn hoàn toàn panel Target Region trên launch.html, ngầm định truyền region=ap-southeast-2 để đồng bộ 100% với SPEC-05. |
 | `2026-11-12` | `1.10.0` | Chủ dự án (xacnhan-skill) | Chuẩn hóa định danh 2 vùng (Region A = us-east-1, Region B = ap-southeast-2), định tuyến sự kiện động qua RegionEventGatewayClients theo vùng được chọn trên UI. |
 | `2026-11-13` | `1.11.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung Pre-condition Launch: giới hạn tối đa 5 máy ảo thuộc `{PENDING, RUNNING, STOPPED, REBOOTING, STOPPING, MIGRATING}` cho mỗi user (kể cả `admin`, `HTTP 409 Conflict`). |
+| `2026-11-13` | `1.12.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung khóa ngoại `scenario_id` (nullable, mặc định `null`) vào bảng `XRegion-Instances` để liên kết 1-1 với bảng `XRegion-MigrationScenarios`. |
+| `2026-11-13` | `1.13.0` | Chủ dự án (`backend-skill`) | Bổ sung ánh xạ `ebs_volume_id` (`vol-...`) trong bảng `XRegion-Nova` và `NovaLookup.java` tách biệt với Cinder `volume_id`. |

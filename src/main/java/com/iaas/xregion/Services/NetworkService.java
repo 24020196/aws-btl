@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Entity.InstanceEntity;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.SecurityGroupEntity;
 import com.iaas.xregion.Entity.SecurityGroupSyncStatus;
+import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
@@ -52,6 +54,29 @@ public class NetworkService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final ObjectMapper objectMapper;
     private final NovaLookup novaLookup;
+
+    @Autowired(required = false)
+    private AuthService authService;
+
+    @Autowired(required = false)
+    private DynamoDbTable<UserEntity> usersTable;
+
+    @Autowired(required = false)
+    private DynamoDbTable<MigrationScenarioEntity> migrationScenariosTable;
+
+    private void assertNoActiveScenario(InstanceEntity inst) {
+        if (inst == null || inst.getScenarioId() == null || inst.getScenarioId().isBlank()
+                || migrationScenariosTable == null) {
+            return;
+        }
+        MigrationScenarioEntity scen = migrationScenariosTable.getItem(
+                Key.builder().partitionValue(inst.getScenarioId()).build());
+        if (scen != null && "ACTIVE".equalsIgnoreCase(scen.getStatus())) {
+            throw new ConflictException(
+                    "Máy ảo [" + inst.getInstanceId()
+                            + "] đang kích hoạt Kịch bản chuyển vùng tự động (ACTIVE). Vui lòng tạm dừng kịch bản trước khi sửa Security Group.");
+        }
+    }
 
 
     /** Bản ghi Route 53 người dùng tự cập nhật (ghi đè bản ghi sinh từ dns + elastic_ip của máy). */
@@ -577,10 +602,17 @@ public class NetworkService {
                 }
             }
         }
+        if (byInstance.size() > 1) {
+            pruneDeletedGroups(byInstance);
+        }
         if (byInstance.size() == 1) {
             return byInstance.get(0);
         }
         if (byInstance.size() > 1) {
+            String resolved = resolveActiveMigrationGroup(inst, byInstance);
+            if (resolved != null) {
+                return resolved;
+            }
             Collections.sort(byInstance);
             throw ambiguousInstanceGroups(inst, byInstance);
         }
@@ -616,6 +648,75 @@ public class NetworkService {
         log.warn("Instance [{}] has {} legacy security groups: {}", inst.getInstanceId(), matches.size(), matches);
         return new ConflictException("Máy " + inst.getInstanceId() + " có " + matches.size()
                 + " Security Group trùng (" + String.join(", ", matches) + "). Cần đối chiếu dữ liệu trước khi sửa rule.");
+    }
+
+    /**
+     * Đối chiếu danh sách ứng viên với DynamoDB để loại bỏ SG đã bị xóa (vd. sau MigrateSourceCleanup)
+     * khỏi cache in-memory. Chỉ loại bỏ khi DynamoDB xác nhận còn ít nhất 1 bản ghi sống.
+     */
+    private void pruneDeletedGroups(List<String> candidates) {
+        if (!isPersistent() || candidates.size() <= 1) {
+            return;
+        }
+        List<String> existing = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        for (String id : candidates) {
+            try {
+                SecurityGroupEntity stored = securityGroupsTable.getItem(Key.builder().partitionValue(id).build());
+                if (stored != null) {
+                    securityGroups.put(id, fromEntity(stored));
+                    existing.add(id);
+                } else {
+                    missing.add(id);
+                }
+            } catch (Exception e) {
+                log.warn("Could not verify security group [{}] in DynamoDB: {}", id, e.getMessage());
+                return;
+            }
+        }
+        if (!existing.isEmpty() && !missing.isEmpty()) {
+            for (String staleId : missing) {
+                securityGroups.remove(staleId);
+            }
+            candidates.clear();
+            candidates.addAll(existing);
+        }
+    }
+
+    /**
+     * Khi vừa migrate xong (trước lúc MigrateSourceCleanup xóa SG cũ), cả SG nguồn cũ và SG đích mới có thể
+     * tạm thời cùng tồn tại. Ưu tiên chọn duy nhất SG khớp active_nova_id hoặc current_region của máy.
+     */
+    private String resolveActiveMigrationGroup(InstanceEntity inst, List<String> candidates) {
+        String activeNovaId = inst.getActiveNovaId() == null ? "" : inst.getActiveNovaId().trim();
+        if (!activeNovaId.isEmpty()) {
+            List<String> byNova = new ArrayList<>();
+            for (String id : candidates) {
+                Map<String, Object> sg = securityGroups.get(id);
+                String sgNovaId = sg == null || sg.get("novaId") == null ? "" : String.valueOf(sg.get("novaId")).trim();
+                if (activeNovaId.equalsIgnoreCase(id) || activeNovaId.equalsIgnoreCase(sgNovaId)) {
+                    byNova.add(id);
+                }
+            }
+            if (byNova.size() == 1) {
+                return byNova.get(0);
+            }
+        }
+        String region = inst.getCurrentRegion() == null ? "" : inst.getCurrentRegion().trim();
+        if (!region.isEmpty()) {
+            List<String> byRegion = new ArrayList<>();
+            for (String id : candidates) {
+                Map<String, Object> sg = securityGroups.get(id);
+                String sgRegion = sg == null || sg.get("region") == null ? "" : String.valueOf(sg.get("region")).trim();
+                if (region.equalsIgnoreCase(sgRegion)) {
+                    byRegion.add(id);
+                }
+            }
+            if (byRegion.size() == 1) {
+                return byRegion.get(0);
+            }
+        }
+        return null;
     }
 
     private List<String> attachedGroupIdList(InstanceEntity inst) {
@@ -713,23 +814,49 @@ public class NetworkService {
 
     private InstanceEntity ownedInstance(String instanceId, String user) {
         InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(instanceId).build());
-        if (inst == null || !user.equalsIgnoreCase(ownerKey(inst))) {
+        if (inst == null) {
+            throw new ResourceNotFoundException("Không tìm thấy máy ảo: " + instanceId);
+        }
+        String owner = ownerKey(inst);
+        if (!user.equalsIgnoreCase(owner) && !"admin".equalsIgnoreCase(user)) {
             throw new ResourceNotFoundException("Không tìm thấy máy ảo: " + instanceId);
         }
         return inst;
     }
 
     /**
-     * Chủ của máy lấy từ user_id đã lưu (usr-lam -> lam). Không fallback sang người đang đăng nhập: nếu bản ghi
-     * thiếu user_id thì không thể xác định chủ, và việc đoán theo phiên HTTP chính là nguồn tạo nhóm rác.
+     * Chủ của máy lấy từ username hoặc đối chiếu user_id qua AuthService/XRegion-Users.
      */
     private String ownerKey(InstanceEntity inst) {
         String owner = inst == null ? null : inst.getUsername();
-        if (owner == null || owner.isBlank()) {
-            throw new ConflictException("Máy " + (inst == null ? "" : inst.getInstanceId())
-                    + " thiếu user_id nên không xác định được chủ Security Group.");
+        if (owner != null && !owner.isBlank()) {
+            return owner.trim();
         }
-        return owner;
+        String userId = inst == null ? null : inst.getUserId();
+        if (userId != null && !userId.isBlank()) {
+            try {
+                String currentUser = getCurrentUsername();
+                if (authService != null && currentUser != null) {
+                    UserEntity u = authService.findUserByUsername(currentUser);
+                    if (u != null && userId.equalsIgnoreCase(u.getUserId())) {
+                        inst.setUsername(currentUser);
+                        return currentUser;
+                    }
+                }
+                if (usersTable != null) {
+                    for (UserEntity u : usersTable.scan().items()) {
+                        if (u != null && userId.equalsIgnoreCase(u.getUserId()) && u.getUsername() != null) {
+                            inst.setUsername(u.getUsername());
+                            return u.getUsername();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not resolve username for user_id [{}]: {}", userId, e.getMessage());
+            }
+        }
+        throw new ConflictException("Máy " + (inst == null ? "" : inst.getInstanceId())
+                + " thiếu user_id nên không xác định được chủ Security Group.");
     }
 
     private String getCurrentUsername() {
@@ -941,6 +1068,7 @@ public class NetworkService {
         }
         String user = getCurrentUsername();
         InstanceEntity inst = ownedInstance(instanceId, user);
+        assertNoActiveScenario(inst);
         String groupId = ensureInstanceGroup(inst);
         // Copy-on-write: thao tác trên bản sao để ghi thất bại không làm bẩn cache đang phục vụ request khác.
         // Đọc STRICT: rules và revision phải đến từ cùng một lần đọc, nếu không điều kiện ghi vô nghĩa.
@@ -1233,6 +1361,11 @@ public class NetworkService {
             boolean ownsGroup = user.equalsIgnoreCase(String.valueOf(sg.get("owner")));
             if (!ownsGroup) {
                 throw new ConflictException("Bạn chỉ xóa được rule trong Security Group của máy mình.");
+            }
+            Object sgInstId = sg.get("instanceId");
+            if (sgInstId != null && !String.valueOf(sgInstId).isBlank() && instancesTable != null) {
+                InstanceEntity inst = instancesTable.getItem(Key.builder().partitionValue(String.valueOf(sgInstId)).build());
+                assertNoActiveScenario(inst);
             }
             // Copy-on-write: chỉ cache được thay sau khi ghi DynamoDB thành công.
             Map<String, Object> working = mutableCopy(refreshFromStoreStrict(String.valueOf(sg.get("groupId"))));

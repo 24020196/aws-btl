@@ -33,6 +33,7 @@ public class InstanceEntity {
     private Integer cooldownSeconds;
     private Long lastMigrationTimestamp;
     private String dns;
+    private String scenarioId;
 
     // Requested launch context is persisted separately from confirmed Nova details.
     private String instanceName;
@@ -42,12 +43,14 @@ public class InstanceEntity {
     private String privateIp;
     private String elasticIp;
     private String volumeId;
+    private String ebsVolumeId;
     private String keyId;
     private String keyName;
     private String securityGroup;
     private String securityGroupId;
     private String networkMode;
     private String imageId;
+    private String publicDns;
     private Integer requestedSizeGb;
     private Integer confirmedSizeGb;
 
@@ -126,6 +129,11 @@ public class InstanceEntity {
         return dns;
     }
 
+    @DynamoDbAttribute("public_dns")
+    public String getPublicDns() {
+        return publicDns;
+    }
+
     // ==========================================
     // Decoupled / Transient Getters (Ignored in DynamoDB)
     // ==========================================
@@ -166,6 +174,11 @@ public class InstanceEntity {
         return volumeId;
     }
 
+    @DynamoDbIgnore
+    public String getEbsVolumeId() {
+        return ebsVolumeId;
+    }
+
     @DynamoDbAttribute("requested_key_id")
     public String getKeyId() {
         return keyId;
@@ -184,5 +197,10 @@ public class InstanceEntity {
     @DynamoDbIgnore
     public String getSecurityGroupId() {
         return securityGroupId;
+    }
+
+    @DynamoDbAttribute("scenario_id")
+    public String getScenarioId() {
+        return scenarioId;
     }
 }

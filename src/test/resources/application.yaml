@@ -16,6 +16,8 @@ aws:
   region: ap-southeast-2
   accessKeyId: mock-test-key
   secretAccessKey: mock-test-secret
+  scheduler:
+    enabled: false
   apigateway:
     eventEndpoint: http://localhost:9999/prod/events
 

@@ -7,7 +7,9 @@ registerI18n({
   detConnTitle: ['Kết nối tới máy ảo', 'Connect to instance'],
   detConnStep1a: ['Mở terminal ở thư mục chứa file khóa', 'Open a terminal in the folder with the key file'],
   detConnStep1b: ['đã tải lúc tạo Key Pair.', 'downloaded when the key pair was created.'],
-  detConnStep2: ['Trên Linux/macOS, giới hạn quyền đọc file khóa:', 'On Linux/macOS, restrict the key file permissions:'],
+  detConnStep2: ['Trên Linux/macOS, giới hạn quyền đọc file khóa (tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!):', 'On Linux/macOS, restrict key file permissions (avoids WARNING: UNPROTECTED PRIVATE KEY FILE!):'],
+  detConnStep2Win: ['Trên Windows (PowerShell), chạy lệnh sau để tránh lỗi WARNING: UNPROTECTED PRIVATE KEY FILE!:', 'On Windows (PowerShell), run this command to avoid WARNING: UNPROTECTED PRIVATE KEY FILE!:'],
+  detConnCopyPermAria: ['Sao chép lệnh phân quyền', 'Copy permission command'],
   detConnStep3: ['Kết nối bằng Elastic IP:', 'Connect with the Elastic IP:'],
   detConnCopyAria: ['Sao chép lệnh SSH', 'Copy SSH command'],
   detConnDns: ['Hoặc dùng tên miền Route 53, vẫn đúng sau khi chuyển vùng:', 'Or use the Route 53 domain, which keeps working after a migration:'],
@@ -21,6 +23,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------------- Connect ----------------
 function openConnectModal() {
+  if (typeof ensureDynamoDataReady === 'function' && !ensureDynamoDataReady()) return;
   const inst = det.inst;
   if (!inst) return;
   const key = (inst.keyName || 'my-key').replace(/\.pem$/i, '') + '.pem';
@@ -28,6 +31,7 @@ function openConnectModal() {
   const host = inst.publicIp || inst.privateIp || '<elastic-ip>';
   setText('connKeyFile', key);
   setText('connChmod', `chmod 400 "${key}"`);
+  setText('connIcacls', `icacls "${key}" /inheritance:r /grant:r "$($env:USERNAME):R"`);
   setText('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
   setText('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
   const imgName = (inst.imageId && typeof KNOWN_IMAGE_MAP !== 'undefined' && KNOWN_IMAGE_MAP[inst.imageId] && KNOWN_IMAGE_MAP[inst.imageId].name) || inst.imageName || 'image này';

@@ -33,12 +33,29 @@ public class MigrationController {
         return ResponseEntity.ok(ApiResponse.ok(migrationService.getAllScenarios()));
     }
 
-    @Operation(summary = "Tạo mới kịch bản di trú", description = "Định nghĩa kịch bản chuyển vùng với các tiêu chí tự động hoặc thủ công")
+    @Operation(summary = "Lấy kịch bản di trú theo máy ảo", description = "Trả về kịch bản liên kết qua khóa ngoại scenario_id (null nếu chưa thiết lập)")
+    @Hidden
+    @GetMapping("/scenarios/instance/{instanceId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getScenarioByInstance(@PathVariable String instanceId) {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.getScenarioByInstanceId(instanceId)));
+    }
+
+    @Operation(summary = "Tạo hoặc cập nhật kịch bản di trú", description = "Lưu kịch bản vào XRegion-MigrationScenarios và gán khóa ngoại scenario_id vào XRegion-Instances")
     @Hidden
     @PostMapping("/scenarios")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createScenario(@Valid @RequestBody CreateScenarioRequest request) {
         Map<String, Object> scenario = migrationService.createScenario(request);
-        return ResponseEntity.ok(ApiResponse.ok("Migration scenario created", scenario));
+        return ResponseEntity.ok(ApiResponse.ok("Migration scenario saved", scenario));
+    }
+
+    @Operation(summary = "Cập nhật trạng thái kịch bản di trú", description = "Chuyển trạng thái ACTIVE / PAUSED trên XRegion-MigrationScenarios")
+    @Hidden
+    @PatchMapping("/scenarios/{scenarioId}/status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> toggleScenarioStatus(
+            @PathVariable String scenarioId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String status = body != null ? body.get("status") : null;
+        return ResponseEntity.ok(ApiResponse.ok("Scenario status updated", migrationService.toggleScenarioStatus(scenarioId, status)));
     }
 
     @Operation(summary = "Kích hoạt chuyển vùng máy ảo", description = "Khởi chạy quy trình Live Migration xuyên vùng 7 bước với Redis Lock và Step Function")

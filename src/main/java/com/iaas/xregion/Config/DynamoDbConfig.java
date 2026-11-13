@@ -4,6 +4,7 @@ import com.iaas.xregion.Entity.FlavorEntity;
 import com.iaas.xregion.Entity.ImageEntity;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.UserEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,9 @@ public class DynamoDbConfig {
 
     @Value("${dynamodb.flavorsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}")
     private String flavorsTableArn;
+
+    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-MigrationScenarios}")
+    private String migrationScenariosTableArn;
 
     @Value("${dynamodb.endpoint:}")
     private String endpoint;
@@ -156,5 +160,12 @@ public class DynamoDbConfig {
         String tableName = parseTableNameFromArn(flavorsTableArn, "XRegion-Flavors");
         log.info("Initialized DynamoDB table bean for flavors: {}", tableName);
         return enhancedClient.table(tableName, TableSchema.fromBean(FlavorEntity.class));
+    }
+
+    @Bean
+    public DynamoDbTable<MigrationScenarioEntity> migrationScenariosTable(DynamoDbEnhancedClient enhancedClient) {
+        String tableName = parseTableNameFromArn(migrationScenariosTableArn, "XRegion-MigrationScenarios");
+        log.info("Initialized DynamoDB table bean for migration scenarios: {}", tableName);
+        return enhancedClient.table(tableName, TableSchema.fromBean(MigrationScenarioEntity.class));
     }
 }

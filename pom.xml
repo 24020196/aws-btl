@@ -52,10 +52,15 @@
             <version>2.3.0</version>
         </dependency>
 
-        <!-- AWS SDK v2 DynamoDB Enhanced Client (Only AWS component retained) -->
+        <!-- AWS SDK v2 DynamoDB Enhanced Client & EventBridge Scheduler -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>dynamodb-enhanced</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>scheduler</artifactId>
             <version>${aws.sdk.version}</version>
         </dependency>
 

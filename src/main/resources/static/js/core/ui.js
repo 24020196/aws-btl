@@ -91,6 +91,42 @@ function closeModal(id) {
   if (m) m.classList.remove('active');
 }
 
+async function showScenarioFreezePopup(instanceId, onDetailPage = false) {
+  const safeId = String(instanceId || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ok = await confirmDialog({
+    title: t('Kịch bản chuyển vùng đang kích hoạt (ACTIVE)', 'Migration scenario is ACTIVE'),
+    message: t(
+      `Máy ảo <code>${safeId}</code> đang bật Kịch bản chuyển vùng tự động, nên mọi thao tác sửa/xóa (Start, Stop, Reboot, Terminate, Security Group, chỉnh sửa kịch bản và chuyển vùng tay) đều bị khóa.<br><br>Vui lòng mở mục <strong>Kịch bản chuyển vùng</strong> tại <code>instance-detail.html?id=${safeId}#migration</code> và bấm <strong>Tạm dừng kịch bản</strong> (PAUSED) trước khi thực hiện.`,
+      `Instance <code>${safeId}</code> has an ACTIVE alternating migration scenario, so lifecycle actions, Terminate, Security Group edits, scenario edits, and manual migration are locked.<br><br>Open <strong>Migration scenario</strong> at <code>instance-detail.html?id=${safeId}#migration</code> and choose <strong>Pause scenario</strong> (PAUSED) first.`
+    ),
+    confirmText: onDetailPage ? t('Tới nút Tạm dừng', 'Go to Pause button') : t('Mở Kịch bản chuyển vùng', 'Open Migration scenario'),
+    cancelText: t('Đóng', 'Close')
+  });
+  if (!ok) return;
+  if (onDetailPage) {
+    const card = document.getElementById('scenarioCard');
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const btn = document.getElementById('btnToggleScenario');
+      if (btn) btn.focus();
+    }
+  } else if (instanceId) {
+    window.location.href = `/instance-detail.html?id=${encodeURIComponent(instanceId)}#migration`;
+  }
+}
+
+async function showDynamoLoadingPopup() {
+  await confirmDialog({
+    title: t('Đang tải dữ liệu từ DynamoDB', 'Loading data from DynamoDB'),
+    message: t(
+      'Dữ liệu trạng thái máy ảo, lịch sử chuyển vùng và kịch bản đang được tải từ AWS DynamoDB. Vui lòng đợi hoàn tất rồi thử lại.',
+      'Instance state, migration history, and scenario data are still loading from AWS DynamoDB. Please wait until loading finishes and try again.'
+    ),
+    confirmText: t('Đã hiểu', 'OK'),
+    cancelText: ''
+  });
+}
+
 // On-Screen API Error Banner
 function showApiError(endpoint, errorMsg, httpStatus = null) {
   const banner = document.getElementById('apiErrorBanner');

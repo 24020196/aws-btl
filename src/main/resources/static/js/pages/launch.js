@@ -135,7 +135,10 @@ async function submitCreateKeyModal(e) {
       const actualKeyId = res.keyId || res.keyName || name;
       downloadPemFile(actualKeyId, res.privateKey);
       closeModal('createKeyModal');
-      showToast(t(`Đã tạo Key Pair [${name}] và tải xuống ${name}.pem thành công!`, `Created Key Pair [${name}] and downloaded ${name}.pem successfully!`), 'success');
+      showToast(t(
+        `Đã tạo Key Pair [${name}] và tải xuống ${name}.pem! Nếu SSH báo WARNING: UNPROTECTED PRIVATE KEY FILE!, hãy chạy icacls (Windows) hoặc chmod 400 (Linux/macOS) trong hộp Kết nối.`,
+        `Created Key Pair [${name}] and downloaded ${name}.pem! If SSH warns UNPROTECTED PRIVATE KEY FILE!, run icacls (Windows) or chmod 400 (Linux/macOS) shown in Connect.`
+      ), 'success');
       await loadKeyPairsDropdown(name);
       if (typeof updateEditInstanceSummary === 'function') {
         updateEditInstanceSummary();

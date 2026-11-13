@@ -1,11 +1,14 @@
 package com.iaas.xregion.service;
 
 import com.iaas.xregion.Client.EventBridgeGatewayClient;
+import com.iaas.xregion.Client.MigrationSchedulerClient;
 import com.iaas.xregion.Client.Model.EventBridgeEventResponse;
 import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
+import com.iaas.xregion.Entity.MigrationScenarioEntity;
 import com.iaas.xregion.Exceptions.ConflictException;
+import com.iaas.xregion.Model.Request.CreateScenarioRequest;
 import com.iaas.xregion.Model.Response.MigrationResponse;
 import com.iaas.xregion.Services.AuditLogService;
 import com.iaas.xregion.Services.MigrationService;
@@ -228,5 +231,271 @@ class MigrationServiceTest {
         assertThat(progress.getStatus()).isEqualTo("COMPLETED");
         assertThat(progress.getProgressPercent()).isEqualTo(100);
         assertThat(progress.getLogs()).containsExactly("Step 5/5 completed");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getScenarioByInstanceIdReturnsNullWhenUnlinked() {
+        DynamoDbTable<MigrationScenarioEntity> scenarios = mock(DynamoDbTable.class);
+        service.setMigrationScenariosTable(scenarios);
+
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-new12345")
+                .username("user")
+                .scenarioId(null)
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-new12345").build())).thenReturn(inst);
+
+        assertThat(service.getScenarioByInstanceId("i-new12345")).isNull();
+        verifyNoInteractions(scenarios);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void createScenarioPersistsUuidAndLinksForeignKeyOnInstance() {
+        DynamoDbTable<MigrationScenarioEntity> scenarios = mock(DynamoDbTable.class);
+        service.setMigrationScenariosTable(scenarios);
+
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-scen1234")
+                .username("user")
+                .currentRegion("ap-southeast-2")
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-scen1234").build())).thenReturn(inst);
+
+        CreateScenarioRequest req = new CreateScenarioRequest();
+        req.setName("Night-Shift");
+        req.setTargetInstanceId("i-scen1234");
+        req.setSourceRegion("ap-southeast-2");
+        req.setDestRegion("us-east-1");
+        req.setDayTime("07:00");
+        req.setNightTime("19:00");
+        req.setCronExpression("0 7,19 * * *");
+        req.setCooldownMinutes(60);
+
+        var saved = service.createScenario(req);
+
+        String scenarioId = (String) saved.get("scenarioId");
+        assertThat(scenarioId).hasSize(36);
+        assertThat(saved.get("name")).isEqualTo("Night-Shift");
+        assertThat(saved.get("status")).isEqualTo("ACTIVE");
+        verify(scenarios).putItem(argThat((MigrationScenarioEntity s) ->
+                scenarioId.equals(s.getScenarioId()) && "Night-Shift".equals(s.getName())));
+        verify(instances).updateItem(any(UpdateItemEnhancedRequest.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toggleScenarioStatusUpdatesToPaused() {
+        DynamoDbTable<MigrationScenarioEntity> scenarios = mock(DynamoDbTable.class);
+        service.setMigrationScenariosTable(scenarios);
+
+        String uuid = "123e4567-e89b-12d3-a456-426614174000";
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-tog1234")
+                .username("user")
+                .currentRegion("ap-southeast-2")
+                .scenarioId(uuid)
+                .build();
+        PageIterable<InstanceEntity> instPage = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> instIterable = () -> List.of(inst).iterator();
+        when(instPage.items()).thenReturn(instIterable);
+        when(instances.scan()).thenReturn(instPage);
+
+        MigrationScenarioEntity existing = MigrationScenarioEntity.builder()
+                .scenarioId(uuid)
+                .name("Day-Night")
+                .status("ACTIVE")
+                .triggerType("SCHEDULED")
+                .build();
+        when(scenarios.getItem(Key.builder().partitionValue(uuid).build())).thenReturn(existing);
+
+        var updated = service.toggleScenarioStatus(uuid, "PAUSED");
+
+        assertThat(updated.get("status")).isEqualTo("PAUSED");
+        verify(scenarios).putItem(argThat((MigrationScenarioEntity s) ->
+                uuid.equals(s.getScenarioId()) && "PAUSED".equals(s.getStatus())));
+    }
+
+    @Test
+    void triggerMigrationPrefersEbsVolumeIdOverCinderVolumeId() {
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-ebs1234")
+                .username("user")
+                .currentStatus("RUNNING")
+                .currentRegion("us-east-1")
+                .activeNovaId("nova-ebs-1")
+                .volumeId("34076713-4bbc-4952-ad8c-d0ad1286143c")
+                .ebsVolumeId("vol-0122838c50783ea01")
+                .migrationLock(false)
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-ebs1234").build())).thenReturn(inst);
+        stubMigrations(List.of());
+
+        service.triggerMigration("i-ebs1234", "vi");
+
+        verify(gatewayClient).sendMigrationEvent(
+                anyString(),
+                eq("i-ebs1234"),
+                eq("nova-ebs-1"),
+                eq("vol-0122838c50783ea01"),
+                eq("us-east-1"),
+                eq("ap-southeast-2"),
+                eq("START"),
+                eq("IN_PROGRESS"),
+                eq(15)
+        );
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void createScenarioCreatesDualSchedulesAndBlocksEditWhileActive() {
+        DynamoDbTable<MigrationScenarioEntity> scenTable = mock(DynamoDbTable.class);
+        MigrationSchedulerClient schedulerClient = mock(MigrationSchedulerClient.class);
+        service.setMigrationScenariosTable(scenTable);
+        service.setMigrationSchedulerClient(schedulerClient);
+
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-scen-1")
+                .username("user")
+                .currentRegion("ap-southeast-2")
+                .currentStatus("RUNNING")
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-scen-1").build())).thenReturn(inst);
+
+        CreateScenarioRequest req = new CreateScenarioRequest();
+        req.setTargetInstanceId("i-scen-1");
+        req.setDayTime("07:00");
+        req.setNightTime("19:00");
+        req.setStatus("ACTIVE");
+
+        var saved = service.createScenario(req);
+        String scenId = String.valueOf(saved.get("scenarioId"));
+        verify(schedulerClient).upsertDualSchedules(
+                eq("i-scen-1"), eq(scenId), eq("ap-southeast-2"), eq("us-east-1"), eq("07:00"), eq("19:00"), eq(true));
+
+        when(scenTable.getItem(Key.builder().partitionValue(scenId).build()))
+                .thenReturn(MigrationScenarioEntity.builder().scenarioId(scenId).status("ACTIVE").build());
+        assertThatThrownBy(() -> service.createScenario(req))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.triggerMigration("i-scen-1", "vi"))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toggleScenarioStatusUpdatesDualSchedulesState() {
+        DynamoDbTable<MigrationScenarioEntity> scenTable = mock(DynamoDbTable.class);
+        MigrationSchedulerClient schedulerClient = mock(MigrationSchedulerClient.class);
+        service.setMigrationScenariosTable(scenTable);
+        service.setMigrationSchedulerClient(schedulerClient);
+
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-scen-2")
+                .username("user")
+                .scenarioId("scen-2")
+                .currentRegion("us-east-1")
+                .build();
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdk = List.of(inst)::iterator;
+        when(pages.items()).thenReturn(sdk);
+        when(instances.scan()).thenReturn(pages);
+        when(scenTable.getItem(Key.builder().partitionValue("scen-2").build()))
+                .thenReturn(MigrationScenarioEntity.builder().scenarioId("scen-2").status("ACTIVE").build());
+
+        var res = service.toggleScenarioStatus("scen-2", "PAUSED");
+        assertThat(res.get("status")).isEqualTo("PAUSED");
+        verify(schedulerClient).setSchedulesEnabled("i-scen-2", false);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void scenarioEditAndActivateBlockedDuringCooldownButPauseAllowed() {
+        DynamoDbTable<MigrationScenarioEntity> scenTable = mock(DynamoDbTable.class);
+        service.setMigrationScenariosTable(scenTable);
+
+        long nowSec = java.time.Instant.now().getEpochSecond();
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-cd-1")
+                .username("user")
+                .scenarioId("scen-cd")
+                .currentRegion("ap-southeast-2")
+                .lastMigrationTimestamp(nowSec - 10)
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-cd-1").build())).thenReturn(inst);
+        PageIterable<MigrationEntity> migPages = mock(PageIterable.class);
+        MigrationEntity completedMig = MigrationEntity.builder()
+                .instanceId("i-cd-1")
+                .migrationId("mig-cd-1")
+                .status("COMPLETED")
+                .completedAt(nowSec - 10)
+                .build();
+        when(migPages.items()).thenReturn(List.of(completedMig)::iterator);
+        when(migrations.query(any(QueryConditional.class))).thenReturn(migPages);
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdk = List.of(inst)::iterator;
+        when(pages.items()).thenReturn(sdk);
+        when(instances.scan()).thenReturn(pages);
+        when(scenTable.getItem(Key.builder().partitionValue("scen-cd").build()))
+                .thenReturn(MigrationScenarioEntity.builder().scenarioId("scen-cd").status("PAUSED").build());
+
+        CreateScenarioRequest req = new CreateScenarioRequest();
+        req.setTargetInstanceId("i-cd-1");
+        assertThatThrownBy(() -> service.createScenario(req))
+                .isInstanceOf(ConflictException.class);
+
+        assertThatThrownBy(() -> service.toggleScenarioStatus("scen-cd", "ACTIVE"))
+                .isInstanceOf(ConflictException.class);
+
+        var paused = service.toggleScenarioStatus("scen-cd", "PAUSED");
+        assertThat(paused.get("status")).isEqualTo("PAUSED");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void scenarioAutoPausesAndBlocksActivationWhileMigrating() {
+        DynamoDbTable<MigrationScenarioEntity> scenTable = mock(DynamoDbTable.class);
+        MigrationSchedulerClient schedulerClient = mock(MigrationSchedulerClient.class);
+        service.setMigrationScenariosTable(scenTable);
+        service.setMigrationSchedulerClient(schedulerClient);
+
+        long nowSec = java.time.Instant.now().getEpochSecond();
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-mig-1")
+                .username("user")
+                .scenarioId("scen-mig")
+                .currentStatus("MIGRATING")
+                .migrationLock(true)
+                .lastMigrationTimestamp(nowSec - 15)
+                .currentRegion("ap-southeast-2")
+                .build();
+        when(instances.getItem(Key.builder().partitionValue("i-mig-1").build())).thenReturn(inst);
+
+        MigrationScenarioEntity activeScen = MigrationScenarioEntity.builder()
+                .scenarioId("scen-mig")
+                .status("ACTIVE")
+                .build();
+        when(scenTable.getItem(Key.builder().partitionValue("scen-mig").build())).thenReturn(activeScen);
+
+        // 1. Reading scenario while MIGRATING auto-pauses ACTIVE -> PAUSED and disables schedules
+        var fetched = service.getScenarioByInstanceId("i-mig-1");
+        assertThat(fetched.get("status")).isEqualTo("PAUSED");
+        verify(scenTable).putItem(argThat((MigrationScenarioEntity s) ->
+                "scen-mig".equals(s.getScenarioId()) && "PAUSED".equals(s.getStatus())));
+        verify(schedulerClient).setSchedulesEnabled("i-mig-1", false);
+
+        // 2. Creating/editing scenario while MIGRATING throws ConflictException
+        CreateScenarioRequest req = new CreateScenarioRequest();
+        req.setTargetInstanceId("i-mig-1");
+        assertThatThrownBy(() -> service.createScenario(req))
+                .isInstanceOf(ConflictException.class);
+
+        // 3. Activating scenario while MIGRATING throws ConflictException
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdk = List.of(inst)::iterator;
+        when(pages.items()).thenReturn(sdk);
+        when(instances.scan()).thenReturn(pages);
+        assertThatThrownBy(() -> service.toggleScenarioStatus("scen-mig", "ACTIVE"))
+                .isInstanceOf(ConflictException.class);
     }
 }

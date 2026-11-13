@@ -175,12 +175,25 @@ function sgeRenderTarget() {
   sgeRenderStatus();
 }
 
-async function openSgEditor() {
-  if (selectedInstanceIds.size !== 1) return;
-  const id = [...selectedInstanceIds][0];
-  const inst = cachedInstances.find(i => i.id === id);
+async function openSgEditor(targetInst) {
+  let inst = targetInst || null;
   if (!inst) {
+    if (typeof selectedInstanceIds === 'undefined' || selectedInstanceIds.size !== 1) return;
+    const selId = [...selectedInstanceIds][0];
+    inst = typeof cachedInstances !== 'undefined' ? cachedInstances.find(i => i.id === selId) : null;
+  }
+  const id = inst && inst.id;
+  if (!inst || !id) {
     showToast(tk('sgeWaitLaunch'), 'error');
+    return;
+  }
+  // Máy đang có Kịch bản chuyển vùng ACTIVE: khóa sửa Security Group và bật pop-up nhắc nhở.
+  if (String(inst.scenarioStatus || '').toUpperCase() === 'ACTIVE') {
+    if (typeof showScenarioFreezePopup === 'function') {
+      showScenarioFreezePopup(id, Boolean(targetInst));
+    } else {
+      showToast(t('Kịch bản chuyển vùng đang ACTIVE, hãy tạm dừng trước khi sửa Security Group.', 'Migration scenario is ACTIVE; pause it first.'), 'error');
+    }
     return;
   }
   // Máy đang tạo / tạo thất bại chưa có tài nguyên mạng: không mở hộp thoại để tránh báo "đã lưu" mà không có gì để áp dụng.
@@ -195,7 +208,11 @@ async function openSgEditor() {
   lfw.region = inst.region;
   lfw.inbound = [];
   lfw.outbound = [];
-  document.getElementById('sgeDetailLink').href = `/instance-detail.html?id=${encodeURIComponent(id)}#security`;
+  const detailLink = document.getElementById('sgeDetailLink');
+  if (detailLink) {
+    detailLink.href = `/instance-detail.html?id=${encodeURIComponent(id)}#security`;
+    detailLink.style.display = targetInst ? 'none' : '';
+  }
   const saveBtn = document.getElementById('sgeSaveBtn');
   saveBtn.disabled = true;
   sgeRenderTarget();
@@ -304,6 +321,7 @@ async function sgeSave() {
     showToast(msg, synced ? 'success' : 'info');
     // Khung tóm tắt bên dưới đang mở tab Security thì vẽ lại cho khớp
     if (typeof loadInstances === 'function') loadInstances();
+    if (typeof loadSecurityAndNetwork === 'function') loadSecurityAndNetwork();
   } catch (e) {
     // Giữ nguyên sge.original để dấu "chưa lưu" còn đúng, người dùng có thể sửa và lưu lại.
     showToast(t('Không lưu được rule: ', 'Could not save the rules: ') + lfwEsc(e.message), 'error');

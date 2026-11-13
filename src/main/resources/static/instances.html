@@ -257,91 +257,6 @@
           </table>
         </div>
       </div>
-
-      <!-- Bottom Split-Pane Drawer (AWS EC2 Console Style) -->
-      <div id="instanceSplitPane" class="split-pane-drawer">
-        <div class="split-pane-header">
-          <div class="split-pane-title-area">
-            <div class="split-pane-title">
-              <svg class="ico ico-md" aria-hidden="true">
-                <use href="/img/icons/sprite.svg#svc-instance"></use>
-              </svg>
-              <span id="splitPaneTitle">Instance summary</span>
-            </div>
-          </div>
-          <div class="split-pane-actions">
-            <a href="#" id="splitPaneViewDetailLink" class="btn btn-secondary btn-sm"
-              style="text-decoration: none; padding: 4px 10px;">
-              <span data-i18n="actViewDetails">View full details</span>
-              <svg class="ico ico-xs" aria-hidden="true">
-                <use href="/img/icons/sprite.svg#ui-chevron-right"></use>
-              </svg>
-            </a>
-            <button class="btn btn-secondary btn-sm" onclick="closeSplitPane()" title="Đóng panel"
-              style="padding: 4px 8px;">
-              <svg class="ico ico-sm" aria-hidden="true">
-                <use href="/img/icons/sprite.svg#ui-close"></use>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Split Pane Tabs -->
-        <div class="split-pane-tabs" id="splitTabsBar">
-          <button class="split-tab-btn active" onclick="switchSplitTab('tabDetails', event)">
-            <svg class="ico ico-sm" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#ui-info"></use>
-            </svg>
-            <span data-i18n="tabDetails">Details</span>
-          </button>
-          <button class="split-tab-btn" onclick="switchSplitTab('tabSecurity', event)">
-            <svg class="ico ico-sm" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#svc-security-group"></use>
-            </svg>
-            <span data-i18n="tabSecurity">Security</span>
-          </button>
-          <button class="split-tab-btn" onclick="switchSplitTab('tabNetworking', event)">
-            <svg class="ico ico-sm" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#svc-vpc"></use>
-            </svg>
-            <span data-i18n="tabNetworking">Networking</span>
-          </button>
-          <button class="split-tab-btn" onclick="switchSplitTab('tabStorage', event)">
-            <svg class="ico ico-sm" aria-hidden="true">
-              <use href="/img/icons/sprite.svg#svc-ebs"></use>
-            </svg>
-            <span data-i18n="tabStorage">Storage</span>
-          </button>
-        </div>
-
-        <!-- Split Pane Content -->
-        <div class="split-pane-body">
-          <!-- Details Tab -->
-          <div id="paneTabDetails" class="split-tab-pane active">
-            <div class="split-kv-grid" id="splitDetailsGrid"></div>
-          </div>
-
-          <!-- Security Tab -->
-          <div id="paneTabSecurity" class="split-tab-pane">
-            <div class="split-kv-grid" id="splitSecurityGrid"></div>
-          </div>
-
-          <!-- Networking Tab -->
-          <div id="paneTabNetworking" class="split-tab-pane">
-            <div class="split-kv-grid" id="splitNetworkingGrid"></div>
-          </div>
-
-          <!-- Storage Tab -->
-          <div id="paneTabStorage" class="split-tab-pane">
-            <div class="split-kv-grid" id="splitStorageGrid"></div>
-          </div>
-
-          <!-- Bulk Selection Summary Tab (shown when multiple instances selected) -->
-          <div id="paneTabBulk" class="split-tab-pane">
-            <div class="split-bulk-summary" id="splitBulkSummary"></div>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 
@@ -352,7 +267,12 @@
         <h2 class="modal-title" id="connectTitle"></h2>
         <ol class="connect-steps">
           <li><span id="connStep1a"></span> <code id="connKeyFile">--</code> <span id="connStep1b"></span></li>
-          <li><span id="connStep2"></span> <code id="connChmod">--</code></li>
+          <li>
+            <span id="connStep2"></span>
+            <div class="cmd-box" style="margin-top: 6px;"><code id="connChmod">--</code><button class="copy-btn" onclick="copyConnectCmd('connChmod')" aria-label="Copy"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+            <div style="margin-top: 8px;" id="connStep2Win"></div>
+            <div class="cmd-box" style="margin-top: 6px;"><code id="connIcacls">--</code><button class="copy-btn" onclick="copyConnectCmd('connIcacls')" aria-label="Copy"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
+          </li>
           <li id="connStep3"></li>
         </ol>
         <div class="cmd-box"><code id="connCmdIp">--</code><button class="copy-btn" onclick="copyConnectCmd('connCmdIp')" aria-label="Copy"><svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-copy"></use></svg></button></div>
