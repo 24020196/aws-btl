@@ -1,8 +1,8 @@
 # SPEC-03: Chuyển Vùng Xuyên Vùng Trực Tiếp (Cross-Region Live Migration)
 
-> **Phiên bản**: `1.1.0`  
+> **Phiên bản**: `1.2.0`  
 > **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Ngày phê duyệt**: `2026-11-13`  
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -12,34 +12,33 @@
 Hệ thống XRegion cung cấp giải pháp chuyển vùng máy ảo an toàn giữa môi trường **Private Cloud OpenStack** (chạy trên EC2 node Sydney) và **AWS Public Cloud** (`ap-southeast-2`).
 
 > [!IMPORTANT]
-> ### NGUYÊN TẮC MÔ HÌNH: LUÔN DUY TRÌ ACTIVE-PASSIVE (KHÔNG DỌN DẸP SOURCE VM)
-> - Sau khi quá trình di trú chuyển vùng hoàn tất thành công sang vùng đích:
->   - **Máy ảo đích (Target VM)**: Trở thành máy ảo chính (**Active**), gắn Elastic IP mới và nhận toàn bộ lưu lượng qua Route 53 DNS.
->   - **Máy ảo nguồn (Source VM)**: Chuyển sang trạng thái dự phòng thụ động (**Passive / STOPPED**), **TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA HAY DỌN DẸP**.
->   - Toàn bộ Boot Volume và cấu hình của Source VM được bảo lưu nguyên vẹn để sẵn sàng cho kịch bản phục hồi khẩn cấp (**Failback / Reverse Migration**) khi vùng đích gặp sự cố.
+> ### NGUYÊN TẮC MÔ HÌNH: CUTOVER & DỌN DẸP SOURCE VM SAU KHI ĐỒNG BỘ ĐÍCH (SPEC-SF-09 v1.5.0)
+> - Sau khi quá trình di trú chuyển vùng hoàn tất thành công tại vùng đích (`SyncDynamoDB` chuyển `current_region = dest_region`, `current_status = RUNNING`, `migration_lock = false`):
+>   - **Máy ảo đích (Target VM)**: Trở thành máy ảo chính (**Active**), gắn Elastic IP mới và cập nhật trên `XRegion-Instances` / `XRegion-Nova` (không sử dụng Route 53 DNS Cutover).
+>   - **Máy ảo nguồn (Source VM)**: `MigrateTargetBoot` kích hoạt bước `TriggerSourceCleanup` gửi sự kiện qua API Gateway về `source_region` để chạy Step Function **`MigrateSourceCleanup`** terminate Nova VM nguồn cũ và giải phóng tài nguyên vùng nguồn (EIP, NAT, SG, Volume, Snapshot) mà không ảnh hưởng bản ghi `XRegion-Instances` đang `RUNNING` tại vùng đích.
+> - **Khi di trú thất bại trước khi hoàn tất**: Source VM được giữ nguyên và phục hồi qua `TriggerSourceRollback` (gửi API Gateway về `source_region` kích hoạt Step Function `LifecycleInstance` với `action = START`).
 
 ### Phân Định Lộ Trình Kiến Trúc (Architecture Transition Note)
-- **Hiện trạng Codebase Giai đoạn 1 (`MigrationService.java`)**: Đang sử dụng luồng mô phỏng bất đồng bộ (`Thread.sleep`, sinh IP ngẫu nhiên) nhằm phục vụ việc kiểm thử giao diện Dashboard và đo lường thời gian hiển thị.
-- **Tiêu Chuẩn Đích (Target Architecture - SPEC-03)**: Đây là kiến trúc chuẩn hóa bắt buộc phải tuân thủ cho toàn bộ các công việc lập trình, refactor hoặc viết test case di trú hạ tầng thật sự trong giai đoạn tiếp theo.
+- **Hiện trạng Chuẩn Hóa (`MigrationService.java` -> `SPEC-SF-08`)**: Backend Spring Boot không còn chạy luồng giả lập `Thread.sleep` trong RAM. `MigrationService.triggerMigration()` thực hiện khóa nguyên tử trên DynamoDB, ghi nhận bản ghi khởi đầu vào `XRegion-Migrations`, và phát sự kiện thật qua API Gateway (`EventBridgeGatewayClient`) theo `sourceRegion` để kích hoạt Step Function `MigrateInstance` (`SPEC-SF-08`). Hỗ trợ đầy đủ cho cả máy ảo dùng `linux_nat_v1`.
+- **Theo dõi tiến độ (`getProgress`)**: `MigrationService.getProgress(instanceId)` đọc trực tiếp bản ghi mới nhất từ bảng DynamoDB `XRegion-Migrations` (`status`, `copy_progress`, `step_logs`, `started_at`, `completed_at`) để đồng bộ thời gian thực với Step Function/Lambda trên AWS.
 
 ---
 
-## 2. Cơ Chế Điều Phối & Khóa Phân Tán (Distributed Lock & SQS FIFO)
+## 2. Cơ Chế Điều Phối & Khóa Nguyên Tử (DynamoDB Conditional Lock)
 
-Nhằm đảm bảo tính tuần tự, chống nghẽn và ngăn chặn xung đột dữ liệu (Race Conditions) khi nhiều yêu cầu di trú được gửi tới cùng lúc:
+Nhằm đảm bảo tính tuần tự và ngăn chặn xung đột dữ liệu (Race Conditions) khi nhiều yêu cầu di trú được gửi tới cùng lúc:
 
-1. **Tuần tự hóa qua AWS SQS FIFO**:
-   - Mọi yêu cầu di trú từ Dashboard/API được đẩy vào hàng đợi **SQS FIFO**.
-   - `MessageGroupId = instance_id`: Đảm bảo các yêu cầu liên quan đến cùng một máy ảo luôn được xử lý tuần tự theo đúng thứ tự đến trước.
-   - `MessageDeduplicationId`: Ngăn chặn việc gửi trùng lặp yêu cầu di trú trong cửa sổ 5 phút.
-2. **Khóa phân tán qua Redis Distributed Lock (Redisson)**:
-   - Trước khi bắt đầu Bước 1, tiến trình bắt buộc phải chiếm thành công Redis Lock với khóa: `lock:migration:{instance_id}`.
-   - Cơ chế: `SET lock:migration:{instance_id} {worker_id} NX EX 900` (TTL mặc định 15 phút).
-   - Tích hợp cơ chế **Watchdog / Auto-Renew**: Tự động gia hạn thêm thời gian giữ khóa nếu quá trình sao chép Snapshot dung lượng lớn kéo dài vượt ngưỡng an toàn.
-   - Bất kỳ yêu cầu nào không chiếm được khóa sẽ bị từ chối với lỗi **`HTTP 409 Conflict`**.
-3. **Thời gian bảo vệ Cooldown (10 phút)**:
-   - Sau khi hoàn tất Bước 7 và giải phóng Redis Lock, hệ thống thiết lập cờ `cooldown_until = now + 600s` trong DynamoDB.
-   - Trong vòng 10 phút này, mọi yêu cầu di trú tiếp theo trên máy ảo đó đều bị chặn.
+1. **Khóa nguyên tử qua DynamoDB Conditional Write (`XRegion-Instances`)**:
+   - Trước khi phát sự kiện kích hoạt Step Function `MigrateInstance`, Backend thực hiện `UpdateItem` có điều kiện trên `XRegion-Instances`:
+     - `ConditionExpression`: `attribute_exists(instance_id) AND (migration_lock = :unlocked OR attribute_not_exists(migration_lock))`
+     - Thiết lập `migration_lock = true`, `current_status = "MIGRATING"`, và cập nhật mốc thời gian giữ khóa (`last_migration_timestamp = nowEpochSeconds`).
+   - Bất kỳ yêu cầu đồng thời nào không chiếm được khóa sẽ bị từ chối với lỗi **`HTTP 409 Conflict`**.
+2. **Thu hồi khóa treo (Stale Lock Recovery - `STALE_LOCK_SECONDS = 900`)**:
+   - Thời gian tối đa giữ khóa là **900 giây (15 phút)** — khớp với `TimeoutSeconds: 900` của Step Function `MigrateInstance` (`SPEC-SF-08`).
+   - Nếu `migration_lock = true` và thời gian giữ khóa (`now - lockSince`) vượt quá `900s`, lần gọi tiếp theo tự động giải phóng khóa treo (`migration_lock = false`), chuyển các bản ghi `IN_PROGRESS` dở dang sang `FAILED` và cho phép kích hoạt lại.
+   - Nếu bước gửi sự kiện qua API Gateway gặp lỗi ngay lúc kích hoạt, hệ thống giữ nguyên `migration_lock = true` để cơ chế Stale Lock `900s` tự thu hồi sau (tránh chồng chéo nếu sự kiện đã vào EventBridge).
+3. **Thời gian bảo vệ Cooldown (`DEFAULT_COOLDOWN_SECONDS = 300`)**:
+   - Sau khi một lần di trú đạt `COMPLETED`, trong vòng **300 giây (5 phút)** tính từ `completed_at` gần nhất trên `XRegion-Migrations`, mọi yêu cầu di trú tiếp theo trên máy ảo đó đều bị chặn với **`HTTP 409 Conflict`**.
 
 ---
 
@@ -141,3 +140,4 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành tài liệu chuẩn hóa quy trình Live Migration 7 bước Active-Passive và Redis Distributed Lock. |
 | `2026-11-10` | `1.1.0` | Lead Architect / Product Owner | Phân định lộ trình kiến trúc chuyển tiếp: MigrationService.java hiện tại là Mock UI giai đoạn 1, SPEC-03 là kiến trúc đích bắt buộc. Đồng bộ enum RUNNING/STOPPED. |
+| `2026-11-13` | `1.2.0` | Chủ dự án (`xacnhan-skill`) | Chuẩn hóa kích hoạt thật qua API Gateway (`SPEC-SF-08`), mở chặn `linux_nat_v1`, thay Redis/SQS bằng DynamoDB Conditional Lock + Stale Lock `900s`, thống nhất Cooldown `300s`, và đọc `getProgress` trực tiếp từ `XRegion-Migrations`. |

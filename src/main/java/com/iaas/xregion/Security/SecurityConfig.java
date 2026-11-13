@@ -60,6 +60,9 @@ public class SecurityConfig {
                                 "/js/**",
                                 "/assets/**",
                                 "/favicon.ico",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/auth/health"

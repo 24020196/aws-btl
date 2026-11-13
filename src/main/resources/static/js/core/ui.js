@@ -3,10 +3,10 @@
 
 // OpenStack & AWS Flavor Specifications (Dòng Tiêu Chuẩn m1 & Dòng Hiệu Năng Cao h1)
 const FLAVOR_SPECS = {
-  'm1.tiny':   { vcpu: 1,  ramMb: 512,   ramDisplay: '512 MB',          defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.small':  { vcpu: 1,  ramMb: 2048,  ramDisplay: '2048 MB (2 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.medium': { vcpu: 2,  ramMb: 4096,  ramDisplay: '4096 MB (4 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
-  'm1.large':  { vcpu: 4,  ramMb: 8192,  ramDisplay: '8192 MB (8 GB)',  defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
+  'm1.tiny':   { vcpu: 1,  ramMb: 1024,  ramDisplay: '1024 MB (1 GB)',  defaultDisk: 1, series: 'Tiêu chuẩn (m1)' },
+  'm1.small':  { vcpu: 1,  ramMb: 2048,  ramDisplay: '2048 MB (2 GB)',  defaultDisk: 1, series: 'Tiêu chuẩn (m1)' },
+  'm1.medium': { vcpu: 2,  ramMb: 4096,  ramDisplay: '4096 MB (4 GB)',  defaultDisk: 1, series: 'Tiêu chuẩn (m1)' },
+  'm1.large':  { vcpu: 4,  ramMb: 8192,  ramDisplay: '8192 MB (8 GB)',  defaultDisk: 1, series: 'Tiêu chuẩn (m1)' },
   'm1.xlarge': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',defaultDisk: 10, series: 'Tiêu chuẩn (m1)' },
   'h1.medium': { vcpu: 8,  ramMb: 16384, ramDisplay: '16384 MB (16 GB)',defaultDisk: 10, series: 'Hiệu năng cao (h1)' },
   'h1.large':  { vcpu: 16, ramMb: 32768, ramDisplay: '32768 MB (32 GB)',defaultDisk: 10, series: 'Hiệu năng cao (h1)' },

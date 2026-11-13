@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 
@@ -130,7 +131,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceResponse response = instanceService.getInstanceById("i-12345");
 
@@ -142,7 +143,7 @@ class InstanceServiceTest {
     @Test
     @DisplayName("getInstanceById throws ResourceNotFoundException when instance belongs to another user or absent")
     void testGetInstanceByIdNotFound() {
-        when(instancesTable.getItem(any(Key.class))).thenReturn(null);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
 
         assertThatThrownBy(() -> instanceService.getInstanceById("i-missing"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -152,7 +153,7 @@ class InstanceServiceTest {
                 .instanceId("i-other")
                 .username("otheruser")
                 .build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(otherInst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(otherInst);
 
         assertThatThrownBy(() -> instanceService.getInstanceById("i-other"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -199,7 +200,7 @@ class InstanceServiceTest {
         verify(auditLogService, times(1)).logAction(eq("LAUNCH_VM"), eq("INSTANCE"), anyString(), anyString());
         verify(eventBridgeGatewayClient, times(1)).sendInstanceLaunchEvent(
                 anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"),
-                eq(inbound), eq(outbound));
+                eq("ap-southeast-2"), eq(inbound), eq(outbound));
     }
 
     @Test
@@ -213,7 +214,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("STOP");
@@ -238,7 +239,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("TERMINATE");
@@ -310,10 +311,11 @@ class InstanceServiceTest {
         req.setName("Launch failure");
         req.setRegion("ap-southeast-2");
         req.setFlavor("m1.medium");
+        req.setImageId("img-123");
         doThrow(new EventBridgeGatewayClient.EventRejectedException("FailedEntryCount=1"))
                 .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
                         anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-                        anyString(), anyString());
+                        anyString(), anyString(), any(), any(), any());
 
         assertThatThrownBy(() -> instanceService.launchInstance(req))
                 .isInstanceOf(AppException.class)
@@ -330,10 +332,11 @@ class InstanceServiceTest {
         req.setName("Unconfirmed launch");
         req.setRegion("ap-southeast-2");
         req.setFlavor("m1.medium");
+        req.setImageId("img-123");
         doThrow(new IllegalStateException("Connection reset after send"))
                 .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
                         anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-                        anyString(), anyString());
+                        anyString(), anyString(), any(), any(), any());
 
         assertThatThrownBy(() -> instanceService.launchInstance(req)).isInstanceOf(AppException.class);
         // Still PENDING (we cannot prove it was not delivered) but rewritten with an explicit
@@ -347,7 +350,7 @@ class InstanceServiceTest {
         InstanceEntity inst = InstanceEntity.builder().instanceId("i-partial")
                 .username("testuser").userId("usr-testuser").dns("app.example")
                 .activeNovaId("nova-partial").currentStatus("RUNNING").build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("STOP");
         instanceService.executeAction("i-partial", req);
@@ -370,7 +373,7 @@ class InstanceServiceTest {
                 .username("testuser")
                 .currentStatus("RUNNING")
                 .build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
         doThrow(new IllegalStateException("FailedEntryCount=1"))
                 .when(eventBridgeGatewayClient).sendInstanceLifecycleEvent(
                         anyString(), anyString(), anyString(), any(), anyString(), any(), anyString());
@@ -423,7 +426,7 @@ class InstanceServiceTest {
                 .currentStatus("PENDING")
                 .currentRegion("ap-southeast-2")
                 .build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         NovaEntity dead = NovaEntity.builder()
                 .novaId("nova-old").instanceId("i-7953bdff")
@@ -447,6 +450,70 @@ class InstanceServiceTest {
         assertThat(inst.getActiveNovaId()).isEqualTo("nova-current");
         assertThat(inst.getCurrentStatus()).isEqualTo("STOPPED");
         assertThat(response.getStatus()).isNotEqualTo("RUNNING");
+    }
+
+    @Test
+    @DisplayName("launchInstance rejects when user already has 5 active/transitional instances (409 Conflict)")
+    @SuppressWarnings("unchecked")
+    void launchRejectsWhenUserReachesMax5Instances() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("sixth-vm");
+        req.setRegion("us-east-1");
+        req.setImageId("img-1");
+
+        when(authService.findUserByUsername("testuser"))
+                .thenReturn(UserEntity.builder().userId("usr-testuser").username("testuser").build());
+
+        List<InstanceEntity> existing = List.of(
+                InstanceEntity.builder().instanceId("i-1").userId("usr-testuser").currentStatus("RUNNING").build(),
+                InstanceEntity.builder().instanceId("i-2").userId("usr-testuser").currentStatus("STOPPED").build(),
+                InstanceEntity.builder().instanceId("i-3").userId("usr-testuser").currentStatus("PENDING").build(),
+                InstanceEntity.builder().instanceId("i-4").userId("usr-testuser").currentStatus("REBOOTING").build(),
+                InstanceEntity.builder().instanceId("i-5").userId("usr-testuser").currentStatus("MIGRATING").build(),
+                InstanceEntity.builder().instanceId("i-6").userId("usr-testuser").currentStatus("FAILED").build(),
+                InstanceEntity.builder().instanceId("i-7").userId("usr-testuser").currentStatus("TERMINATED").build()
+        );
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdkIterable = existing::iterator;
+        when(pages.items()).thenReturn(sdkIterable);
+        when(instancesTable.scan()).thenReturn(pages);
+
+        assertThatThrownBy(() -> instanceService.launchInstance(req))
+                .isInstanceOf(com.iaas.xregion.Exceptions.ConflictException.class)
+                .hasMessageContaining("5");
+
+        verify(instancesTable, never()).putItem(any(InstanceEntity.class));
+        verifyNoInteractions(eventBridgeGatewayClient);
+    }
+
+    @Test
+    @DisplayName("launchInstance ignores FAILED/ERROR/TERMINATED when counting max 5 instances")
+    @SuppressWarnings("unchecked")
+    void launchIgnoresFailedAndTerminatedInQuotaCount() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("valid-vm");
+        req.setRegion("us-east-1");
+        req.setImageId("img-1");
+
+        when(authService.findUserByUsername("testuser"))
+                .thenReturn(UserEntity.builder().userId("usr-testuser").username("testuser").build());
+
+        List<InstanceEntity> existing = List.of(
+                InstanceEntity.builder().instanceId("i-1").userId("usr-testuser").currentStatus("RUNNING").build(),
+                InstanceEntity.builder().instanceId("i-2").userId("usr-testuser").currentStatus("FAILED").build(),
+                InstanceEntity.builder().instanceId("i-3").userId("usr-testuser").currentStatus("ERROR").build(),
+                InstanceEntity.builder().instanceId("i-4").userId("usr-testuser").currentStatus("TERMINATED").build(),
+                InstanceEntity.builder().instanceId("i-5").userId("usr-testuser").currentStatus("SHUTTING_DOWN").build()
+        );
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdkIterable = existing::iterator;
+        when(pages.items()).thenReturn(sdkIterable);
+        when(instancesTable.scan()).thenReturn(pages);
+
+        InstanceResponse res = instanceService.launchInstance(req);
+        assertThat(res.getFlavor()).isEqualTo("m1.tiny");
+        assertThat(res.getStatus()).isEqualTo("PENDING");
+        verify(instancesTable).putItem(any(InstanceEntity.class));
     }
 }
 

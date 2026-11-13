@@ -107,26 +107,26 @@
                 <span data-i18n="launchSecRegion">Target Region</span>
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                <label class="option-card selected" id="optRegionA" onclick="selectRegion('ap-southeast-2')">
-                  <input type="radio" name="regionRadio" value="ap-southeast-2" checked>
+                <label class="option-card selected" id="optRegionA" onclick="selectRegion('us-east-1')">
+                  <input type="radio" name="regionRadio" value="us-east-1" checked>
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <strong style="color: #fff; font-size: 14px;">Region A (Sydney)</strong>
+                    <strong style="color: #fff; font-size: 14px;">Region A (N. Virginia)</strong>
                     <span class="badge badge-active" style="font-size: 10px;">Primary</span>
-                  </div>
-                  <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>ap-southeast-2</code></div>
-                </label>
-
-                <label class="option-card" id="optRegionB" onclick="selectRegion('us-east-1')">
-                  <input type="radio" name="regionRadio" value="us-east-1">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <strong style="color: #fff; font-size: 14px;">Region B (N. Virginia)</strong>
-                    <span class="badge"
-                      style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px;">Standby</span>
                   </div>
                   <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>us-east-1</code></div>
                 </label>
+
+                <label class="option-card" id="optRegionB" onclick="selectRegion('ap-southeast-2')">
+                  <input type="radio" name="regionRadio" value="ap-southeast-2">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong style="color: #fff; font-size: 14px;">Region B (Sydney)</strong>
+                    <span class="badge"
+                      style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px;">Standby</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-muted);">Mã vùng: <code>ap-southeast-2</code></div>
+                </label>
               </div>
-              <input type="hidden" id="instRegion" value="ap-southeast-2">
+              <input type="hidden" id="instRegion" value="us-east-1">
             </div>
 
             <!-- Panel 3: Application and OS Images (Amazon Machine Image - AMI) -->
@@ -208,7 +208,7 @@
               <div class="form-group">
                 <label class="form-label" data-i18n="launchSelectFlavor">Chọn Flavor (vCPU & RAM):</label>
                 <select class="form-select" id="instFlavor" onchange="updatePageLaunchSummary()">
-                  <option value="m1.small">m1.small (1 vCPU • 2048 MB RAM • 10 GB Disk)</option>
+                  <option value="m1.tiny" selected>m1.tiny (1 vCPU • 512 MB RAM • 1 GB Disk)</option>
                 </select>
               </div>
 
@@ -241,7 +241,7 @@
                         </td>
                         <td style="padding: 8px 12px; font-weight: 700; color: #fff;">1</td>
                         <td style="padding: 8px 12px; font-weight: 700; color: #fff;">2048</td>
-                        <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">10</td>
+                        <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">1</td>
                       </tr>
                     </tbody>
                   </table>
@@ -371,14 +371,9 @@
                 </div>
                 <div class="form-group">
                   <label class="form-label" data-i18n="launchVolSize">Dung lượng Root Disk (GiB) *</label>
-                  <input type="number" class="form-input" id="instEbsSize" value="10" min="10" max="1000"
+                  <input type="number" class="form-input" id="instEbsSize" value="1" min="1" max="5"
                     oninput="updatePageLaunchSummary()">
                 </div>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" data-i18n="launchDomainName">Tên miền Route 53 DNS</label>
-                <input type="text" class="form-input" id="instDomain" placeholder="vd: my-app.xregion.net">
               </div>
             </div>
           </div>
@@ -405,7 +400,7 @@
                   style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
                   data-i18n="launchSumRegion">TARGET REGION</div>
                 <div id="sumRegionText" style="font-size: 13.5px; font-weight: 700; color: #fff; margin-top: 3px;">
-                  Region A (Sydney)</div>
+                  Region A (N. Virginia)</div>
               </div>
 
               <div style="margin-bottom: 14px;">
@@ -429,8 +424,8 @@
                   style="font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;"
                   data-i18n="launchSumSpecs">INSTANCE SPECIFICATIONS</div>
                 <div id="sumSpecsText"
-                  style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">1 vCPU • 2048
-                  MB (2 GB) • 10 GiB Root Disk</div>
+                  style="font-size: 13px; font-weight: 600; color: var(--accent-cyan); margin-top: 3px;">1 vCPU • 512
+                  MB • 1 GiB Root Disk</div>
               </div>
 
               <button type="submit" id="btnLaunchInstance" class="btn btn-aws"

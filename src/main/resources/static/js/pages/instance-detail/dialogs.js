@@ -30,8 +30,9 @@ function openConnectModal() {
   setText('connChmod', `chmod 400 "${key}"`);
   setText('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
   setText('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
-  setText('connNote', t(`User mặc định của ${inst.imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
-    `The default user of ${inst.imageName || 'this image'} is "${user}". A security group must allow inbound TCP 22 from your IP.`)
+  const imgName = (inst.imageId && typeof KNOWN_IMAGE_MAP !== 'undefined' && KNOWN_IMAGE_MAP[inst.imageId] && KNOWN_IMAGE_MAP[inst.imageId].name) || inst.imageName || 'image này';
+  setText('connNote', t(`User mặc định của ${imgName} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
+    `The default user of ${imgName} is "${user}". A security group must allow inbound TCP 22 from your IP.`)
     + (det.groups.some(g => (g.inboundRules || []).some(r => (r.protocol === 'tcp' && r.fromPort <= 22 && r.toPort >= 22) || r.protocol === 'all'))
       ? '' : t(' Hiện chưa có rule nào mở cổng 22.', ' No rule opens port 22 yet.')));
   openModal('connectModal');

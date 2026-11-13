@@ -160,13 +160,13 @@ function selectRegion(regionCode) {
 
   const optA = document.getElementById('optRegionA');
   const optB = document.getElementById('optRegionB');
-  if (optA) optA.classList.toggle('selected', regionCode === 'ap-southeast-2');
-  if (optB) optB.classList.toggle('selected', regionCode === 'us-east-1');
+  if (optA) optA.classList.toggle('selected', regionCode === 'us-east-1');
+  if (optB) optB.classList.toggle('selected', regionCode === 'ap-southeast-2');
 
-  const radioA = document.querySelector('input[name="regionRadio"][value="ap-southeast-2"]');
-  const radioB = document.querySelector('input[name="regionRadio"][value="us-east-1"]');
-  if (radioA) radioA.checked = (regionCode === 'ap-southeast-2');
-  if (radioB) radioB.checked = (regionCode === 'us-east-1');
+  const radioA = document.querySelector('input[name="regionRadio"][value="us-east-1"]');
+  const radioB = document.querySelector('input[name="regionRadio"][value="ap-southeast-2"]');
+  if (radioA) radioA.checked = (regionCode === 'us-east-1');
+  if (radioB) radioB.checked = (regionCode === 'ap-southeast-2');
 
   updatePageLaunchSummary();
 }
@@ -265,7 +265,7 @@ async function loadLaunchImagesAndFlavors() {
         if (m1Flavors.length > 0) {
           selectHtml += `<optgroup label="── ` + t('Dòng Tiêu Chuẩn (General Purpose)', 'General Purpose (m1)') + ` ──">`;
           m1Flavors.forEach(f => {
-            const isSel = f.name === 'm1.small' ? 'selected' : '';
+            const isSel = f.name === 'm1.tiny' ? 'selected' : '';
             selectHtml += `<option value="${f.name}" ${isSel}>${f.name} — ${f.vcpus} vCPU • ${f.ramDisplay} • ${f.diskGb} GB Root Disk</option>`;
           });
           selectHtml += `</optgroup>`;
@@ -282,16 +282,16 @@ async function loadLaunchImagesAndFlavors() {
         if (flavorMatrixBody) {
           flavorMatrixBody.innerHTML = flavors.map(f => {
             const rowId = `row-${f.name.replace('.', '-')}`;
-            const isSmall = f.name === 'm1.small';
+            const isDefault = f.name === 'm1.tiny';
             const seriesColor = f.name.startsWith('h1') ? '#a855f7' : '#38bdf8';
             return `
-              <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isSmall ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
+              <tr id="${rowId}" style="border-top: 1px solid rgba(255,255,255,0.05); ${isDefault ? 'background: rgba(56, 189, 248, 0.12);' : ''}">
                 <td class="launch-series" data-series="${f.series || ''}" style="padding: 8px 12px; color: ${seriesColor}; font-weight: 600;">${launchSeriesLabel(f.series)}</td>
-                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isSmall ? '#38bdf8' : '#fff'};">
-                  ${f.name} ${isSmall ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
+                <td style="padding: 8px 12px; font-family: monospace; font-weight: 700; color: ${isDefault ? '#38bdf8' : '#fff'};">
+                  ${f.name} ${isDefault ? '<span class="badge badge-active" style="font-size:10px; margin-left:4px;">Default</span>' : ''}
                 </td>
-                <td style="padding: 8px 12px; font-weight: ${isSmall ? '700' : '400'}; color: #fff;">${f.vcpus}</td>
-                <td style="padding: 8px 12px; font-weight: ${isSmall ? '700' : '400'}; color: #fff;">${f.ramMb}</td>
+                <td style="padding: 8px 12px; font-weight: ${isDefault ? '700' : '400'}; color: #fff;">${f.vcpus}</td>
+                <td style="padding: 8px 12px; font-weight: ${isDefault ? '700' : '400'}; color: #fff;">${f.ramMb}</td>
                 <td style="padding: 8px 12px; color: #34d399; font-weight: 600;">${f.diskGb}</td>
               </tr>
             `;
@@ -316,8 +316,8 @@ function updatePageLaunchSummary() {
   if (!regionEl || !imageEl || !flavorEl || !ebsEl) return;
 
   const region = regionEl.value;
-  const isRegionA = region.includes('southeast');
-  const regionLabel = isRegionA ? 'Region A (Sydney)' : 'Region B (N. Virginia)';
+  const isRegionA = region === 'us-east-1';
+  const regionLabel = isRegionA ? 'Region A (N. Virginia)' : 'Region B (Sydney)';
 
   const osMap = {
     'img-u22': 'Ubuntu Server 22.04 LTS',
@@ -328,8 +328,8 @@ function updatePageLaunchSummary() {
   const osLabel = dynamicOsMap[imageEl.value] || osMap[imageEl.value] || imageEl.value;
 
   const flavorVal = flavorEl.value;
-  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.small'] || { vcpu: 1, ramDisplay: '2048 MB (2 GB)', defaultDisk: 10 };
-  const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 10;
+  const spec = FLAVOR_SPECS[flavorVal] || FLAVOR_SPECS['m1.tiny'] || { vcpu: 1, ramDisplay: '512 MB', defaultDisk: 1 };
+  const ebsSize = parseInt(ebsEl.value) || spec.defaultDisk || 1;
 
   const specsText = `${spec.vcpu} vCPU${spec.vcpu > 1 ? 's' : ''} • ${spec.ramDisplay} • ${ebsSize} GiB Root Disk`;
 
@@ -379,6 +379,15 @@ async function handleLaunchPageSubmit(e) {
     return;
   }
 
+  // Kiểm tra dung lượng Root Disk (1..5 GiB)
+  const ebsInput = document.getElementById('instEbsSize');
+  const rawEbs = ebsInput ? Number(ebsInput.value) : 1;
+  if (!Number.isInteger(rawEbs) || rawEbs < 1 || rawEbs > 5) {
+    showToast(t('Dung lượng Root Disk phải từ 1 đến 5 GiB.', 'Root Disk size must be between 1 and 5 GiB.'), 'error');
+    if (ebsInput) ebsInput.focus();
+    return;
+  }
+
   // Kiểm tra rule firewall (launch-firewall.js)
   const fwError = typeof lfwValidate === 'function' ? lfwValidate() : '';
   if (fwError) {
@@ -399,8 +408,8 @@ async function handleLaunchPageSubmit(e) {
     flavor: document.getElementById('instFlavor').value,
     imageId: document.getElementById('instImage').value,
     keyPairName: document.getElementById('instKeyPair')?.value || 'xregion-key',
-    ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 10,
-    domainName: document.getElementById('instDomain').value.trim()
+    ebsSizeGb: parseInt(document.getElementById('instEbsSize').value) || 1,
+    domainName: document.getElementById('instDomain')?.value.trim() || ''
   };
 
   // SPEC-SF-01 bước 7: rule tường lửa đi cùng payload launch để pipeline và bản ghi

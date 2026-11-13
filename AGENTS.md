@@ -17,12 +17,15 @@ Các hướng dẫn này áp dụng cho dự án hiện tại. Giữ nguyên tha
 | Skill | Công việc |
 | --- | --- |
 | [aws-skill](.agents/skills/aws-skill/SKILL.md) | AWS CLI và làm việc cùng AWS Toolkit |
+| [backend-skill](.agents/skills/backend-skill/SKILL.md) | Quản lý và kiểm thử mã nguồn Backend Java/Spring Boot trong src/main/ |
 | [ec2-skill](.agents/skills/ec2-skill/SKILL.md) | EC2 qua SSM, Ubuntu và OpenStack |
+| [rea-skill](.agents/skills/rea-skill/SKILL.md) | Quản lý và kiểm tra tài nguyên AWS Cloud tại Region A (N. Virginia - us-east-1) |
+| [reb-skill](.agents/skills/reb-skill/SKILL.md) | Quản lý và kiểm tra tài nguyên AWS Cloud tại Region B (Sydney - ap-southeast-2) |
 | [team-skill](.agents/skills/team-skill/SKILL.md) | Hai agent Backend và AWS sau khi duyệt kế hoạch |
 | [tunnel-skill](.agents/skills/tunnel-skill/SKILL.md) | Tunnel SSM tới Horizon ở localhost:8888 |
 | [xacnhan-skill](.agents/skills/xacnhan-skill/SKILL.md) | Phỏng vấn xác nhận mã nguồn và đồng bộ tài liệu đặc tả nghiệp vụ docs/specs/ |
 
-- Chỉ vận hành 5 skill trên khi người dùng yêu cầu dùng skill tương ứng bằng tên, ví dụ `$aws-skill`, `$xacnhan-skill` hoặc `dùng xacnhan-skill kiểm tra Lambda ...`.
+- Chỉ vận hành các skill trên khi người dùng yêu cầu dùng skill tương ứng bằng tên, ví dụ `$backend-skill`, `$aws-skill`, `$rea-skill`, `$reb-skill`, `$xacnhan-skill` hoặc `dùng backend-skill kiểm tra Controller...`.
 - Việc hỏi cách dùng, đọc, sửa hoặc cài skill không phải yêu cầu vận hành AWS, mở tunnel, tạo goal hoặc khởi chạy đội agent.
 - Khi người dùng gọi `team-skill` để làm việc, việc đó cho phép điều phối hai agent theo kế hoạch đã duyệt; các yêu cầu khác không tự kích hoạt đội agent.
 - **Ngoại lệ cho `tunnel-skill`**: khi được gọi để mở tunnel và chế độ phiên cho phép thực thi, bỏ qua bước lập kế hoạch và Grill-Me, thực hiện ngay trong quyền của phiên; không tạo/sửa file để vận hành tunnel. Ngoại lệ này không vượt giới hạn Plan Mode: khi vẫn ở Plan Mode, chỉ khảo sát hoặc lập kế hoạch, không mở tunnel.

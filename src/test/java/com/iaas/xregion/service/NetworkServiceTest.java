@@ -165,7 +165,7 @@ class NetworkServiceTest {
         assertThat(saved.get("eventPublished")).isEqualTo(true);
         assertThat(saved.get("revision")).isEqualTo(6L);
         // SG service luôn gửi lệnh qua API Gateway; không còn nhánh PENDING_DEPLOY do cờ tắt.
-        verify(eventBridgeGatewayClient).sendSecurityGroupSyncEvent(GROUP_ID, INSTANCE_ID, "nova-1", 6L, 1, "lam");
+        verify(eventBridgeGatewayClient).sendSecurityGroupSyncEvent("ap-southeast-2", GROUP_ID, INSTANCE_ID, "nova-1", 6L, 1, "lam");
     }
 
     @Test
@@ -210,7 +210,24 @@ class NetworkServiceTest {
         assertThat(saved.get("eventPublished")).isEqualTo(true);
         assertThat(saved.get("syncStatus")).isEqualTo(SecurityGroupSyncStatus.PENDING_SYNC);
         // 1 inbound + 1 outbound: số rule gửi cho worker là số rule mong muốn thật.
-        verify(eventBridgeGatewayClient).sendSecurityGroupSyncEvent(GROUP_ID, INSTANCE_ID, "nova-1", 6L, 2, "lam");
+        verify(eventBridgeGatewayClient).sendSecurityGroupSyncEvent("ap-southeast-2", GROUP_ID, INSTANCE_ID, "nova-1", 6L, 2, "lam");
+    }
+
+    @Test
+    void publishingRevisionForVirginiaInstanceRoutesToVirginia() throws Exception {
+        existingGroup("lam");
+        InstanceEntity virginiaVm = InstanceEntity.builder().instanceId(INSTANCE_ID).userId("usr-lam")
+                .currentRegion("us-east-1").currentStatus("RUNNING").activeNovaId("nova-va-1").build();
+        when(instancesTable.getItem(any(Key.class))).thenReturn(virginiaVm);
+        when(novaLookup.find(any(InstanceEntity.class)))
+                .thenReturn(NovaEntity.builder().novaId("nova-va-1").instanceId(INSTANCE_ID).build());
+        SecurityGroupRequest request = rules(rule("tcp", 443, 443));
+        request.setOutboundRules(List.of(rule("all", 0, 65535)));
+
+        Map<String, Object> saved = service.replaceInstanceRules(INSTANCE_ID, request);
+
+        assertThat(saved.get("eventPublished")).isEqualTo(true);
+        verify(eventBridgeGatewayClient).sendSecurityGroupSyncEvent("us-east-1", GROUP_ID, INSTANCE_ID, "nova-va-1", 6L, 2, "lam");
     }
 
     @Test

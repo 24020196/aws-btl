@@ -1,5 +1,6 @@
 package com.iaas.xregion.Services;
 
+import com.iaas.xregion.Client.EventBridgeGatewayClient;
 import com.iaas.xregion.Config.TimeSyncUtil;
 import com.iaas.xregion.Entity.InstanceEntity;
 import com.iaas.xregion.Entity.MigrationEntity;
@@ -7,7 +8,6 @@ import com.iaas.xregion.Entity.MigrationStep;
 import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.CreateScenarioRequest;
-import com.iaas.xregion.Model.Request.UpdateDnsRequest;
 import com.iaas.xregion.Model.Response.MigrationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +22,6 @@ import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,19 +32,17 @@ public class MigrationService {
     private final DynamoDbTable<InstanceEntity> instancesTable;
     private final DynamoDbTable<MigrationEntity> migrationsTable;
     private final AuditLogService auditLogService;
-    private final NetworkService networkService;
+    private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final NovaLookup novaLookup;
-
-    private final Map<String, MigrationResponse> activeRuns = new ConcurrentHashMap<>();
 
     /** Trạng thái chuyển tiếp kiểu EC2: máy đang đổi trạng thái thì không được chuyển vùng. */
     private static final Set<String> TRANSITIONAL_STATES = Set.of("PENDING", "STOPPING", "SHUTTING_DOWN", "TERMINATING", "REBOOTING");
 
-    /** Giống giá trị mặc định InstanceService trả về cho giao diện khi cooldown_seconds trống. */
+    /** Giống giá trị mặc định InstanceService trả về cho giao diện khi cooldown_seconds trống (SPEC-03: 300s). */
     private static final int DEFAULT_COOLDOWN_SECONDS = 300;
 
-    /** Khóa giữ quá lâu mà không có tiến trình nào chạy trong bộ nhớ = khóa treo (vd backend restart giữa chừng). */
-    private static final long STALE_LOCK_SECONDS = 120;
+    /** Khóa giữ quá 900s (khớp Timeout Step Function MigrateInstance) = khóa treo (SPEC-03 / SPEC-SF-08). */
+    private static final long STALE_LOCK_SECONDS = 900;
 
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -128,12 +124,7 @@ public class MigrationService {
             throw new ResourceNotFoundException(msg(lang, "Không tìm thấy máy ảo " + instanceId + ".", "Instance not found: " + instanceId));
         }
 
-        // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp (PENDING, STOPPING, SHUTTING_DOWN...)
-        if ("linux_nat_v1".equals(instance.getNetworkMode())) {
-            throw new ConflictException(msg(lang,
-                    "Chưa hỗ trợ chuyển vùng cho máy ảo dùng Linux NAT 1:1.",
-                    "Cross-region migration is not supported for Linux NAT 1:1 instances."));
-        }
+        // 0. Chặn khi máy ảo đang ở trạng thái chuyển tiếp hoặc đã xóa (hỗ trợ đầy đủ linux_nat_v1)
         String status = instance.getCurrentStatus() != null ? instance.getCurrentStatus().toUpperCase(Locale.ROOT) : "";
         if ("TERMINATED".equals(status) || "TERMINATING".equals(status)) {
             throw new ConflictException(msg(lang,
@@ -171,6 +162,7 @@ public class MigrationService {
         try {
             instance.setMigrationLock(true);
             instance.setCurrentStatus("MIGRATING");
+            instance.setLastMigrationTimestamp(startEpochSec);
 
             UpdateItemEnhancedRequest<InstanceEntity> lockReq = UpdateItemEnhancedRequest.builder(InstanceEntity.class)
                     .item(instance)
@@ -193,23 +185,49 @@ public class MigrationService {
         String srcRegion = instance.getCurrentRegion() != null ? instance.getCurrentRegion() : "ap-southeast-2";
         String dstRegion = srcRegion.contains("southeast") ? "us-east-1" : "ap-southeast-2";
 
+        List<String> logs = new ArrayList<>();
+        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Migration initiated for instance " + instanceId);
+        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Acquired migration_lock on AWS Cloud DynamoDB (XRegion-Instances)");
+
         // Create initial record in XRegion-Migrations (all timestamps in UTC Epoch Seconds)
         MigrationEntity migrationRecord = MigrationEntity.builder()
                 .instanceId(instanceId)
                 .migrationId(migrationId)
                 .sourceRegion(srcRegion)
                 .destRegion(dstRegion)
+                .volumeId(instance.getVolumeId())
                 .status("IN_PROGRESS")
                 .copyProgress(15)
                 .startedAt(startEpochSec)
                 .completedAt(0L)
                 .errorMessage("")
+                .stepLogs(new ArrayList<>(logs))
                 .build();
         migrationsTable.putItem(migrationRecord);
 
-        List<String> logs = new ArrayList<>();
-        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Migration initiated for instance " + instanceId);
-        logs.add("[" + TimeSyncUtil.formatVietnamTime(startEpochMs) + "] Acquired migration_lock on AWS Cloud DynamoDB (XRegion-Instances)");
+        // Phát sự kiện thật qua API Gateway (SigV4) theo sourceRegion để kích hoạt Step Function MigrateInstance (SPEC-SF-08)
+        try {
+            eventBridgeGatewayClient.sendMigrationEvent(
+                    migrationId,
+                    instanceId,
+                    instance.getActiveNovaId(),
+                    instance.getVolumeId(),
+                    srcRegion,
+                    dstRegion,
+                    "START",
+                    "IN_PROGRESS",
+                    15
+            );
+            logs.add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis())
+                    + "] Dispatched migration event to API Gateway (" + srcRegion + ") for Step Function MigrateInstance.");
+        } catch (Exception e) {
+            log.error("Failed to dispatch migration event for instance {} ({}): {}", instanceId, migrationId, e.getMessage(), e);
+            logs.add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis())
+                    + "] WARNING: Event dispatch error (" + e.getMessage() + "). Retaining migration_lock for 900s stale-lock recovery.");
+            migrationRecord.setErrorMessage("Event dispatch error: " + e.getMessage());
+        }
+        migrationRecord.setStepLogs(new ArrayList<>(logs));
+        migrationsTable.putItem(migrationRecord);
 
         MigrationResponse response = MigrationResponse.builder()
                 .scenarioId(migrationId)
@@ -227,129 +245,9 @@ public class MigrationService {
                 .logs(logs)
                 .build();
 
-        activeRuns.put(instanceId, response);
         auditLogService.logAction("MIGRATE_START", "INSTANCE", instanceId, "Started migration to " + dstRegion);
 
-        // Run 6-step execution on a background thread so the API returns immediately
-        // and the dashboard can poll /progress for real-time logs.
-        // (@Async has no effect when called from inside the same class, so we start the thread explicitly.)
-        final String runInstanceId = instanceId;
-        CompletableFuture.runAsync(() -> execute6StepAsync(runInstanceId, migrationRecord, response, instance, dstRegion));
-
         return response;
-    }
-
-    public void execute6StepAsync(String instanceId, MigrationEntity migrationRecord, 
-                                 MigrationResponse run, InstanceEntity instance, String dstRegion) {
-        try {
-            // STEP 1: Stop Source VM
-            Thread.sleep(2000);
-            updateStep(run, 1, 20, MigrationStep.STOP_SOURCE_VM.getDescription(), "Flushed disk cache and stopped source VM.");
-            long sourceStoppedMs = TimeSyncUtil.nowEpochMillis();
-            migrationRecord.setCopyProgress(20);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            // STEP 2: Create EBS Snapshot
-            Thread.sleep(2000);
-            String snapshotId = newSnapshotId();
-            String volumeId = instance.getVolumeId() != null && !instance.getVolumeId().isBlank() ? instance.getVolumeId() : null;
-            updateStep(run, 2, 40, MigrationStep.CREATE_EBS_SNAPSHOT.getDescription(),
-                    "EBS gp3 snapshot " + snapshotId + (volumeId != null ? " of " + volumeId : "") + " created in " + migrationRecord.getSourceRegion() + ".");
-            migrationRecord.setSnapshotId(snapshotId);
-            migrationRecord.setVolumeId(volumeId);
-            migrationRecord.setCopyProgress(40);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            // STEP 3: Cross-Region Transfer
-            Thread.sleep(3000);
-            String destSnapshotId = newSnapshotId();
-            updateStep(run, 3, 65, MigrationStep.COPY_SNAPSHOT_CROSS_REGION.getDescription(),
-                    "Copied " + snapshotId + " to " + dstRegion + " as " + destSnapshotId + ".");
-            migrationRecord.setDestSnapshotId(destSnapshotId);
-            migrationRecord.setCopyProgress(65);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            // STEP 4: Target Volume
-            Thread.sleep(2000);
-            updateStep(run, 4, 80, MigrationStep.CREATE_TARGET_VOLUME.getDescription(), "Restored target EBS volume in " + dstRegion);
-            migrationRecord.setCopyProgress(80);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            // STEP 5: Boot VM in Target Region
-            Thread.sleep(2500);
-            // Elastic IP thuộc dải public của vùng đích: Sydney 3.27.x.x, N. Virginia 54.85.x.x
-            String eipPrefix = dstRegion.contains("southeast") ? "3.27." : "54.85.";
-            String newIp = eipPrefix + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
-            // Private IP mới nằm trong subnet của vùng đích (cùng quy tắc với InstanceService khi tạo máy)
-            String newPrivateIp = (dstRegion.contains("southeast") ? "10.0.1." : "10.1.1.") + (100 + new Random().nextInt(150));
-            instance.setElasticIp(newIp);
-            instance.setPrivateIp(newPrivateIp);
-            instance.setCurrentRegion(dstRegion);
-            // Vùng / IP của máy nằm ở bản ghi Nova đang chạy: ghi vào đó để trang danh sách và chi tiết thấy vùng mới
-            novaLookup.saveLocation(instance, dstRegion, newPrivateIp, newIp);
-            updateStep(run, 5, 90, MigrationStep.BOOT_TARGET_VM.getDescription(), "Booted NovaVM in " + dstRegion + " with IP: " + newIp);
-            migrationRecord.setCopyProgress(90);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            // STEP 6: Route 53 Cutover
-            Thread.sleep(1500);
-            String domain = (instance.getDns() != null && !instance.getDns().trim().isEmpty())
-                    ? instance.getDns().trim()
-                    : (instance.getInstanceName() != null ? instance.getInstanceName().toLowerCase() : instanceId) + ".xregion.net";
-            UpdateDnsRequest dnsRequest = new UpdateDnsRequest();
-            dnsRequest.setDomainName(domain);
-            dnsRequest.setTargetIp(newIp);
-            dnsRequest.setTtl(60);
-            networkService.updateDnsRecord(dnsRequest);
-            updateStep(run, 6, 100, MigrationStep.ROUTE53_DNS_CUTOVER.getDescription(), "Route 53 A record " + domain + " -> " + newIp + " (TTL 60s). Automated switchover completed!");
-
-            // FINALIZE: Release migration_lock on AWS Cloud DynamoDB (store UTC Epoch Seconds)
-            long completedSec = TimeSyncUtil.nowEpochSeconds();
-            long completedMs = TimeSyncUtil.nowEpochMillis();
-            long downtimeSec = Math.max(1, Math.round((completedMs - sourceStoppedMs) / 1000.0));
-            run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(completedMs) + "] Released migration_lock. Downtime (RTO) = " + downtimeSec + "s.");
-
-            instance.setMigrationLock(false);
-            instance.setCurrentStatus("RUNNING");
-            instancesTable.putItem(instance);
-
-            migrationRecord.setStatus("COMPLETED");
-            migrationRecord.setCopyProgress(100);
-            migrationRecord.setCompletedAt(completedSec);
-            migrationRecord.setDowntimeSeconds(downtimeSec);
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-
-            run.setStatus("COMPLETED");
-            run.setCurrentStep(MigrationStep.COMPLETED.getDescription());
-            run.setFinishedAt(completedMs);
-
-            auditLogService.logAction("MIGRATE_COMPLETED", "INSTANCE", instanceId, "Migration completed to " + dstRegion);
-        } catch (Exception e) {
-            log.error("Migration error: {}", e.getMessage());
-            // Rollback lock
-            instance.setMigrationLock(false);
-            instance.setCurrentStatus("RUNNING");
-            instancesTable.putItem(instance);
-
-            run.setStatus("ROLLED_BACK");
-            run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] ERROR: " + e.getMessage() + ". Migration lock released.");
-
-            migrationRecord.setStatus("FAILED");
-            migrationRecord.setErrorMessage(e.getMessage());
-            migrationRecord.setCompletedAt(TimeSyncUtil.nowEpochSeconds());
-            migrationRecord.setStepLogs(new ArrayList<>(run.getLogs()));
-            migrationsTable.putItem(migrationRecord);
-        }
-    }
-
-    private static String newSnapshotId() {
-        return "snap-" + UUID.randomUUID().toString().replace("-", "").substring(0, 17);
     }
 
     /** Một dòng snapshot cho API (giống cột của bảng Snapshots trên AWS). */
@@ -403,17 +301,13 @@ public class MigrationService {
         return snapshotsOf(all, mine);
     }
 
-    private void updateStep(MigrationResponse run, int stepNum, int percent, String stepName, String logMsg) {
-        run.setStepNumber(stepNum);
-        run.setProgressPercent(percent);
-        run.setCurrentStep(stepName);
-        run.getLogs().add("[" + TimeSyncUtil.formatVietnamTime(TimeSyncUtil.nowEpochMillis()) + "] Step " + stepNum + "/6: " + logMsg);
-    }
-
-    /** Thời điểm giữ migration_lock (ms): ưu tiên cột lock_acquired_at, không có thì lấy giờ bắt đầu lần chuyển vùng đang chạy. */
+    /** Thời điểm giữ migration_lock (ms): ưu tiên cột lock_acquired_at, không có thì lấy last_migration_timestamp hoặc giờ bắt đầu lần chuyển vùng đang chạy. */
     private Long lockSince(InstanceEntity instance, List<MigrationEntity> migrations) {
         if (instance.getLockAcquiredAt() != null && instance.getLockAcquiredAt() > 0) {
             return TimeSyncUtil.toEpochMillis(instance.getLockAcquiredAt());
+        }
+        if (instance.getLastMigrationTimestamp() != null && instance.getLastMigrationTimestamp() > 0) {
+            return TimeSyncUtil.toEpochMillis(instance.getLastMigrationTimestamp());
         }
         return migrations.stream()
                 .filter(m -> "IN_PROGRESS".equalsIgnoreCase(m.getStatus()) && m.getStartedAt() != null && m.getStartedAt() > 0)
@@ -426,8 +320,11 @@ public class MigrationService {
         if (!Boolean.TRUE.equals(instance.getMigrationLock())) {
             return false;
         }
-        MigrationResponse run = activeRuns.get(instance.getInstanceId());
-        return run == null || !"IN_PROGRESS".equals(run.getStatus());
+        Long acquiredMs = lockSince(instance, findMigrations(instance.getInstanceId()));
+        if (acquiredMs == null) {
+            return true;
+        }
+        return (TimeSyncUtil.nowEpochMillis() - acquiredMs) >= STALE_LOCK_SECONDS * 1000L;
     }
 
     /** Nhả khóa treo và đánh dấu các bản ghi IN_PROGRESS bị bỏ dở là FAILED. */
@@ -600,16 +497,68 @@ public class MigrationService {
         return result;
     }
 
+    /**
+     * Đọc tiến độ chuyển vùng mới nhất trực tiếp từ bảng DynamoDB XRegion-Migrations (SPEC-03).
+     */
     public MigrationResponse getProgress(String instanceId) {
-        MigrationResponse run = activeRuns.get(instanceId);
-        if (run != null) return run;
+        Optional<MigrationEntity> latestOpt = findMigrations(instanceId).stream()
+                .max(Comparator.comparing((MigrationEntity m) ->
+                        m.getStartedAt() != null ? TimeSyncUtil.toEpochSeconds(m.getStartedAt()) : 0L));
+
+        if (latestOpt.isEmpty()) {
+            return MigrationResponse.builder()
+                    .instanceId(instanceId)
+                    .status("IDLE")
+                    .currentStep("Ready")
+                    .progressPercent(0)
+                    .logs(Collections.singletonList("System idle. Ready for migration."))
+                    .build();
+        }
+
+        MigrationEntity latest = latestOpt.get();
+        String status = latest.getStatus() != null ? latest.getStatus().toUpperCase(Locale.ROOT) : "IN_PROGRESS";
+        int progress = latest.getCopyProgress() != null
+                ? latest.getCopyProgress()
+                : ("COMPLETED".equals(status) ? 100 : 0);
+        long startedMs = latest.getStartedAt() != null && latest.getStartedAt() > 0
+                ? TimeSyncUtil.toEpochMillis(latest.getStartedAt())
+                : 0L;
+        long finishedMs = latest.getCompletedAt() != null && latest.getCompletedAt() > 0
+                ? TimeSyncUtil.toEpochMillis(latest.getCompletedAt())
+                : 0L;
+
+        String stepDesc;
+        int stepNum;
+        if ("COMPLETED".equals(status)) {
+            stepDesc = MigrationStep.COMPLETED.getDescription();
+            stepNum = MigrationStep.COMPLETED.getStepNumber();
+        } else if ("FAILED".equals(status) || "ROLLED_BACK".equals(status)) {
+            stepDesc = MigrationStep.ROLLED_BACK.getDescription();
+            stepNum = MigrationStep.ROLLED_BACK.getStepNumber();
+        } else {
+            stepDesc = MigrationStep.STOP_SOURCE_VM.getDescription();
+            stepNum = 1;
+        }
+
+        List<String> logs = latest.getStepLogs() != null && !latest.getStepLogs().isEmpty()
+                ? latest.getStepLogs()
+                : (latest.getErrorMessage() != null && !latest.getErrorMessage().isBlank()
+                ? Collections.singletonList(latest.getErrorMessage())
+                : Collections.emptyList());
 
         return MigrationResponse.builder()
+                .scenarioId(latest.getMigrationId())
+                .scenarioName("Live Migration " + latest.getMigrationId())
                 .instanceId(instanceId)
-                .status("IDLE")
-                .currentStep("Ready")
-                .progressPercent(0)
-                .logs(Collections.singletonList("System idle. Ready for migration."))
+                .sourceRegion(latest.getSourceRegion())
+                .destRegion(latest.getDestRegion())
+                .currentStep(stepDesc)
+                .stepNumber(stepNum)
+                .progressPercent(progress)
+                .status(status)
+                .startedAt(startedMs)
+                .finishedAt(finishedMs)
+                .logs(logs)
                 .build();
     }
 }

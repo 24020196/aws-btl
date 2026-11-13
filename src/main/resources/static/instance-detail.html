@@ -83,7 +83,6 @@
     <!-- Tabs -->
     <div class="det-tabs" role="tablist" aria-label="Instance details">
       <button class="det-tab active" role="tab" data-tab="details" id="tabBtn-details" aria-controls="tab-details" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-info"></use></svg><span data-i18n="tabDetails">Chi tiết</span></button>
-      <button class="det-tab" role="tab" data-tab="monitoring" id="tabBtn-monitoring" aria-controls="tab-monitoring" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-chart"></use></svg><span data-i18n="tabMonitoring">Giám sát</span></button>
       <button class="det-tab" role="tab" data-tab="migration" id="tabBtn-migration" aria-controls="tab-migration" aria-selected="false"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg><span data-i18n="tabMigration">Chuyển vùng</span> <span class="tab-dot" id="migTabDot" hidden></span></button>
     </div>
 
@@ -116,61 +115,8 @@
       </div>
     </section>
 
-    <!-- TAB: Monitoring -->
-    <section class="det-panel" id="tab-monitoring" role="tabpanel" aria-labelledby="tabBtn-monitoring">
-      <div class="card-header mon-head">
-        <div>
-          <div class="card-title" id="monTitle">Chỉ số 1 giờ qua</div>
-          <div class="card-sub"><span id="monSub">Basic monitoring</span> <span class="sim-badge" title="Chỉ số được sinh mô phỏng ở backend (MonitoringService), chưa đọc từ CloudWatch thật" data-i18n-title="detMonSimTitle" data-i18n="detMonSim">Dữ liệu mô phỏng</span></div>
-        </div>
-        <div class="mon-controls">
-          <div class="seg" role="group" aria-label="Khoảng thời gian" data-i18n-aria="detMonRange">
-            <button type="button" class="seg-btn active" data-hours="1" aria-pressed="true">1h</button>
-            <button type="button" class="seg-btn" data-hours="3" aria-pressed="false">3h</button>
-            <button type="button" class="seg-btn" data-hours="12" aria-pressed="false">12h</button>
-          </div>
-          <label class="check-row mon-auto"><input type="checkbox" id="monAuto" checked> <span data-i18n="detMonAuto">Tự làm mới mỗi phút</span></label>
-          <button class="btn btn-secondary btn-sm" onclick="loadMetrics()" data-i18n="actRefresh">Làm mới</button>
-        </div>
-      </div>
-      <div class="alarm-bar" id="cpuAlarm">
-        <span class="alarm-state" id="cpuAlarmState">–</span>
-        <span><strong>xregion-cpu-high</strong> · CPUUtilization &gt; <span id="cpuAlarmThreshold">80</span><span data-i18n="detMonAlarmPeriod">% trong 1 chu kỳ</span></span>
-        <span class="muted" id="cpuAlarmNote"></span>
-      </div>
-      <div class="mon-grid">
-        <div class="card mon-card"><div class="mon-title">CPU utilization <span class="mon-now" id="monCpuNow">–</span></div><div class="mon-chart" id="chartCpu"></div></div>
-        <div class="card mon-card"><div class="mon-title">Memory utilization <span class="mon-now" id="monRamNow">–</span></div><div class="mon-chart" id="chartRam"></div></div>
-        <div class="card mon-card"><div class="mon-title">Network in / out <span class="mon-now" id="monNetNow">–</span></div><div class="mon-chart" id="chartNet"></div></div>
-        <div class="card mon-card"><div class="mon-title">Disk I/O <span class="mon-now" id="monDiskNow">–</span></div><div class="mon-chart" id="chartDisk"></div></div>
-      </div>
-    </section>
-
     <!-- TAB 3: Cross-region migration -->
     <section class="det-panel" id="tab-migration" role="tabpanel" aria-labelledby="tabBtn-migration">
-      <div class="mig-status">
-        <div class="mig-status-item">
-          <div class="summary-label">migration_lock</div>
-          <div class="summary-value" id="migLock">–</div>
-          <div class="mig-hint" id="migLockHint"></div>
-        </div>
-        <div class="mig-status-item">
-          <div class="summary-label">Cooldown</div>
-          <div class="cooldown-value" id="migCooldown">–</div>
-          <div class="cooldown-bar"><span id="migCooldownBar"></span></div>
-          <div class="mig-hint" id="migCooldownHint"></div>
-        </div>
-        <div class="mig-status-item">
-          <div class="summary-label" data-i18n="detMigNext">Hướng chuyển tiếp theo</div>
-          <div class="summary-value mig-route" id="migRoute">–</div>
-          <div class="mig-hint" id="migRouteHint"></div>
-        </div>
-        <div class="mig-status-item mig-cta">
-          <button class="btn btn-primary" id="btnMigrateTab" onclick="openMigrateModal()"><svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-migrate"></use></svg> <span>Fast Migrate X-Region</span></button>
-          <div class="mig-hint" id="migBlockReason"></div>
-        </div>
-      </div>
-
       <!-- CARD: Kịch bản chuyển vùng duy nhất của máy ảo (Chức năng số 5) -->
       <div class="card scenario-card" id="scenarioCard">
         <div class="card-header">
@@ -180,22 +126,12 @@
               <span data-i18n="detScenTitle">Kịch bản chuyển vùng</span>
               <span class="scen-badge active" id="scenStatusBadge">ACTIVE</span>
             </div>
-            <div class="card-sub" data-i18n="detScenSingleSub">Mỗi máy ảo áp dụng 1 kịch bản chuyển vùng duy nhất. Bạn có thể tự chuyển vùng bằng tay hoặc theo lịch định kỳ.</div>
           </div>
           <div class="scen-header-actions" id="scenHeaderActions">
             <button class="btn btn-secondary btn-sm ico-label" id="btnEditScenario" onclick="openScenarioModal()">
               <svg class="ico ico-sm" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-edit"></use></svg>
               <span data-i18n="detScenEditBtn">Chỉnh sửa kịch bản</span>
             </button>
-          </div>
-        </div>
-
-        <!-- Banner chính sách an toàn & Khóa xung đột -->
-        <div class="scenario-safety-banner">
-          <svg class="ico ico-sm ico-warning" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-shield"></use></svg>
-          <div class="scenario-safety-text">
-            <strong data-i18n="detScenSafetyTitle">Chính sách bảo vệ an toàn:</strong>
-            <span data-i18n="detScenSafetyDesc">Áp dụng khoảng chờ tối thiểu giữa hai lần chuyển (Cooldown) và khóa xung đột migration_lock (chặn chạy đồng thời 2 kịch bản trên cùng 1 máy ảo).</span>
           </div>
         </div>
 
@@ -219,14 +155,6 @@
             <div class="scen-info-item">
               <div class="scen-info-label" data-i18n="detScenColDest">Hướng chuyển vùng</div>
               <div class="scen-info-val" id="scenValRoute">Sydney → N. Virginia</div>
-            </div>
-            <div class="scen-info-item">
-              <div class="scen-info-label" data-i18n="detScenColCooldown">Thời gian Cooldown</div>
-              <div class="scen-info-val" id="scenValCooldown">60 phút</div>
-            </div>
-            <div class="scen-info-item">
-              <div class="scen-info-label" data-i18n="modalScenNotify">Kênh nhận thông báo</div>
-              <div class="scen-info-val" id="scenValNotify">Dashboard &amp; Email</div>
             </div>
           </div>
 
@@ -255,30 +183,6 @@
             <span data-i18n="detScenAddBtn">Thiết lập kịch bản</span>
           </button>
         </div>
-      </div>
-
-      <div class="card pipe-card" id="migPipelineCard" tabindex="-1" aria-label="Tiến trình chuyển vùng" data-i18n-aria="detPipeAria">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="detPipeTitle">Tiến trình chuyển vùng (6 bước)</div>
-            <div class="card-sub" id="pipeSub" data-i18n="detPipeIdle">Chưa có lần chuyển vùng nào đang chạy.</div>
-          </div>
-          <div class="pipe-percent" id="pipePercent">0%</div>
-        </div>
-        <div class="det-progress"><span id="detPipeBar"></span></div>
-        <ol class="det-pipeline" id="detPipeline">
-          <li class="det-step" data-step="1"><span class="det-step-dot">1</span><span class="det-step-name" data-i18n="detStep1">Dừng máy nguồn</span><span class="det-step-hint">fsfreeze, stop NovaVM</span></li>
-          <li class="det-step" data-step="2"><span class="det-step-dot">2</span><span class="det-step-name" data-i18n="detStep2">Snapshot EBS</span><span class="det-step-hint">Incremental gp3</span></li>
-          <li class="det-step" data-step="3"><span class="det-step-dot">3</span><span class="det-step-name" data-i18n="detStep3">Sao chép liên vùng</span><span class="det-step-hint">CopySnapshot</span></li>
-          <li class="det-step" data-step="4"><span class="det-step-dot">4</span><span class="det-step-name" data-i18n="detStep4">Tạo volume đích</span><span class="det-step-hint">CreateVolume + attach</span></li>
-          <li class="det-step" data-step="5"><span class="det-step-dot">5</span><span class="det-step-name" data-i18n="detStep5">Khởi động NovaVM</span><span class="det-step-hint">Boot + health check</span></li>
-          <li class="det-step" data-step="6"><span class="det-step-dot">6</span><span class="det-step-name" data-i18n="detStep6">Chuyển DNS</span><span class="det-step-hint">Route 53 A record</span></li>
-        </ol>
-        <div class="terminal-head">
-          <span data-i18n="detLogLive">Log thời gian thực</span>
-          <span class="muted" id="logStatus" data-i18n="detLogWaiting">Đang chờ</span>
-        </div>
-        <div class="terminal-window" id="detTerminal" role="log" aria-live="polite"><div class="muted" data-i18n="detLogHint">Log của từng bước sẽ hiện ở đây khi bạn bấm Fast Migrate.</div></div>
       </div>
 
       <div class="card">
@@ -343,7 +247,7 @@
             <!-- Dòng 1: Region A (Vùng hiện tại - Tự điền) -->
             <div class="scen-grid-row">
               <div class="scen-grid-cell scen-grid-region">
-                <span class="scen-region-title" id="scenRegionAName">Sydney (ap-southeast-2)</span>
+                <span class="scen-region-title" id="scenRegionAName">N. Virginia (us-east-1)</span>
                 <span class="scen-region-tag" data-i18n="modalScenRegionACurrent">Vùng hiện tại</span>
               </div>
               <div class="scen-grid-cell scen-grid-time">
@@ -354,7 +258,7 @@
             <!-- Dòng 2: Region B (Vùng đối ứng - Tự tính, readonly) -->
             <div class="scen-grid-row scen-grid-row-auto">
               <div class="scen-grid-cell scen-grid-region">
-                <span class="scen-region-title" id="scenRegionBName">N. Virginia (us-east-1)</span>
+                <span class="scen-region-title" id="scenRegionBName">Sydney (ap-southeast-2)</span>
                 <span class="scen-region-tag auto-calc" data-i18n="modalScenRegionBOpposite">Vùng đối ứng (Tự động tính)</span>
               </div>
               <div class="scen-grid-cell scen-grid-time">
@@ -366,27 +270,7 @@
           <!-- Dòng tóm tắt lịch trình tự nhiên -->
           <div class="scen-summary-box">
             <svg class="ico ico-sm ico-accent" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-clock"></use></svg>
-            <span id="scenScheduleSummary">Tự động luân phiên: Hoạt động tại Sydney từ 07:00 đến 19:00, sau đó chuyển sang N. Virginia từ 19:00 đến 07:00 hôm sau.</span>
-          </div>
-        </div>
-
-        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
-          <div>
-            <label class="form-label" for="scenCooldown" data-i18n="modalScenCooldown">Khoảng chờ tối thiểu (phút)</label>
-            <input type="number" id="scenCooldown" class="form-input" min="5" max="1440" value="60">
-          </div>
-          <div>
-            <label class="form-label" data-i18n="modalScenNotify">Kênh thông báo kết quả</label>
-            <div style="display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap;">
-              <label class="check-row">
-                <input type="checkbox" id="scenNotifyDashboard" checked>
-                <span data-i18n="modalScenNotifyDash">Dashboard</span>
-              </label>
-              <label class="check-row">
-                <input type="checkbox" id="scenNotifyEmail" checked>
-                <span data-i18n="modalScenNotifyEmail">Email Admin</span>
-              </label>
-            </div>
+            <span id="scenScheduleSummary">Tự động luân phiên: Hoạt động tại N. Virginia từ 07:00 đến 19:00, sau đó chuyển sang Sydney từ 19:00 đến 07:00 hôm sau.</span>
           </div>
         </div>
 
