@@ -35,7 +35,7 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ap-southeast-2
+          region: ${{ secrets.AWS_REGION || 'ap-southeast-2' }}
           application_name: ${{ secrets.EB_APP_NAME || 'xregion-app' }}
           environment_name: ${{ secrets.EB_ENV_NAME || 'xregion-app-env' }}
           version_label: xregion-${{ github.sha }}-${{ github.run_number }}
