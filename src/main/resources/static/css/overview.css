@@ -7,6 +7,7 @@
   gap: 12px;
 }
 .dash-res-grid .svc-tile { min-width: 0; }
+.dash-res-grid div.svc-tile { cursor: default; }
 .dash-res-grid div.svc-tile:hover { background: var(--bg-card); border-color: var(--border-color); }
 .svc-tile-foot { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 

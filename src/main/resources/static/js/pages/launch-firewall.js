@@ -28,7 +28,7 @@ const LFW_TYPES = {
   rdp:        { label: 'RDP',          protocol: 'tcp',  from: 3389, to: 3389 },
   'custom-tcp': { label: 'Custom TCP', protocol: 'tcp',  from: 8080, to: 8080, custom: true },
   'custom-udp': { label: 'Custom UDP', protocol: 'udp',  from: 53,   to: 53, custom: true },
-  icmp:       { label: 'All ICMP',     protocol: 'icmp', from: 0,    to: 65535 },
+  icmp:       { label: 'All ICMP',     protocol: 'icmp', from: 0,    to: 0 },
   all:        { label: 'All traffic',  protocol: 'all',  from: 0,    to: 65535 }
 };
 
@@ -81,9 +81,8 @@ function lfwRenderTable(dir) {
 function lfwRender() {
   lfwRenderTable('inbound');
   lfwRenderTable('outbound');
-  const open = lfw.inbound.some(r => r.cidr.trim() === '0.0.0.0/0' && !['http', 'https'].includes(r.type));
   const warn = document.getElementById('lfwWarn');
-  if (warn) warn.hidden = !open;
+  if (warn) warn.hidden = true;
   if (typeof updatePageLaunchSummary === 'function') updatePageLaunchSummary();
 }
 
@@ -129,7 +128,6 @@ function lfwEnsureModal() {
           <button type="button" class="chip-btn" id="lfwAnyChip" onclick="lfwModalCidr('0.0.0.0/0')"></button>
           <button type="button" class="chip-btn" id="lfwVpcChip" onclick="lfwModalCidr(lfwVpcCidr())"></button>
         </div>
-        <div class="form-warn" id="lfwModalWarn" hidden></div>
       </div>
       <div class="form-group">
         <label class="form-label" for="lfwDesc" id="lfwDescLabel"></label>
@@ -185,14 +183,7 @@ function lfwModalCidr(cidr) {
   lfwModalWarn();
 }
 
-function lfwModalWarn() {
-  const type = document.getElementById('lfwType').value;
-  const open = document.getElementById('lfwDir').value === 'inbound'
-    && document.getElementById('lfwCidr').value.trim() === '0.0.0.0/0' && !['http', 'https'].includes(type);
-  const warn = document.getElementById('lfwModalWarn');
-  warn.hidden = !open;
-  warn.textContent = t('Cổng này sẽ mở cho toàn Internet. Chỉ nên làm vậy với HTTP/HTTPS.', 'This port will be open to the whole Internet. Only do this for HTTP/HTTPS.');
-}
+function lfwModalWarn() {}
 
 function lfwSubmitRule(e) {
   e.preventDefault();
@@ -286,13 +277,23 @@ function lfwPayload() {
 }
 
 // Gọi sau khi POST /api/instances thành công: ghi rule vào Security Group riêng của máy vừa tạo.
-async function lfwApplyToInstance(instanceId) {
+// Lưu kèm trạng thái đồng bộ: máy vừa tạo chưa chắc đã chạy nên template chỉ được coi là chưa áp dụng.
+// Trả về true nếu cấu hình đã lưu thành công (lỗi đồng bộ hạ tầng không làm mất template đã nhập).
+async function lfwApplyToInstance(instanceId, expectedRevision) {
   if (!instanceId) return false;
   try {
-    await apiRequest(`/network/security-groups/instances/${encodeURIComponent(instanceId)}`, {
+    const body = lfwPayload();
+    // Có revision thì backend chỉ ghi khi nhóm vẫn ở đúng revision đó.
+    if (expectedRevision != null) body.expectedRevision = Number(expectedRevision);
+    const g = await apiRequest(`/network/security-groups/instances/${encodeURIComponent(instanceId)}`, {
       method: 'PUT',
-      body: JSON.stringify(lfwPayload())
+      body: JSON.stringify(body)
     });
+    const status = g && g.syncStatus ? String(g.syncStatus).toUpperCase() : '';
+    if (status && status !== 'SYNCED') {
+      showToast(t('Đã lưu rule lúc tạo máy; rule sẽ được áp dụng khi máy sẵn sàng tài nguyên mạng.',
+        'Rules saved with the launch; they will be applied once the instance has network resources.'), 'info');
+    }
     return true;
   } catch (err) {
     showToast(t('Máy đã tạo nhưng chưa ghi được rule Security Group: ', 'Instance created but its security group rules were not saved: ') + lfwEsc(err.message), 'error');

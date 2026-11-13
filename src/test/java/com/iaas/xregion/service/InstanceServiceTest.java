@@ -9,7 +9,6 @@ import com.iaas.xregion.Exceptions.AppException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
-import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Services.AuditLogService;
 import com.iaas.xregion.Services.AuthService;
@@ -27,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import software.amazon.awssdk.core.pagination.sync.SdkIterable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 
@@ -131,7 +131,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceResponse response = instanceService.getInstanceById("i-12345");
 
@@ -143,7 +143,7 @@ class InstanceServiceTest {
     @Test
     @DisplayName("getInstanceById throws ResourceNotFoundException when instance belongs to another user or absent")
     void testGetInstanceByIdNotFound() {
-        when(instancesTable.getItem(any(Key.class))).thenReturn(null);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
 
         assertThatThrownBy(() -> instanceService.getInstanceById("i-missing"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -153,7 +153,7 @@ class InstanceServiceTest {
                 .instanceId("i-other")
                 .username("otheruser")
                 .build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(otherInst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(otherInst);
 
         assertThatThrownBy(() -> instanceService.getInstanceById("i-other"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -170,6 +170,12 @@ class InstanceServiceTest {
         req.setImageId("img-ubuntu22");
         req.setEbsSizeGb(50);
         req.setKeyPairName("prod-key");
+        // SPEC-SF-01 bước 7: rule người dùng soạn phải đi cùng sự kiện launch, không bị bỏ lại ở UI.
+        List<java.util.Map<String, Object>> inbound = List.of(
+                java.util.Map.of("protocol", "tcp", "fromPort", 443, "toPort", 443, "cidr", "0.0.0.0/0"));
+        List<java.util.Map<String, Object>> outbound = List.of();
+        req.setInboundRules(inbound);
+        req.setOutboundRules(outbound);
 
         UserEntity userEntity = UserEntity.builder()
                 .userId("usr-testuser")
@@ -193,57 +199,8 @@ class InstanceServiceTest {
         verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
         verify(auditLogService, times(1)).logAction(eq("LAUNCH_VM"), eq("INSTANCE"), anyString(), anyString());
         verify(eventBridgeGatewayClient, times(1)).sendInstanceLaunchEvent(
-                anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"));
-    }
-
-    @Test
-    @DisplayName("updateInstance prevents flavor modification when instance is RUNNING (EC2 rule)")
-    void testUpdateFlavorWhileRunningFails() {
-        InstanceEntity runningInst = InstanceEntity.builder()
-                .instanceId("i-running")
-                .instanceName("App")
-                .flavor("m1.small")
-                .username("testuser")
-                .currentStatus("RUNNING")
-                .build();
-
-        when(instancesTable.getItem(any(Key.class))).thenReturn(runningInst);
-
-        UpdateInstanceRequest req = UpdateInstanceRequest.builder()
-                .name("App")
-                .flavor("m1.large")
-                .build();
-
-        assertThatThrownBy(() -> instanceService.updateInstance("i-running", req))
-                .isInstanceOf(AppException.class)
-                .hasMessageContaining("Dừng máy ảo (Stop) trước khi thay đổi");
-    }
-
-    @Test
-    @DisplayName("updateInstance permits flavor modification when instance is STOPPED")
-    void testUpdateFlavorWhileStoppedSucceeds() {
-        InstanceEntity stoppedInst = InstanceEntity.builder()
-                .instanceId("i-stopped")
-                .instanceName("App")
-                .flavor("m1.small")
-                .username("testuser")
-                .activeNovaId("nova-stopped")
-                .currentStatus("STOPPED")
-                .build();
-
-        when(instancesTable.getItem(any(Key.class))).thenReturn(stoppedInst);
-
-        UpdateInstanceRequest req = UpdateInstanceRequest.builder()
-                .name("App Renamed")
-                .flavor("m1.large")
-                .build();
-
-        InstanceResponse response = instanceService.updateInstance("i-stopped", req);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getFlavor()).isEqualTo("m1.large");
-        assertThat(response.getName()).isEqualTo("App Renamed");
-        verify(instancesTable, times(1)).putItem(any(InstanceEntity.class));
+                anyString(), eq("Production-DB"), eq(50), eq("gp3"), eq("m1.medium"), eq("img-ubuntu22"), eq("prod-key"), eq("testuser"),
+                eq("ap-southeast-2"), eq(inbound), eq(outbound));
     }
 
     @Test
@@ -257,7 +214,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("STOP");
@@ -282,7 +239,7 @@ class InstanceServiceTest {
                 .currentStatus("RUNNING")
                 .build();
 
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
 
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("TERMINATE");
@@ -354,10 +311,11 @@ class InstanceServiceTest {
         req.setName("Launch failure");
         req.setRegion("ap-southeast-2");
         req.setFlavor("m1.medium");
+        req.setImageId("img-123");
         doThrow(new EventBridgeGatewayClient.EventRejectedException("FailedEntryCount=1"))
                 .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
                         anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-                        anyString(), anyString());
+                        anyString(), anyString(), any(), any(), any());
 
         assertThatThrownBy(() -> instanceService.launchInstance(req))
                 .isInstanceOf(AppException.class)
@@ -367,17 +325,23 @@ class InstanceServiceTest {
     }
 
     @Test
-    void ambiguousLaunchDeliveryDoesNotMarkInstanceFailed() {
+    void ambiguousLaunchDeliveryIsRecordedInsteadOfLeftPending() {
+        // XR-RISK-003: a transport failure left the record PENDING forever: nothing showed
+        // the request was stuck, and it was indistinguishable from a launch still starting.
         LaunchInstanceRequest req = new LaunchInstanceRequest();
         req.setName("Unconfirmed launch");
         req.setRegion("ap-southeast-2");
         req.setFlavor("m1.medium");
+        req.setImageId("img-123");
         doThrow(new IllegalStateException("Connection reset after send"))
                 .when(eventBridgeGatewayClient).sendInstanceLaunchEvent(
                         anyString(), anyString(), anyInt(), anyString(), anyString(), anyString(),
-                        anyString(), anyString());
+                        anyString(), anyString(), any(), any(), any());
+
         assertThatThrownBy(() -> instanceService.launchInstance(req)).isInstanceOf(AppException.class);
-        verify(instancesTable, never()).updateItem(any(UpdateItemEnhancedRequest.class));
+        // Still PENDING (we cannot prove it was not delivered) but rewritten with an explicit
+        // marker, so the request is visible and reconcilable rather than silently stuck.
+        verify(instancesTable).updateItem(any(UpdateItemEnhancedRequest.class));
     }
 
     @Test
@@ -386,7 +350,7 @@ class InstanceServiceTest {
         InstanceEntity inst = InstanceEntity.builder().instanceId("i-partial")
                 .username("testuser").userId("usr-testuser").dns("app.example")
                 .activeNovaId("nova-partial").currentStatus("RUNNING").build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
         InstanceActionRequest req = new InstanceActionRequest();
         req.setAction("STOP");
         instanceService.executeAction("i-partial", req);
@@ -409,7 +373,7 @@ class InstanceServiceTest {
                 .username("testuser")
                 .currentStatus("RUNNING")
                 .build();
-        when(instancesTable.getItem(any(Key.class))).thenReturn(inst);
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
         doThrow(new IllegalStateException("FailedEntryCount=1"))
                 .when(eventBridgeGatewayClient).sendInstanceLifecycleEvent(
                         anyString(), anyString(), anyString(), any(), anyString(), any(), anyString());
@@ -448,4 +412,108 @@ class InstanceServiceTest {
         assertThat(response.getActiveNovaId()).isEqualTo("nova-uuid-999");
         assertThat(response.getNovaIds()).containsExactly("nova-uuid-999");
     }
+
+    @Test
+    @DisplayName("auto-link ignores terminated Nova and never publishes RUNNING for a SHUTOFF VM")
+    @SuppressWarnings("unchecked")
+    void autoLinkIgnoresDeadNovaRows() {
+        // XR-RISK-002: the index query has no filter, so a terminated server from an older
+        // launch could be relinked while the real VM was SHUTOFF, publishing RUNNING.
+        InstanceEntity inst = InstanceEntity.builder()
+                .instanceId("i-7953bdff")
+                .instanceName("canary")
+                .username("testuser")
+                .currentStatus("PENDING")
+                .currentRegion("ap-southeast-2")
+                .build();
+        when(instancesTable.getItem(any(GetItemEnhancedRequest.class))).thenReturn(inst);
+
+        NovaEntity dead = NovaEntity.builder()
+                .novaId("nova-old").instanceId("i-7953bdff")
+                .status("TERMINATED").createdAt(1000L).build();
+        NovaEntity stopped = NovaEntity.builder()
+                .novaId("nova-current").instanceId("i-7953bdff")
+                .status("SHUTOFF").createdAt(2000L).build();
+
+        var index = mock(software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex.class);
+        when(novaTable.index("instance_id-index")).thenReturn(index);
+        PageIterable<NovaEntity> pages = mock(PageIterable.class);
+        @SuppressWarnings("unchecked")
+        software.amazon.awssdk.enhanced.dynamodb.model.Page<NovaEntity> page =
+                mock(software.amazon.awssdk.enhanced.dynamodb.model.Page.class);
+        when(page.items()).thenReturn(List.of(dead, stopped));
+        doReturn(pages).when(index).query(any(java.util.function.Consumer.class));
+        when(pages.iterator()).thenReturn(List.of(page).iterator());
+
+        InstanceResponse response = instanceService.getInstanceById("i-7953bdff");
+
+        assertThat(inst.getActiveNovaId()).isEqualTo("nova-current");
+        assertThat(inst.getCurrentStatus()).isEqualTo("STOPPED");
+        assertThat(response.getStatus()).isNotEqualTo("RUNNING");
+    }
+
+    @Test
+    @DisplayName("launchInstance rejects when user already has 5 active/transitional instances (409 Conflict)")
+    @SuppressWarnings("unchecked")
+    void launchRejectsWhenUserReachesMax5Instances() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("sixth-vm");
+        req.setRegion("us-east-1");
+        req.setImageId("img-1");
+
+        when(authService.findUserByUsername("testuser"))
+                .thenReturn(UserEntity.builder().userId("usr-testuser").username("testuser").build());
+
+        List<InstanceEntity> existing = List.of(
+                InstanceEntity.builder().instanceId("i-1").userId("usr-testuser").currentStatus("RUNNING").build(),
+                InstanceEntity.builder().instanceId("i-2").userId("usr-testuser").currentStatus("STOPPED").build(),
+                InstanceEntity.builder().instanceId("i-3").userId("usr-testuser").currentStatus("PENDING").build(),
+                InstanceEntity.builder().instanceId("i-4").userId("usr-testuser").currentStatus("REBOOTING").build(),
+                InstanceEntity.builder().instanceId("i-5").userId("usr-testuser").currentStatus("MIGRATING").build(),
+                InstanceEntity.builder().instanceId("i-6").userId("usr-testuser").currentStatus("FAILED").build(),
+                InstanceEntity.builder().instanceId("i-7").userId("usr-testuser").currentStatus("TERMINATED").build()
+        );
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdkIterable = existing::iterator;
+        when(pages.items()).thenReturn(sdkIterable);
+        when(instancesTable.scan()).thenReturn(pages);
+
+        assertThatThrownBy(() -> instanceService.launchInstance(req))
+                .isInstanceOf(com.iaas.xregion.Exceptions.ConflictException.class)
+                .hasMessageContaining("5");
+
+        verify(instancesTable, never()).putItem(any(InstanceEntity.class));
+        verifyNoInteractions(eventBridgeGatewayClient);
+    }
+
+    @Test
+    @DisplayName("launchInstance ignores FAILED/ERROR/TERMINATED when counting max 5 instances")
+    @SuppressWarnings("unchecked")
+    void launchIgnoresFailedAndTerminatedInQuotaCount() {
+        LaunchInstanceRequest req = new LaunchInstanceRequest();
+        req.setName("valid-vm");
+        req.setRegion("us-east-1");
+        req.setImageId("img-1");
+
+        when(authService.findUserByUsername("testuser"))
+                .thenReturn(UserEntity.builder().userId("usr-testuser").username("testuser").build());
+
+        List<InstanceEntity> existing = List.of(
+                InstanceEntity.builder().instanceId("i-1").userId("usr-testuser").currentStatus("RUNNING").build(),
+                InstanceEntity.builder().instanceId("i-2").userId("usr-testuser").currentStatus("FAILED").build(),
+                InstanceEntity.builder().instanceId("i-3").userId("usr-testuser").currentStatus("ERROR").build(),
+                InstanceEntity.builder().instanceId("i-4").userId("usr-testuser").currentStatus("TERMINATED").build(),
+                InstanceEntity.builder().instanceId("i-5").userId("usr-testuser").currentStatus("SHUTTING_DOWN").build()
+        );
+        PageIterable<InstanceEntity> pages = mock(PageIterable.class);
+        SdkIterable<InstanceEntity> sdkIterable = existing::iterator;
+        when(pages.items()).thenReturn(sdkIterable);
+        when(instancesTable.scan()).thenReturn(pages);
+
+        InstanceResponse res = instanceService.launchInstance(req);
+        assertThat(res.getFlavor()).isEqualTo("m1.tiny");
+        assertThat(res.getStatus()).isEqualTo("PENDING");
+        verify(instancesTable).putItem(any(InstanceEntity.class));
+    }
 }
+

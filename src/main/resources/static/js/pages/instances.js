@@ -42,6 +42,7 @@ registerI18n({
 
 let cachedInstances = [];
 let cachedGroups = new Map(); // groupId -> nhóm (để hiện tên Security Group)
+let cachedImages = new Map(); // imageId -> thông tin image từ /api/images
 let selectedInstanceIds = new Set();
 let statePollingInterval = null;
 let currentSplitTab = 'tabDetails';
@@ -89,9 +90,6 @@ function updateInstancesKPIs() {
   if (elStop) elStop.textContent = stopped;
   if (elPending) elPending.textContent = pendingOrTransition;
   if (elBadge) elBadge.textContent = `(${total})`;
-
-  const pag = document.getElementById('paginationInfo');
-  if (pag) pag.textContent = total > 0 ? `1-${total} of ${total}` : '0 of 0';
 }
 
 // 3. Polling tự động khi có máy ảo đang trong trạng thái chuyển tiếp
@@ -147,6 +145,11 @@ async function loadInstances() {
       // Nhóm riêng của từng máy (server trả instanceId), vì bảng Instances không còn lưu mã nhóm
       groups.filter(g => g.instanceId).forEach(g => cachedGroups.set(`inst:${g.instanceId}`, g));
     }
+    const images = await apiRequest('/images').catch(() => null);
+    if (images && images.length) {
+      cachedImages = new Map(images.map(img => [img.id, img]));
+      images.filter(img => img.glanceId).forEach(img => cachedImages.set(img.glanceId, img));
+    }
     const instances = await apiRequest('/instances');
     cachedInstances = instances || [];
     notifyLaunchStatus(cachedInstances);
@@ -195,13 +198,9 @@ function filterInstancesUI() {
   tbody.innerHTML = '';
 
   const q = (document.getElementById('instanceSearchInput')?.value || '').trim().toLowerCase();
-  const statusFilter = document.getElementById('instanceStatusFilter')?.value || 'ALL';
-
   const filtered = cachedInstances.filter(inst => {
-    const rawStatus = (inst.status || '').toUpperCase();
     const matchText = !q || (inst.name || '').toLowerCase().includes(q) || (inst.id || '').toLowerCase().includes(q) || (inst.publicIp || '').includes(q) || (inst.privateIp || '').includes(q);
-    const matchStatus = statusFilter === 'ALL' || rawStatus === statusFilter.toUpperCase();
-    return matchText && matchStatus;
+    return matchText;
   });
 
   if (filtered.length === 0) {
@@ -421,8 +420,16 @@ function updateSelectionToolbar() {
     btnMigrate.title = why || tk('instMigrateTitle');
   }
 
-  // Nút Instance State sáng khi chọn >= 1 máy ảo
-  if (btnState) btnState.disabled = (count === 0);
+  // Nút Instance State chỉ sáng khi chọn đúng 1 máy ảo; vô hiệu hóa khi chọn 0 hoặc >= 2 máy ảo
+  if (btnState) {
+    btnState.disabled = (count !== 1);
+    if (count >= 2) {
+      btnState.title = t('Chỉ có thể thay đổi trạng thái khi chọn đúng 1 máy ảo', 'State changes are only supported for a single selected instance');
+      closeAllDropdowns();
+    } else {
+      btnState.title = count === 0 ? t('Chọn một máy ảo', 'Select an instance') : '';
+    }
+  }
   updateStateMenuItems();
 }
 
@@ -541,7 +548,8 @@ function updateSplitPane() {
   if (!drawer) return;
 
   const count = selectedInstanceIds.size;
-  if (count === 0) {
+  // Chỉ hiển thị panel Split Pane khi chọn đúng 1 máy; đóng khi chọn 0 hoặc từ 2 máy trở lên
+  if (count !== 1) {
     drawer.classList.remove('active');
     return;
   }
@@ -614,13 +622,14 @@ function renderSplitDetailsTab(inst) {
   const grid = document.getElementById('splitDetailsGrid');
   if (!grid) return;
   const spec = (typeof FLAVOR_SPECS !== 'undefined' && FLAVOR_SPECS[inst.flavor]) || null;
+  const imgInfo = resolveInstanceImageInfo(inst);
   grid.innerHTML = [
     splitKv('Instance ID', `<code style="color: var(--accent-cyan); font-weight: 700;">${splitEsc(inst.id)}</code>`),
     splitKv(t('Tên máy ảo', 'Instance name'), `<strong>${splitEsc(inst.name)}</strong>`),
     splitKv(t('Trạng thái máy ảo', 'Instance state'), instanceStateBadge(inst.status)),
     splitKv(t('Loại máy ảo', 'Instance type'), `<code>${splitEsc(inst.flavor || '–')}</code>${spec ? ` · ${spec.vcpu} vCPU` : ''}`),
     splitKv('Region', splitRegion(inst)),
-    splitKv('AMI', splitEsc(inst.imageName || inst.image || '–'))
+    splitKv('AMI', splitEsc(imgInfo.imageName || inst.imageName || inst.image || '–'))
   ].join('');
 }
 
@@ -808,8 +817,65 @@ function migrateSelectedInstance() {
 }
 
 // 11. Connect SSH Modal
-// Hộp Kết nối giống trang chi tiết: cùng các bước, lệnh theo Elastic IP và theo tên miền Route 53, user theo image
-const CONNECT_SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
+// Hộp Kết nối: tự động nhận diện username chuẩn theo image OpenStack Glance / Cloud
+const KNOWN_IMAGE_MAP = {
+  // OpenStack Glance images
+  '831dc24b-9d29-4cb6-8154-9de2d0fd268f': { name: 'CirrOS-0.6.2', user: 'cirros' },
+  'c66c2ab2-68fe-40bb-8f55-d2e5ba1c944d': { name: 'Alpine-Linux-3.20-Cloud', user: 'alpine' },
+  'fd249548-1863-4d30-b809-732108cab057': { name: 'Ubuntu Server 24.04 LTS', user: 'ubuntu' },
+  // Legacy / Test IDs
+  'img-u22': { name: 'Ubuntu Server 22.04 LTS', user: 'ubuntu' },
+  'img-deb12': { name: 'Debian 12 Bookworm', user: 'debian' },
+  'img-rocky9': { name: 'Rocky Linux 9 Enterprise', user: 'rocky' },
+  'img-alp319': { name: 'Alpine Linux 3.19 Minimal', user: 'alpine' }
+};
+
+// SSH User mapping theo chuẩn OpenStack Glance distro
+const CONNECT_SSH_USERS = {
+  cirros: 'cirros',
+  alpine: 'alpine',
+  debian: 'debian',
+  ubuntu: 'ubuntu',
+  rocky: 'rocky',
+  centos: 'centos',
+  fedora: 'fedora',
+  amazon: 'ec2-user',
+  al2: 'ec2-user'
+};
+
+function resolveInstanceImageInfo(inst) {
+  if (!inst) return { imageName: 'Linux Image', sshUser: 'ubuntu' };
+  const rawId = inst.imageId || '';
+  const rawName = inst.imageName || '';
+
+  // 1. Kiểm tra bảng KNOWN_IMAGE_MAP theo UUID hoặc legacy ID
+  if (rawId && KNOWN_IMAGE_MAP[rawId]) {
+    return {
+      imageName: rawName || KNOWN_IMAGE_MAP[rawId].name,
+      sshUser: KNOWN_IMAGE_MAP[rawId].user
+    };
+  }
+
+  // 2. Kiểm tra cachedImages từ API GET /api/images
+  if (rawId && cachedImages && cachedImages.has(rawId)) {
+    const imgObj = cachedImages.get(rawId);
+    const resolvedName = imgObj.name || rawName || rawId;
+    const lowerName = resolvedName.toLowerCase();
+    const hit = Object.keys(CONNECT_SSH_USERS).find(k => lowerName.includes(k));
+    return {
+      imageName: resolvedName,
+      sshUser: hit ? CONNECT_SSH_USERS[hit] : 'ubuntu'
+    };
+  }
+
+  // 3. Phân giải theo từ khóa tên image hoặc ID
+  const candidate = (rawName || rawId).toLowerCase();
+  const hit = Object.keys(CONNECT_SSH_USERS).find(k => candidate.includes(k));
+  return {
+    imageName: rawName || rawId || 'Linux Image',
+    sshUser: hit ? CONNECT_SSH_USERS[hit] : 'ubuntu'
+  };
+}
 
 function openConnectModal() {
   if (selectedInstanceIds.size !== 1) return;
@@ -817,9 +883,9 @@ function openConnectModal() {
   const inst = cachedInstances.find(i => i.id === id);
   if (!inst) return;
 
-  const image = String(inst.imageName || inst.imageId || '').toLowerCase();
-  const hit = Object.keys(CONNECT_SSH_USERS).find(k => image.includes(k));
-  const user = hit ? CONNECT_SSH_USERS[hit] : 'ubuntu';
+  const imgInfo = resolveInstanceImageInfo(inst);
+  const user = imgInfo.sshUser;
+  const imageName = imgInfo.imageName;
   const key = (inst.keyName || 'my-key').replace(/\.pem$/i, '') + '.pem';
   const host = inst.publicIp || inst.privateIp || '<elastic-ip>';
   const set = (elId, text) => { const el = document.getElementById(elId); if (el) el.textContent = text; };
@@ -835,8 +901,8 @@ function openConnectModal() {
   set('connChmod', `chmod 400 "${key}"`);
   set('connCmdIp', `ssh -i "${key}" ${user}@${host}`);
   set('connCmdDns', inst.dnsDomain ? `ssh -i "${key}" ${user}@${inst.dnsDomain}` : t('Máy chưa có tên miền Route 53', 'No Route 53 domain yet'));
-  set('connNote', t(`User mặc định của ${inst.imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
-    `The default user of ${inst.imageName || 'this image'} is "${user}". A security group must allow inbound TCP 22 from your IP.`));
+  set('connNote', t(`User mặc định của ${imageName || 'image này'} là "${user}". Security Group phải mở inbound TCP 22 cho IP của bạn.`,
+    `The default user of ${imageName || 'this image'} is "${user}". A security group must allow inbound TCP 22 from your IP.`));
   openModal('connectModal');
 }
 

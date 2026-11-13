@@ -18,7 +18,9 @@ def logical(kind, identifier):
 class Builder:
     def __init__(self, root):
         self.root = root
-        self.session = boto3.Session(region_name="ap-southeast-2")
+        manifest_path = self.root / "manifest.json"
+        self.region = json.loads(manifest_path.read_text(encoding="utf-8")).get("region", "ap-southeast-2") if manifest_path.exists() else "ap-southeast-2"
+        self.session = boto3.Session(region_name=self.region)
         self.cc = self.session.client("cloudcontrol")
         self.cfn = self.session.client("cloudformation")
         self.schemas = {}

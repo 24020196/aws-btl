@@ -1,8 +1,8 @@
 package com.iaas.xregion.Entity;
 
 public enum RegionType {
-    SYDNEY("ap-southeast-2", "Sydney (Region A)"),
-    VIRGINIA("us-east-1", "N. Virginia (Region B)");
+    VIRGINIA("us-east-1", "N. Virginia (Region A)"),
+    SYDNEY("ap-southeast-2", "Sydney (Region B)");
 
     private final String code;
     private final String displayName;

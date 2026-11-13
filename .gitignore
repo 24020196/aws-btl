@@ -24,6 +24,11 @@ Thumbs.db
 
 # Log files
 *.log
+.agents
+.clinerules
+.ebextensions
+.github/workflows111111111111111111111
+
 
 # Project specific ignores
 .agents

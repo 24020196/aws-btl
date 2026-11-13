@@ -58,10 +58,12 @@ def main():
     errors = []
     client = None
     schemas = {}
+    manifest_path = root / "manifest.json"
+    region = json.loads(manifest_path.read_text(encoding="utf-8")).get("region", "ap-southeast-2") if manifest_path.exists() else "ap-southeast-2"
     for typ in sorted({r["Type"] for r in resources.values()}):
         path = root / "resource-schemas" / (typ.replace("::", "-") + ".json")
         if not path.exists() and args.fetch_schemas:
-            client = client or boto3.client("cloudformation", region_name="ap-southeast-2")
+            client = client or boto3.client("cloudformation", region_name=region)
             path.write_text(client.describe_type(Type="RESOURCE", TypeName=typ)["Schema"], encoding="utf-8")
         if path.exists():
             schemas[typ] = json.loads(path.read_text())

@@ -54,12 +54,7 @@ registerI18n({
   tokensStatusRevoked: ['Đã thu hồi', 'Revoked'],
   tokensStatusExpired: ['Đã hết hạn', 'Expired'],
   tokensNeverExpires: ['Không thời hạn (Vĩnh viễn)', 'Never expires'],
-  tokensRevokeBtn: ['Thu hồi', 'Revoke'],
-  tokensCurlHeading: ['Hướng Dẫn Gọi AWS API Gateway (Edge-Optimized)', 'AWS API Gateway (Edge-Optimized) cURL Guide'],
-  tokensCurlDesc: [
-    'Endpoint đã được tối ưu hóa toàn cầu qua mạng CloudFront Edge. Sử dụng lệnh cURL sau để gửi sự kiện vào Amazon EventBridge:',
-    'Global edge-optimized endpoint via CloudFront. Use the following cURL command to publish lifecycle events to Amazon EventBridge:'
-  ]
+  tokensRevokeBtn: ['Thu hồi', 'Revoke']
 });
 
 document.addEventListener('DOMContentLoaded', () => {

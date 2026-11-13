@@ -8,11 +8,9 @@ registerI18n({
   detSumState: ['Trạng thái máy ảo', 'Instance state'],
   detSumType: ['Loại máy ảo', 'Instance type'],
   detSumChecks: ['Kiểm tra trạng thái', 'Status checks'],
-  detSumPlatform: ['Nền tảng', 'Platform'],
   detSumOwner: ['Chủ sở hữu', 'Owner'],
   detHwTitle: ['Phần cứng & Hệ điều hành', 'Hardware & OS'],
   detOs: ['Hệ điều hành', 'Operating system'],
-  detPlatform: ['Nền tảng', 'Platform'],
   detVirt: ['Ảo hóa', 'Virtualization'],
   detVirtValue: ['KVM (OpenStack Nova) trên EC2 Bare Metal', 'KVM (OpenStack Nova) on EC2 Bare Metal'],
   detIdTitle: ['Định danh & Truy cập', 'Identity & access'],
@@ -69,7 +67,7 @@ const RULE_PRESETS = {
   'postgres':   { protocol: 'tcp',  from: 5432, to: 5432 },
   'custom-tcp': { protocol: 'tcp',  from: 8080, to: null },
   'custom-udp': { protocol: 'udp',  from: 53,   to: null },
-  'icmp':       { protocol: 'icmp', from: 0,    to: 65535 },
+  'icmp':       { protocol: 'icmp', from: 0,    to: 0 },
   'all':        { protocol: 'all',  from: 0,    to: 65535 }
 };
 
@@ -144,11 +142,34 @@ function fmtCountdown(sec) {
 }
 
 // ---------------- Tabs ----------------
-const DET_TABS = ['details', 'security', 'networking', 'storage', 'monitoring', 'migration'];
-const SSH_USERS = { ubuntu: 'ubuntu', debian: 'admin', rocky: 'rocky', alpine: 'alpine', centos: 'centos', amazon: 'ec2-user' };
+const DET_TABS = ['details', 'monitoring', 'migration'];
+const SSH_USERS = {
+  cirros: 'cirros',
+  alpine: 'alpine',
+  debian: 'debian',
+  ubuntu: 'ubuntu',
+  rocky: 'rocky',
+  centos: 'centos',
+  fedora: 'fedora',
+  amazon: 'ec2-user',
+  al2: 'ec2-user'
+};
+
+const KNOWN_IMAGE_MAP = {
+  '831dc24b-9d29-4cb6-8154-9de2d0fd268f': { name: 'CirrOS-0.6.2', user: 'cirros' },
+  'c66c2ab2-68fe-40bb-8f55-d2e5ba1c944d': { name: 'Alpine-Linux-3.20-Cloud', user: 'alpine' },
+  'fd249548-1863-4d30-b809-732108cab057': { name: 'Ubuntu Server 24.04 LTS', user: 'ubuntu' },
+  'img-u22': { name: 'Ubuntu Server 22.04 LTS', user: 'ubuntu' },
+  'img-deb12': { name: 'Debian 12 Bookworm', user: 'debian' },
+  'img-rocky9': { name: 'Rocky Linux 9 Enterprise', user: 'rocky' },
+  'img-alp319': { name: 'Alpine Linux 3.19 Minimal', user: 'alpine' }
+};
 
 function sshUser(inst) {
-  const name = String((inst && (inst.imageName || inst.imageId)) || '').toLowerCase();
+  if (!inst) return 'ubuntu';
+  const rawId = inst.imageId || '';
+  if (rawId && KNOWN_IMAGE_MAP[rawId]) return KNOWN_IMAGE_MAP[rawId].user;
+  const name = String(inst.imageName || rawId || '').toLowerCase();
   const hit = Object.keys(SSH_USERS).find(k => name.includes(k) || (k === 'debian' && name.includes('deb')));
   return hit ? SSH_USERS[hit] : 'ubuntu';
 }
@@ -191,7 +212,6 @@ function switchDetailTab(tab) {
   if (location.hash !== '#' + tab) history.replaceState(null, '', location.pathname + location.search + '#' + tab);
   if (tab === 'monitoring' && det.inst) loadMetrics();
   scheduleMetricsRefresh(tab);
-  if (tab === 'storage' && det.inst) { loadVolumes(); loadSnapshots(); }
 }
 
 // Đổi ngôn ngữ: i18n.js đã vẽ lại phần đầu trang, tab Security/Networking và lịch sử;
@@ -199,7 +219,6 @@ function switchDetailTab(tab) {
 onLangChange(() => {
   if (!det.inst) return;
   const tab = (location.hash || '').replace('#', '');
-  if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
   if (tab === 'monitoring') loadMetrics();
   renderMonSub();
   if (det.lastProgress) renderPipeline(det.lastProgress);
@@ -227,7 +246,6 @@ async function initInstanceDetail() {
   await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
   const tabNow = (location.hash || '').replace('#', '');
   if (tabNow === 'monitoring') loadMetrics();
-  if (tabNow === 'storage') { loadVolumes(); loadSnapshots(); }
   await resumeRunningMigration();
   if (new URLSearchParams(window.location.search).get('action') === 'migrate') {
     switchDetailTab('migration');
@@ -365,7 +383,6 @@ async function refreshAll() {
       await Promise.all([loadSecurityAndNetwork(), loadMigrationHistory()]);
       const tab = (location.hash || '').replace('#', '');
       if (tab === 'monitoring') loadMetrics();
-      if (tab === 'storage') { loadVolumes(); loadSnapshots(); }
       showToast(t('Đã làm mới thông tin máy ảo', 'Instance refreshed'), 'success');
     }
   } finally {
@@ -434,7 +451,7 @@ function renderActions() {
     tabBtn.innerHTML = `${ICON('ui-migrate')} Fast Migrate ${t('sang', 'to')} ${esc(regionLabel(otherRegion(inst.region)))}`;
   }
   setText('migBlockReason', reason || t('Sẵn sàng chuyển vùng.', 'Ready to migrate.'));
-  document.getElementById('migBlockReason').classList.toggle('warn', !!reason);
+  document.getElementById('migBlockReason')?.classList.toggle('warn', !!reason);
 }
 
 async function runDetailAction(id, action) {

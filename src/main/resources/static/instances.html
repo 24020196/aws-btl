@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/pages/instances.css">
   <link rel="stylesheet" href="/css/pages/launch-firewall.css">
+  <link rel="stylesheet" href="/css/pages/instances-sg-editor.css">
 </head>
 
 <body>
@@ -219,34 +220,6 @@
               data-i18n-placeholder="instSearchPlaceholder" oninput="filterInstancesUI()">
           </div>
 
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <select class="form-select" id="instanceStatusFilter"
-              style="width: 170px; padding: 6px 10px; font-size: 12.5px;" onchange="filterInstancesUI()">
-              <option value="ALL" data-i18n="instFilterAll">All instance states</option>
-              <option value="RUNNING">Running</option>
-              <option value="PENDING">Pending</option>
-              <option value="STOPPING">Stopping</option>
-              <option value="STOPPED">Stopped</option>
-              <option value="REBOOTING">Rebooting</option>
-              <option value="SHUTTING_DOWN">Shutting-down</option>
-              <option value="TERMINATED">Terminated</option>
-              <option value="MIGRATING">Migrating</option>
-            </select>
-
-            <div class="table-pagination-nav">
-              <span id="paginationInfo">1-10 of 10</span>
-              <button id="btnPrevPage" disabled title="Trang trước">
-                <svg class="ico ico-xs" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-chevron-left"></use>
-                </svg>
-              </button>
-              <button id="btnNextPage" disabled title="Trang sau">
-                <svg class="ico ico-xs" aria-hidden="true">
-                  <use href="/img/icons/sprite.svg#ui-chevron-right"></use>
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- Data Table -->

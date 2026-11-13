@@ -1,0 +1,4 @@
+/* Trạng thái đồng bộ của nhóm riêng của máy: cấu hình đã lưu khác với firewall đã áp dụng. */
+.sge-sync { margin: 0 0 14px; }
+.sge-sync[hidden] { display: none; }
+.sge-sync-ok { background: #e7f6ec; border-color: #9bd6ae; color: #1d6b34; }

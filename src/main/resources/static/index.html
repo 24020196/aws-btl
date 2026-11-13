@@ -54,7 +54,6 @@
             <svg class="ico ico-xl" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-ec2"></use></svg>
             <span data-i18n="navDashboard">Bảng điều khiển EC2</span>
           </h1>
-          <p class="page-subtitle" data-i18n="dashSubtitle">Máy ảo NovaVM trên EC2 Bare Metal ở 2 vùng, chuyển vùng bằng EBS snapshot và Route 53.</p>
         </div>
         <div class="page-actions">
           <button type="button" class="btn btn-secondary ico-label" onclick="refreshDashboard()">
@@ -73,87 +72,23 @@
         <div class="card-header">
           <div>
             <h2 class="card-title" id="dashResTitle" data-i18n="dashResources">Tài nguyên</h2>
-            <div class="card-sub" data-i18n="dashResourcesSub">Bạn đang dùng các tài nguyên sau ở Sydney (ap-southeast-2) và N. Virginia (us-east-1).</div>
           </div>
         </div>
         <div class="dash-res-grid">
-          <a class="svc-tile" href="/instances.html">
+          <div class="svc-tile">
             <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-instance"></use></svg>
             <div><div class="svc-tile-label" data-i18n="dashResRunning">Máy ảo (đang chạy)</div><div class="svc-tile-value" id="resRunning">–</div></div>
-          </a>
-          <a class="svc-tile" href="/instances.html">
+          </div>
+          <div class="svc-tile">
             <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-instance"></use></svg>
             <div><div class="svc-tile-label" data-i18n="dashResInstances">Máy ảo (tất cả)</div><div class="svc-tile-value" id="resInstances">–</div></div>
-          </a>
-          <div class="svc-tile">
-            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-ebs"></use></svg>
-            <div><div class="svc-tile-label">Volumes</div><div class="svc-tile-value" id="resVolumes">–</div><div class="svc-tile-foot" id="resVolumesGb"></div></div>
           </div>
           <div class="svc-tile">
-            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-snapshot"></use></svg>
-            <div><div class="svc-tile-label">Snapshots</div><div class="svc-tile-value" id="resSnapshots">–</div><div class="svc-tile-foot" data-i18n="dashResSnapshotsFoot">tạo khi chuyển vùng</div></div>
-          </div>
-          <a class="svc-tile" href="/launch.html">
             <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-key-pair"></use></svg>
             <div><div class="svc-tile-label">Key pairs</div><div class="svc-tile-value" id="resKeys">–</div></div>
-          </a>
-          <div class="svc-tile">
-            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-security-group"></use></svg>
-            <div><div class="svc-tile-label">Security groups</div><div class="svc-tile-value" id="resSgs">–</div></div>
-          </div>
-          <div class="svc-tile">
-            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-elastic-ip"></use></svg>
-            <div><div class="svc-tile-label">Elastic IPs</div><div class="svc-tile-value" id="resEips">–</div></div>
-          </div>
-          <div class="svc-tile">
-            <svg class="ico" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
-            <div><div class="svc-tile-label">Regions</div><div class="svc-tile-value">2</div></div>
           </div>
         </div>
       </section>
-
-      <!-- Tình trạng 2 vùng (giống khối Service health của EC2 Dashboard) -->
-      <div class="region-grid">
-        <section class="region-card">
-          <div class="region-card-header">
-            <div class="region-title">
-              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
-              <span>Sydney</span> <code>ap-southeast-2</code>
-            </div>
-            <span class="badge badge-active" data-i18n="dashRegionPrimary">Vùng chính</span>
-          </div>
-          <dl class="region-facts">
-            <dt>Region</dt><dd>Region A</dd>
-            <dt>VPC subnet</dt><dd><code>10.0.1.0/24</code></dd>
-            <dt data-i18n="dashRegionRole">Vai trò</dt><dd data-i18n="dashRegionRoleA">Chạy production</dd>
-            <dt data-i18n="dashRegionInstances">Máy ảo tại vùng</dt><dd><strong id="regionAInstanceCount">–</strong></dd>
-          </dl>
-          <div class="region-health">
-            <svg class="ico ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check-circle"></use></svg>
-            <span data-i18n="dashRegionOk">Dịch vụ hoạt động bình thường</span>
-          </div>
-        </section>
-
-        <section class="region-card">
-          <div class="region-card-header">
-            <div class="region-title">
-              <svg class="ico ico-lg" aria-hidden="true"><use href="/img/icons/sprite.svg#svc-region"></use></svg>
-              <span>N. Virginia</span> <code>us-east-1</code>
-            </div>
-            <span class="badge badge-standby" data-i18n="dashRegionStandby">Vùng dự phòng</span>
-          </div>
-          <dl class="region-facts">
-            <dt>Region</dt><dd>Region B</dd>
-            <dt>VPC subnet</dt><dd><code>10.1.1.0/24</code></dd>
-            <dt data-i18n="dashRegionRole">Vai trò</dt><dd data-i18n="dashRegionRoleB">Dự phòng, khôi phục sau sự cố</dd>
-            <dt data-i18n="dashRegionInstances">Máy ảo tại vùng</dt><dd><strong id="regionBInstanceCount">–</strong></dd>
-          </dl>
-          <div class="region-health">
-            <svg class="ico ico-success" aria-hidden="true"><use href="/img/icons/sprite.svg#ui-check-circle"></use></svg>
-            <span data-i18n="dashRegionOk">Dịch vụ hoạt động bình thường</span>
-          </div>
-        </section>
-      </div>
 
       <!-- Tóm tắt chuyển vùng -->
       <section class="card mig-summary" aria-labelledby="migSumTitle">

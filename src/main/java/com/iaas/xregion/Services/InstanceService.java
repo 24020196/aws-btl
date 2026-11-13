@@ -7,26 +7,30 @@ import com.iaas.xregion.Entity.NovaEntity;
 import com.iaas.xregion.Entity.RegionType;
 import com.iaas.xregion.Entity.UserEntity;
 import com.iaas.xregion.Exceptions.AppException;
+import com.iaas.xregion.Exceptions.ConflictException;
 import com.iaas.xregion.Exceptions.ResourceNotFoundException;
 import com.iaas.xregion.Model.Request.InstanceActionRequest;
 import com.iaas.xregion.Model.Request.LaunchInstanceRequest;
-import com.iaas.xregion.Model.Request.UpdateInstanceRequest;
 import com.iaas.xregion.Model.Response.InstanceResponse;
 import com.iaas.xregion.Entity.InstanceStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchGetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch;
 import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,7 +44,35 @@ public class InstanceService {
     private final EventBridgeGatewayClient eventBridgeGatewayClient;
     private final AuthService authService;
     private final LaunchAdmissionService launchAdmissionService;
-    private final Map<String, Integer> instanceEbsSizeMap = new ConcurrentHashMap<>();
+
+    @Autowired(required = false)
+    private DynamoDbEnhancedClient enhancedClient;
+
+    /**
+     * Ma trận điều kiện tiên quyết của SPEC-01 (mục 2) và trạng thái chuyển tiếp tương ứng.
+     *
+     * <p>START/STOP/REBOOT sai điều kiện trả 400 qua {@link AppException}; TERMINATE sai điều kiện
+     * trả 409 qua {@link ConflictException} — đúng bảng Pre-conditions của Spec.
+     */
+    private void requireActionPrecondition(String action, String currentStatus) {
+        String status = currentStatus == null ? "" : currentStatus.trim().toUpperCase(Locale.ROOT);
+        switch (action) {
+            case "START", "STOP", "REBOOT" -> {
+                String required = "START".equals(action) ? "STOPPED" : "RUNNING";
+                if (!required.equals(status)) {
+                    throw new AppException("Hành động " + action + " chỉ được phép khi máy ảo ở trạng thái "
+                            + required + " (hiện tại: " + (status.isEmpty() ? "không xác định" : status) + ").");
+                }
+            }
+            case "TERMINATE", "DELETE" -> {
+                if (!Set.of("RUNNING", "STOPPED", "FAILED").contains(status)) {
+                    throw new ConflictException("Terminate chỉ được phép khi máy ảo ở trạng thái RUNNING, STOPPED "
+                            + "hoặc FAILED (hiện tại: " + (status.isEmpty() ? "không xác định" : status) + ").");
+                }
+            }
+            default -> throw new IllegalArgumentException("Unknown lifecycle action: " + action);
+        }
+    }
 
     private void updateInstanceState(String id, String status, String expectedStatus) {
         Expression.Builder condition = Expression.builder().expression("attribute_exists(instance_id)");
@@ -85,6 +117,18 @@ public class InstanceService {
         return false;
     }
 
+    private static final java.util.Set<String> DEAD_NOVA_STATUSES = java.util.Set.of(
+            "TERMINATED", "DELETED", "ERROR", "SHELVED_OFFLOADED_DELETED");
+
+    /** Nova row that can still represent the instance: not deleted/terminated/errored. */
+    private static boolean isLiveNova(NovaEntity nova) {
+        if (nova == null || nova.getNovaId() == null || nova.getNovaId().trim().isEmpty()) {
+            return false;
+        }
+        String status = nova.getStatus() == null ? "" : nova.getStatus().trim();
+        return !DEAD_NOVA_STATUSES.contains(status.toUpperCase(java.util.Locale.ROOT));
+    }
+
     private void autoLinkNovaIfAvailable(InstanceEntity entity) {
         if (entity == null || entity.getActiveNovaId() != null || novaTable == null) {
             return;
@@ -99,41 +143,102 @@ public class InstanceService {
             if (index == null) return;
             var query = index.query(r -> r.queryConditional(
                     QueryConditional.keyEqualTo(Key.builder().partitionValue(entity.getInstanceId()).build())));
+            // The index is keyed on instance_id only, so rows come back in no meaningful order
+            // and may include terminated servers from earlier launches. Picking page.items()
+            // directly relinked a dead Nova and published RUNNING while the VM was SHUTOFF.
+            var live = new java.util.ArrayList<NovaEntity>();
             for (var page : query) {
                 for (NovaEntity nova : page.items()) {
-                    if (nova != null && nova.getNovaId() != null) {
-                        entity.setActiveNovaId(nova.getNovaId());
-                        if (entity.getNovaIds() == null) {
-                            entity.setNovaIds(new java.util.ArrayList<>());
-                        }
-                        if (!entity.getNovaIds().contains(nova.getNovaId())) {
-                            entity.getNovaIds().add(nova.getNovaId());
-                        }
-                        if ("ACTIVE".equalsIgnoreCase(nova.getStatus())) {
-                            entity.setCurrentStatus("RUNNING");
-                        }
-                        entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
-                        instancesTable.putItem(entity);
-                        log.info("Auto-linked current Nova [{}] to instance [{}] with status [{}]",
-                                nova.getNovaId(), entity.getInstanceId(), entity.getCurrentStatus());
-                        return;
+                    if (isLiveNova(nova)) {
+                        live.add(nova);
                     }
                 }
             }
+            if (live.isEmpty()) {
+                log.debug("Auto-link skipped for instance [{}]: no live Nova record", entity.getInstanceId());
+                return;
+            }
+            live.sort(java.util.Comparator.comparing(NovaEntity::getCreatedAt,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+            NovaEntity chosen = live.get(live.size() - 1);
+            entity.setActiveNovaId(chosen.getNovaId());
+            if (entity.getNovaIds() == null) {
+                entity.setNovaIds(new java.util.ArrayList<>());
+            }
+            if (!entity.getNovaIds().contains(chosen.getNovaId())) {
+                entity.getNovaIds().add(chosen.getNovaId());
+            }
+            String novaStatus = chosen.getStatus() == null ? "" : chosen.getStatus().toUpperCase(java.util.Locale.ROOT);
+            // Only RUNNING when Nova says so; otherwise keep the transition state instead of
+            // asserting a status the VM is not actually in.
+            switch (novaStatus) {
+                case "ACTIVE" -> entity.setCurrentStatus("RUNNING");
+                case "SHUTOFF", "SHELVED", "SHELVED_OFFLOADED" -> entity.setCurrentStatus("STOPPED");
+                default -> { }
+            }
+            entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
+            instancesTable.putItem(entity);
+            log.info("Auto-linked current Nova [{}] to instance [{}] with status [{}]",
+                    chosen.getNovaId(), entity.getInstanceId(), entity.getCurrentStatus());
         } catch (Exception e) {
-            log.debug("Auto-link Nova for instance [{}] not ready: {}", entity.getInstanceId(), e.getMessage());
+            log.warn("Auto-link Nova for instance [{}] failed: {}", entity.getInstanceId(), e.toString());
         }
+    }
+
+    private Map<String, NovaEntity> batchLoadNova(Collection<String> novaIds) {
+        Map<String, NovaEntity> result = new HashMap<>();
+        if (enhancedClient == null || novaTable == null || novaIds == null || novaIds.isEmpty()) {
+            return result;
+        }
+        List<String> distinctIds = novaIds.stream()
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+        for (int i = 0; i < distinctIds.size(); i += 100) {
+            List<String> chunk = distinctIds.subList(i, Math.min(i + 100, distinctIds.size()));
+            ReadBatch.Builder<NovaEntity> batchBuilder = ReadBatch.builder(NovaEntity.class)
+                    .mappedTableResource(novaTable);
+            for (String nid : chunk) {
+                batchBuilder.addGetItem(Key.builder().partitionValue(nid).build());
+            }
+            enhancedClient.batchGetItem(BatchGetItemEnhancedRequest.builder()
+                            .addReadBatch(batchBuilder.build())
+                            .build())
+                    .resultsForTable(novaTable)
+                    .forEach(nova -> {
+                        if (nova != null && nova.getNovaId() != null) {
+                            result.put(nova.getNovaId(), nova);
+                        }
+                    });
+        }
+        return result;
     }
 
     public List<InstanceResponse> getAllInstances() {
         String currentUser = getCurrentUsername();
         try {
-            return instancesTable.scan()
+            List<InstanceEntity> owned = instancesTable.scan()
                     .items()
                     .stream()
                     .filter(entity -> isOwner(entity, currentUser))
-                    .peek(this::autoLinkNovaIfAvailable)
-                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            owned.parallelStream().forEach(this::autoLinkNovaIfAvailable);
+
+            Map<String, NovaEntity> novaMap = (enhancedClient != null)
+                    ? batchLoadNova(owned.stream().map(InstanceEntity::getActiveNovaId).collect(Collectors.toList()))
+                    : Collections.emptyMap();
+
+            return owned.stream()
+                    .map(entity -> {
+                        if (enhancedClient != null) {
+                            NovaEntity preloaded = entity.getActiveNovaId() != null
+                                    ? novaMap.get(entity.getActiveNovaId())
+                                    : null;
+                            return mapToResponse(entity, preloaded);
+                        }
+                        return mapToResponse(entity);
+                    })
                     .sorted((a, b) -> Long.compare(b.getUpdatedAt(), a.getUpdatedAt()))
                     .collect(Collectors.toList());
         } catch (Exception e) {
@@ -146,7 +251,10 @@ public class InstanceService {
         String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
-            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+            entity = instancesTable.getItem(GetItemEnhancedRequest.builder()
+                    .key(Key.builder().partitionValue(id).build())
+                    .consistentRead(true)
+                    .build());
         } catch (Exception e) {
             log.error("Failed to get instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi kết nối AWS DynamoDB khi tra cứu máy ảo: " + e.getMessage());
@@ -158,9 +266,26 @@ public class InstanceService {
         return mapToResponse(entity);
     }
 
+    public static final int MAX_INSTANCES_PER_USER = 5;
+    private static final Set<String> QUOTA_COUNTED_STATUSES = Set.of(
+            "PENDING", "RUNNING", "STOPPED", "REBOOTING", "STOPPING", "MIGRATING"
+    );
+
     public InstanceResponse launchInstance(LaunchInstanceRequest request) {
         String currentUser = getCurrentUsername();
         launchAdmissionService.validate(request, currentUser);
+
+        UserEntity currentUserEntity = authService.findUserByUsername(currentUser);
+        String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
+                ? currentUserEntity.getUserId()
+                : ("usr-" + currentUser);
+
+        long activeCount = countActiveQuotaInstances(userId, currentUser);
+        if (activeCount >= MAX_INSTANCES_PER_USER) {
+            throw new ConflictException("Bạn đã đạt giới hạn tối đa " + MAX_INSTANCES_PER_USER
+                    + " máy ảo đang hoạt động. Vui lòng xóa bớt máy ảo trước khi tạo mới.");
+        }
+
         String id = "i-" + UUID.randomUUID().toString().substring(0, 8);
         long nowSec = TimeSyncUtil.nowEpochSeconds();
 
@@ -168,19 +293,11 @@ public class InstanceService {
         String keyId = (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty())
                 ? request.getKeyPairName().trim()
                 : "xregion-key";
-        String securityGroup = (request.getSecurityGroup() != null && !request.getSecurityGroup().trim().isEmpty())
-                ? request.getSecurityGroup().trim()
-                : "sg-default";
         String dns = (request.getDomainName() != null && !request.getDomainName().trim().isEmpty())
                 ? request.getDomainName().trim()
                 : request.getName().trim().toLowerCase().replaceAll("[^a-z0-9.-]", "-") + ".xregion.net";
 
-        UserEntity currentUserEntity = authService.findUserByUsername(currentUser);
-        String userId = (currentUserEntity != null && currentUserEntity.getUserId() != null)
-                ? currentUserEntity.getUserId()
-                : ("usr-" + currentUser);
-        int initialEbsGb = (request.getEbsSizeGb() > 0) ? request.getEbsSizeGb() : 10;
-        instanceEbsSizeMap.put(id, initialEbsGb);
+        int initialEbsGb = request.getEbsSizeGb();
 
         // 1. Initial Streamlined Instance record in XRegion-Instances with PENDING status (active_nova_id not yet assigned)
         InstanceEntity entity = InstanceEntity.builder()
@@ -211,28 +328,35 @@ public class InstanceService {
 
         // Bắn sự kiện qua API Gateway vào EventBridge để Step Function LaunchInstance tự động cấp phát và đồng bộ DynamoDB
         try {
-            int ebsSize = request.getEbsSizeGb() > 0 ? request.getEbsSizeGb() : 10;
+            int ebsSize = request.getEbsSizeGb();
             String volType = (request.getEbsVolumeType() != null && !request.getEbsVolumeType().trim().isEmpty())
                     ? request.getEbsVolumeType().trim() : "gp3";
-            String imageId = (request.getImageId() != null && !request.getImageId().trim().isEmpty())
-                    ? request.getImageId().trim() : "72e9830a-53ef-4c36-8b5c-fae3b96a3fd0";
+            String imageId = (request.getImageId() != null) ? request.getImageId().trim() : "";
+            String instName = (request.getName() != null) ? request.getName().trim() : "";
 
             eventBridgeGatewayClient.sendInstanceLaunchEvent(
                     id,
-                    request.getName().trim(),
+                    instName,
                     ebsSize,
                     volType,
                     request.getFlavor(),
                     imageId,
                     keyId,
-                    currentUser);
+                    currentUser,
+                    region,
+                    request.getInboundRules(),
+                    request.getOutboundRules());
         } catch (Exception e) {
             if (e instanceof EventBridgeGatewayClient.EventRejectedException) {
-                try {
-                    updateInstanceState(id, InstanceStatus.FAILED.name(), InstanceStatus.PENDING.name());
-                } catch (Exception stateError) {
-                    e.addSuppressed(stateError);
-                }
+                // The gateway refused the event: nothing was ever dispatched, so the request
+                // is definitively failed and the record must not stay PENDING.
+                markFailed(id, InstanceStatus.FAILED.name(), "EventBridge từ chối: " + e.getMessage(), e);
+            } else {
+                // Transport failure/timeout: we cannot prove the event was not delivered.
+                // Leaving it PENDING hides the request forever, and retrying blindly could
+                // launch a second VM. Record it as unknown so it is visible and reconcilable.
+                markFailed(id, InstanceStatus.PENDING.name(),
+                        "Chưa xác minh được sự kiện launch đã được nhận: " + e.getMessage(), e);
             }
             throw new AppException("Không gửi được yêu cầu tạo máy ảo: " + e.getMessage(), e);
         }
@@ -240,149 +364,47 @@ public class InstanceService {
         return mapToResponse(entity);
     }
 
-    public InstanceResponse updateInstance(String id, UpdateInstanceRequest request) {
-        String currentUser = getCurrentUsername();
-        InstanceEntity entity;
-        try {
-            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
-        } catch (Exception e) {
-            log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
-            throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
+    private long countActiveQuotaInstances(String userId, String currentUser) {
+        var page = instancesTable.scan();
+        if (page == null || page.items() == null) {
+            return 0;
         }
-
-        if (entity == null || !isOwner(entity, currentUser)) {
-            throw new ResourceNotFoundException("Instance not found: " + id);
-        }
-
-        if (Boolean.TRUE.equals(entity.getMigrationLock()) || "MIGRATING".equalsIgnoreCase(entity.getCurrentStatus())) {
-            throw new AppException(
-                    "Máy ảo đang trong quá trình chuyển vùng (MIGRATING), không thể chỉnh sửa cấu hình lúc này.");
-        }
-
-        NovaEntity activeNova = null;
-        if (entity.getActiveNovaId() != null && novaTable != null) {
-            try {
-                activeNova = novaTable.getItem(Key.builder().partitionValue(entity.getActiveNovaId()).build());
-            } catch (Exception e) {
-                log.warn("Could not fetch active Nova [{}] for update: {}", entity.getActiveNovaId(), e.getMessage());
-            }
-        }
-
-        String oldName = (activeNova != null && activeNova.getInstanceName() != null) ? activeNova.getInstanceName() : entity.getInstanceName();
-        String oldFlavor = (activeNova != null && activeNova.getFlavor() != null) ? activeNova.getFlavor() : (entity.getFlavor() != null ? entity.getFlavor() : "m1.medium");
-        String oldKey = (activeNova != null && activeNova.getKeyId() != null) ? activeNova.getKeyId() : entity.getKeyId();
-        String oldSg = (activeNova != null && activeNova.getSecurityGroupId() != null) ? activeNova.getSecurityGroupId() : entity.getSecurityGroupId();
-        String oldEip = (activeNova != null && activeNova.getElasticIp() != null) ? activeNova.getElasticIp() : entity.getElasticIp();
-
-        boolean isStopped = "STOPPED".equalsIgnoreCase(entity.getCurrentStatus())
-                || "SHUTOFF".equalsIgnoreCase(entity.getCurrentStatus());
-
-        // Quy tắc AWS EC2 Nhóm 2 (Cold-modify): Thay đổi Instance Type (Flavor) bắt buộc máy ảo phải ở trạng thái STOPPED
-        String requestedFlavor = request.getFlavor() != null ? request.getFlavor().trim() : oldFlavor;
-        if (!requestedFlavor.equalsIgnoreCase(oldFlavor)) {
-            if (!isStopped) {
-                throw new AppException(
-                        "Theo quy tắc AWS EC2, bạn bắt buộc phải Dừng máy ảo (Stop) trước khi thay đổi gói cấu hình phần cứng (Instance Type / Flavor từ "
-                                + oldFlavor + " sang " + requestedFlavor + ")!");
-            }
-            if (activeNova != null) {
-                activeNova.setFlavor(requestedFlavor);
-            }
-            entity.setFlavor(requestedFlavor);
-        }
-
-        // Quy tắc AWS EC2 Nhóm 3 & 1 (EBS Elastic Volumes): Chỉ cho phép tăng dung lượng ổ cứng, không hỗ trợ giảm (Downsize)
-        int currentEbsSize = instanceEbsSizeMap.getOrDefault(id, 10);
-        if (request.getEbsSizeGb() != null) {
-            if (request.getEbsSizeGb() < currentEbsSize) {
-                throw new AppException(
-                        "AWS EBS chỉ cho phép mở rộng (tăng) kích thước ổ cứng, không hỗ trợ giảm dung lượng trực tiếp (Hiện tại: "
-                                + currentEbsSize + " GB, Yêu cầu: " + request.getEbsSizeGb() + " GB).");
-            }
-            instanceEbsSizeMap.put(id, request.getEbsSizeGb());
-        }
-
-        // Quy tắc AWS EC2 Nhóm 1 (Hot-modify): Sửa trực tiếp khi máy đang chạy
-        String newName = request.getName().trim();
-        if (activeNova != null) {
-            activeNova.setInstanceName(newName);
-        }
-        entity.setInstanceName(newName);
-
-        if (request.getKeyPairName() != null && !request.getKeyPairName().trim().isEmpty()) {
-            String newKey = request.getKeyPairName().trim();
-            String newKeyId = newKey.startsWith("key-") ? newKey : "key-" + newKey;
-            if (activeNova != null) {
-                activeNova.setKeyId(newKeyId);
-            }
-            entity.setKeyId(newKeyId);
-        }
-        if (request.getDomainName() != null && !request.getDomainName().trim().isEmpty()) {
-            entity.setDns(request.getDomainName().trim());
-        }
-        if (request.getSecurityGroupId() != null && !request.getSecurityGroupId().trim().isEmpty()) {
-            String newSgId = request.getSecurityGroupId().trim();
-            if (activeNova != null) {
-                activeNova.setSecurityGroupId(newSgId);
-            }
-            entity.setSecurityGroupId(newSgId);
-        }
-        if (request.getElasticIpAction() != null) {
-            String eipAct = request.getElasticIpAction().trim().toUpperCase();
-            if ("ALLOCATE_NEW".equals(eipAct)) {
-                String newEip = (request.getCustomElasticIp() != null && !request.getCustomElasticIp().trim().isEmpty())
-                        ? request.getCustomElasticIp().trim()
-                        : "3.27." + (new Random().nextInt(200) + 10) + "." + (new Random().nextInt(250) + 1);
-                if (activeNova != null) {
-                    activeNova.setElasticIp(newEip);
-                }
-                entity.setElasticIp(newEip);
-            } else if ("DISASSOCIATE".equals(eipAct)) {
-                if (activeNova != null) {
-                    activeNova.setElasticIp("Chưa gán");
-                }
-                entity.setElasticIp("Chưa gán");
-            }
-        }
-
-        if (activeNova != null && novaTable != null) {
-            try {
-                novaTable.putItem(activeNova);
-            } catch (Exception e) {
-                log.error("Failed to update active Nova in AWS DynamoDB: {}", e.getMessage());
-            }
-        }
-
-        try {
-            instancesTable.putItem(entity);
-        } catch (Exception e) {
-            log.error("Failed to update instance in AWS DynamoDB: {}", e.getMessage());
-            throw new AppException("Lỗi cập nhật thông tin máy ảo vào AWS DynamoDB: " + e.getMessage());
-        }
-
-        auditLogService.logAction("UPDATE_VM", "INSTANCE", id,
-                String.format(
-                        "Updated instance [%s -> %s], flavor [%s -> %s], sg [%s -> %s], eip [%s -> %s], ebs [%dGB]",
-                        oldName, entity.getInstanceName(), oldFlavor, entity.getFlavor(),
-                        oldSg, entity.getSecurityGroupId(), oldEip, entity.getElasticIp(),
-                        instanceEbsSizeMap.getOrDefault(id, 10)));
-
-        try {
-            eventBridgeGatewayClient.sendInstanceLifecycleEvent(
-                    "MODIFY", id, entity.getInstanceName(), entity.getFlavor(),
-                    entity.getCurrentRegion(), entity.getKeyId(), currentUser);
-        } catch (Exception e) {
-            log.warn("Không thể gửi sự kiện MODIFY qua API Gateway EventBridge: {}", e.getMessage());
-        }
-
-        return mapToResponse(entity);
+        return page.items().stream()
+                .filter(e -> {
+                    if (userId != null && userId.equalsIgnoreCase(e.getUserId())) {
+                        return true;
+                    }
+                    return currentUser != null && currentUser.equalsIgnoreCase(e.getUsername());
+                })
+                .filter(e -> e.getCurrentStatus() != null
+                        && QUOTA_COUNTED_STATUSES.contains(e.getCurrentStatus().toUpperCase(Locale.ROOT)))
+                .count();
     }
+
+    private void markFailed(String id, String status, String reason, Exception cause) {
+        try {
+            updateInstanceState(id, status, InstanceStatus.PENDING.name());
+            log.warn("Launch request [{}] left in [{}]: {}", id, status, reason);
+        } catch (Exception stateError) {
+            // Both the event send and the state write failed: surface both, never swallow.
+            cause.addSuppressed(stateError);
+            log.error("Launch request [{}] could not be marked as [{}]: {}", id, status,
+                    stateError.getMessage());
+        }
+    }
+
+    // SPEC-01 mục 3: cấu hình máy ảo là bất biến sau launch. Endpoint PUT /api/instances/{id} và
+    // toàn bộ logic updateInstance (flavor, đĩa, key, SG, EIP, tên) đã được loại bỏ; muốn cấu hình
+    // khác phải Terminate rồi Launch máy mới.
 
     public InstanceResponse executeAction(String id, InstanceActionRequest request) {
         String currentUser = getCurrentUsername();
         InstanceEntity entity;
         try {
-            entity = instancesTable.getItem(Key.builder().partitionValue(id).build());
+            entity = instancesTable.getItem(GetItemEnhancedRequest.builder()
+                    .key(Key.builder().partitionValue(id).build())
+                    .consistentRead(true)
+                    .build());
         } catch (Exception e) {
             log.error("Failed to read instance from AWS DynamoDB: {}", e.getMessage());
             throw new AppException("Lỗi đọc máy ảo từ AWS DynamoDB: " + e.getMessage());
@@ -394,10 +416,11 @@ public class InstanceService {
 
         String action = request.getAction().toUpperCase(Locale.ROOT);
         String previousStatus = entity.getCurrentStatus();
+        requireActionPrecondition(action, previousStatus);
 
         switch (action) {
             case "START":
-                entity.setCurrentStatus(InstanceStatus.PENDING.name());
+                entity.setCurrentStatus(InstanceStatus.STARTING.name());
                 entity.setLastMigrationTimestamp(TimeSyncUtil.nowEpochSeconds());
                 break;
             case "STOP":
@@ -452,6 +475,10 @@ public class InstanceService {
                 log.warn("Could not fetch active Nova [{}] for instance [{}]: {}", entity.getActiveNovaId(), entity.getInstanceId(), e.getMessage());
             }
         }
+        return mapToResponse(entity, activeNova);
+    }
+
+    public InstanceResponse mapToResponse(InstanceEntity entity, NovaEntity activeNova) {
 
         String regionCode = (activeNova != null && activeNova.getRegion() != null)
                 ? activeNova.getRegion()
@@ -467,6 +494,7 @@ public class InstanceService {
         } else if ("FAILED".equalsIgnoreCase(entity.getCurrentStatus())) {
             status = InstanceStatus.FAILED.name();
         } else if ("STOPPING".equalsIgnoreCase(entity.getCurrentStatus())
+                || "STARTING".equalsIgnoreCase(entity.getCurrentStatus())
                 || "REBOOTING".equalsIgnoreCase(entity.getCurrentStatus())
                 || "SHUTTING_DOWN".equalsIgnoreCase(entity.getCurrentStatus())) {
             status = entity.getCurrentStatus().toUpperCase(Locale.ROOT);
@@ -544,15 +572,18 @@ public class InstanceService {
                                 : "app.xregion.net"))
                 .imageId(entity.getImageId())
                 .imageName(null)
-                .consoleUrl("https://console.xregion.internal/vnc?vm=" + entity.getInstanceId())
+                // SPEC-01: quản trị máy ảo chỉ qua SSH terminal, không còn Web VNC console.
+                .consoleUrl(null)
                 .createdAt(timestampMs)
                 .updatedAt(timestampMs)
                 .keyId(keyId)
                 .keyName(keyId != null ? keyId : "xregion-key")
                 .volumeId(volumeId)
                 .requestedSizeGb(entity.getRequestedSizeGb())
-                .ebsSizeGb(entity.getConfirmedSizeGb() != null ? entity.getConfirmedSizeGb() : entity.getRequestedSizeGb() != null ? entity.getRequestedSizeGb()
-                        : instanceEbsSizeMap.getOrDefault(entity.getInstanceId(), 10))
+                // Dung lượng đã xác nhận do Step Function ghi (confirmed_size_gb); nếu chưa có thì dùng
+                // kích thước yêu cầu đã lưu, không dùng bộ nhớ tạm của tiến trình backend.
+                .ebsSizeGb(entity.getConfirmedSizeGb() != null ? entity.getConfirmedSizeGb()
+                        : entity.getRequestedSizeGb())
                 .securityGroupId(sgId)
                 .build();
     }

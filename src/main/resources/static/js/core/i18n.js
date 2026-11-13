@@ -398,8 +398,7 @@ function applyPageTranslations() {
   const navMap = [
     { href: '/index.html', vi: 'Trang Chủ Tổng Quan', en: 'Overview Dashboard' },
     { href: '/instances.html', vi: 'Danh Sách Máy Ảo', en: 'Instances' },
-    { href: '/launch.html', vi: 'Khởi Tạo Máy Ảo (+ Launch VM)', en: 'Launch Instance (+ Launch VM)' },
-    { href: '/account-tokens.html', vi: 'Tài Khoản & API Token', en: 'Account & API Tokens' }
+    { href: '/launch.html', vi: 'Khởi Tạo Máy Ảo (+ Launch VM)', en: 'Launch Instance (+ Launch VM)' }
   ];
   navMap.forEach(item => {
     document.querySelectorAll(`.sub-nav a[href="${item.href}"]`).forEach(a => {

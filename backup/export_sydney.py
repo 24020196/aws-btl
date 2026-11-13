@@ -13,14 +13,19 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-REGION = "ap-southeast-2"
+DEFAULT_REGION = "ap-southeast-2"
 ACCOUNT = "291634989063"
+REGION_PREFIX = {
+    "ap-southeast-2": "sydney",
+    "us-east-1": "virginia",
+}
 
 
 class Exporter:
-    def __init__(self, root):
+    def __init__(self, root, region=DEFAULT_REGION):
         self.root = root
-        self.session = boto3.Session(region_name=REGION)
+        self.region = region
+        self.session = boto3.Session(region_name=region)
         self.clients = {}
         self.errors = []
         self.counts = {}
@@ -182,14 +187,37 @@ class Exporter:
                 for url in values:
                     self.optional(f"sqs/{url.rsplit('/', 1)[-1]}/attributes.json", "sqs", "get_queue_attributes", QueueUrl=url, AttributeNames=["All"])
                     self.optional(f"sqs/{url.rsplit('/', 1)[-1]}/tags.json", "sqs", "list_queue_tags", QueueUrl=url)
+            elif service == "scheduler":
+                self.counts["schedules"] = len(values)
+                for sched in values:
+                    detail = self.optional(
+                        f"eventbridge/schedules/{sched['Name']}.json",
+                        "scheduler",
+                        "get_schedule",
+                        Name=sched["Name"],
+                        GroupName=sched.get("GroupName", "default"),
+                    )
+                    if detail and detail.get("Target", {}).get("RoleArn"):
+                        self.roles.add(detail["Target"]["RoleArn"])
         buckets = []
         s3 = self.client("s3")
         for bucket in self.pages("s3", "list_buckets", "Buckets"):
             if "xregion" in bucket["Name"].lower():
-                location = s3.get_bucket_location(Bucket=bucket["Name"]).get("LocationConstraint")
-                if location == REGION:
+                location = s3.get_bucket_location(Bucket=bucket["Name"]).get("LocationConstraint") or "us-east-1"
+                if location == self.region:
                     buckets.append(bucket)
         self.save("inventory/additional-s3.json", buckets)
+
+    def ssm(self):
+        doc_count = 0
+        doc = self.optional("ssm/documents/XRegion-NetworkGateway/description.json", "ssm", "describe_document", Name="XRegion-NetworkGateway")
+        if doc:
+            doc_count += 1
+            self.optional("ssm/documents/XRegion-NetworkGateway/content.json", "ssm", "get_document", Name="XRegion-NetworkGateway")
+        param_name = f"/xregion/{self.region}/launch/admission"
+        param = self.optional("ssm/parameters/launch-admission.json", "ssm", "get_parameter", Name=param_name)
+        self.counts["ssm_documents"] = doc_count
+        self.counts["ssm_parameters"] = 1 if param else 0
 
     def _find_roles(self, node):
         if isinstance(node, dict):
@@ -203,11 +231,23 @@ class Exporter:
 
     def infrastructure(self):
         ec2 = self.client("ec2")
-        instances = [i for r in self.pages("ec2", "describe_instances", "Reservations") for i in r["Instances"]]
+        instances = [
+            i
+            for r in self.pages("ec2", "describe_instances", "Reservations")
+            for i in r["Instances"]
+            if i["State"]["Name"] != "terminated"
+        ]
         for i in instances:
-            if i["InstanceId"] == "i-056d7f3dd24156234" or "xregion" in json.dumps(i.get("Tags", [])).lower():
-                self.vpcs.add(i["VpcId"])
-        instances = [i for i in instances if i.get("VpcId") in self.vpcs and i["State"]["Name"] != "terminated"]
+            tags_lower = json.dumps(i.get("Tags", [])).lower()
+            if (
+                i["InstanceId"] in {"i-056d7f3dd24156234", "i-07738a186534cb5ba"}
+                or "xregion" in tags_lower
+                or "regiona-tempec2" in tags_lower
+                or "regionb-tempec2" in tags_lower
+            ):
+                if i.get("VpcId"):
+                    self.vpcs.add(i["VpcId"])
+        instances = [i for i in instances if i.get("VpcId") in self.vpcs]
         self.save("ec2/instances.json", instances)
         self.counts["ec2_instances"] = len(instances)
         profile_names = [i["IamInstanceProfile"]["Arn"].split("/")[-1] for i in instances if i.get("IamInstanceProfile")]
@@ -261,13 +301,13 @@ class Exporter:
         if identity["Account"] != ACCOUNT:
             raise RuntimeError("Wrong account; export refused")
         self.save("identity.json", identity)
-        for step in [self.lambdas, self.workflows, self.tables, self.events, self.apis, self.infrastructure, self.iam, self.monitoring, self.additional_inventory]:
+        for step in [self.lambdas, self.workflows, self.tables, self.events, self.apis, self.infrastructure, self.ssm, self.iam, self.monitoring, self.additional_inventory]:
             print(step.__name__, flush=True)
             step()
         checksums = {str(p.relative_to(self.root)).replace("\\", "/"): hashlib.sha256(p.read_bytes()).hexdigest()
                      for p in self.root.rglob("*") if p.is_file()}
         self.save("SHA256SUMS.json", checksums)
-        self.save("manifest.json", {"account": ACCOUNT, "region": REGION, "counts": self.counts,
+        self.save("manifest.json", {"account": ACCOUNT, "region": self.region, "counts": self.counts,
                   "read_errors_or_absent_optional_features": self.errors,
                   "database_items_exported": False, "ebs_included": False, "ebs_snapshots_created": False,
                   "source": "live AWS deployed resources; phase1 candidate excluded"})
@@ -276,15 +316,17 @@ class Exporter:
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--region", default=DEFAULT_REGION, help="AWS region to export (e.g. ap-southeast-2, us-east-1)")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--resume", action="store_true", help="Retry a retained partial export")
     args = parser.parse_args()
-    output = args.output or Path(__file__).parent / "snapshots" / datetime.now(timezone.utc).strftime("sydney-%Y%m%dT%H%M%SZ")
+    prefix = REGION_PREFIX.get(args.region, args.region)
+    output = args.output or Path(__file__).parent / "snapshots" / datetime.now(timezone.utc).strftime(f"{prefix}-%Y%m%dT%H%M%SZ")
     if output.exists() and not args.resume:
         raise SystemExit("Output already exists; choose a new directory")
     output.mkdir(parents=True, exist_ok=args.resume)
     try:
-        Exporter(output).run()
+        Exporter(output, region=args.region).run()
     except Exception:
         print(f"Partial export retained at {output}", file=sys.stderr)
         raise
