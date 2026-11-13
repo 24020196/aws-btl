@@ -21,9 +21,6 @@ Thay vì tách rời mô tả kiến trúc và triển khai gây lặp lại, to
 
 ### 1.2 Sơ đồ Đồ thị Step Function (`LaunchInstance`)
 
-> [!TIP]
-> Bạn có thể chụp ảnh đồ thị **Workflow Studio** từ AWS Step Functions Console lưu vào đường dẫn `docs-writer/img/stepfunction_launch_instance.png` để hiển thị trực tiếp bên dưới.
-
 ![Sơ đồ AWS Step Function LaunchInstance](img/stepfunction_launch_instance.png)
 
 
@@ -81,27 +78,6 @@ stateDiagram-v2
 ### 2.2 Sơ đồ Đồ thị Step Function (`LifecycleInstance`)
 
 ![Sơ đồ AWS Step Function LifecycleInstance](img/stepfunction_lifecycle_instance.png)
-
-```mermaid
-flowchart TD
-    Start((Start)) --> SetLoad["1. SetModeLoad<br/>(Pass: mode = LOAD)"] --> LoadInst["2. LoadInstance<br/>(Lambda: XRegion-InstanceLifecycle)"]
-    LoadInst --> ChoiceLoaded{"3. ChoiceLoaded"}
-    ChoiceLoaded -- "ALREADY_HANDLED" --> Already((AlreadyHandled))
-    ChoiceLoaded -- "REJECTED" --> Rejected((LifecycleRejected))
-    ChoiceLoaded -- "FAILED" --> Failed((LifecycleFailed))
-    ChoiceLoaded -- "already_at_target == true" --> SetSync["8. SetModeSync<br/>(Pass: mode = SYNC)"]
-    ChoiceLoaded -- "Cần thực thi" --> SetDispatch["4. SetModeDispatch<br/>(Pass: mode = DISPATCH)"] --> Dispatch["5. DispatchAction<br/>(Lambda: XRegion-InstanceLifecycle)"]
-    Dispatch --> ChoiceDisp{"ChoiceDispatched"}
-    ChoiceDisp -- "REJECTED" --> Rejected
-    ChoiceDisp -- "Đã gửi lệnh" --> WaitStatus["6. WaitStatus (5s)"] --> SetStatus["SetModeStatus<br/>(Pass: mode = STATUS)"] --> CheckStatus["7. CheckStatus<br/>(Lambda: XRegion-InstanceLifecycle)"]
-    CheckStatus --> ChoiceStatus{"ChoiceStatus<br/>(Observe-before-write)"}
-    ChoiceStatus -- "STOP -> SHUTOFF/STOPPED<br/>START -> ACTIVE<br/>REBOOT -> ACTIVE + saw_transition" --> SetSync
-    ChoiceStatus -- "START trên SHELVED" --> Rejected
-    ChoiceStatus -- "observed == ERROR" --> Failed
-    ChoiceStatus -- "Đang chuyển đổi" --> WaitStatus
-    SetSync --> SyncDDB["9. SyncDynamoDB<br/>(Lambda: XRegion-InstanceLifecycle)"] --> Succeeded((LifecycleSucceeded))
-```
-
 *Hình 1.3: Đồ thị luồng thực thi Observe-before-write của State Machine `LifecycleInstance`*
 
 ### 2.3 Giải thích từng Step & Nguyên lý Observe-before-write (`XRegion-InstanceLifecycle`)
@@ -124,26 +100,6 @@ Bảo đảm khi quản trị viên hủy một máy ảo, toàn bộ các tài 
 ### 3.2 Sơ đồ Đồ thị Step Function (`TerminateInstance`)
 
 ![Sơ đồ AWS Step Function TerminateInstance](img/stepfunction_terminate_instance.png)
-
-```mermaid
-flowchart TD
-    Start((Start)) --> LoadNet["1. LoadNetworkContext<br/>(Lambda: Network-Release)"]
-    LoadNet --> RemNat["2. RemoveNatMapping<br/>(Lambda: Network-Dispatch)"]
-    RemNat --> WaitNat["3. WaitNatCommand (3s)"] --> CheckNat["4. CheckNatCommand<br/>(Lambda: Network-CheckCommand)"]
-    CheckNat --> ChoiceNat{"5. ChoiceNatCommand<br/>($.command_status == SUCCEEDED?)"}
-    ChoiceNat -- "Chưa xong" --> WaitNat
-    ChoiceNat -- "SUCCEEDED" --> DelNova["6. DeleteNovaVM<br/>(Lambda: TerminateInstance-DeleteNova)"]
-    DelNova --> FinNet["7. FinalizeNetworkRelease<br/>(Lambda: Network-Release)"]
-    FinNet --> DelSG["8. DeleteSecurityGroup<br/>(Lambda: TerminateInstance-DeleteSecurityGroup)"]
-    DelSG --> DelVol["9. DeleteVolume<br/>(Lambda: TerminateInstance-DeleteVolume)"]
-    DelVol --> VolStatus{"10. VolumeDeletionStatus<br/>($.volume_cleanup.status == DELETED?)"}
-    VolStatus -- "Chưa DELETED" --> WaitVol["WaitVolumeDeletion (5s)"] --> DelVol
-    VolStatus -- "DELETED" --> SyncDDB["11. SyncDynamoDB<br/>(Lambda: TerminateInstance-SyncDynamoDB)"]
-    SyncDDB --> Success((TerminationSuccess))
-
-    LoadNet & RemNat & CheckNat & DelNova & FinNet & DelSG & DelVol & SyncDDB -. "Catch States.ALL" .-> Fail((TerminationFailed))
-```
-
 *Hình 1.4: Đồ thị luồng thu hồi tài nguyên toàn diện của State Machine `TerminateInstance`*
 
 ### 3.3 Giải thích chi tiết từng Step trong `TerminateInstance`
