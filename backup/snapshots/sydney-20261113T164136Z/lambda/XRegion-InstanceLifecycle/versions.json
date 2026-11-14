@@ -1,0 +1,54 @@
+[
+  {
+    "FunctionName": "XRegion-InstanceLifecycle",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-InstanceLifecycle:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lifecycle_runtime.lambda_handler",
+    "CodeSize": 16528,
+    "Description": "SPEC-SF-06 lifecycle LOAD/DISPATCH/STATUS/SYNC worker",
+    "Timeout": 60,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:25.000+0000",
+    "CodeSha256": "BRRFbYmNwcJXA9O6zhWEgog9uE3/MDDi1ZnxQ7Xtb7o=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OS_USERNAME": "admin",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "a3f1f330-89f4-4771-8c6d-275915368674",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-InstanceLifecycle"
+    }
+  }
+]

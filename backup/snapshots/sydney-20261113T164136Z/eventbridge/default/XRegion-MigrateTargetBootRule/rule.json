@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-MigrateTargetBootRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-MigrateTargetBootRule",
+  "EventPattern": "{\"source\": [\"xregion.migration.orchestrator\"], \"detail-type\": [\"instance.migration.boot\"]}",
+  "State": "ENABLED",
+  "EventBusName": "default"
+}

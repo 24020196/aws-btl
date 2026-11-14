@@ -1,0 +1,124 @@
+[
+  {
+    "FunctionName": "XRegion-TerminateInstance-DeleteNova",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteNova:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13639,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T20:13:31.000+0000",
+    "CodeSha256": "FhasQggfyn4Uhp5u7kgPpTnJw1/GNK3Jk1h4hp3cmBg=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0909efd155bc3b18e"
+      ],
+      "SecurityGroupIds": [
+        "sg-06ed3f375ea95f881"
+      ],
+      "VpcId": "vpc-0c9e2dc8fa012a40b",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0123913e3357df916",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-0ed6a1623d49ebe3a",
+        "NETWORK_STAGE": "DeleteNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-07738a186534cb5ba",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "c4ee842f-a56b-4e99-93c0-e0d4bf3261fe",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-DeleteNova"
+    }
+  },
+  {
+    "FunctionName": "XRegion-TerminateInstance-DeleteNova",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteNova:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 11881,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-11T18:12:34.572+0000",
+    "CodeSha256": "joFBH239asHh9lDcXQbFnTCQ6BpF5pRNPXiFLlF4+OY=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-04bea2c49919460fc"
+      ],
+      "SecurityGroupIds": [
+        "sg-007ef3a0b94d53ce9"
+      ],
+      "VpcId": "vpc-02c7d26a539293275",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-02608023a28062a95",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "NEUTRON_URL": "http://10.10.10.99:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.10.10.99:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-0403544b8996a3b5a",
+        "NETWORK_STAGE": "DeleteNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-054f3fe75f9160889",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.10.10.99:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "c9f19cd4-0370-45c4-a68f-cac8a48e57c7",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-DeleteNova"
+    }
+  }
+]

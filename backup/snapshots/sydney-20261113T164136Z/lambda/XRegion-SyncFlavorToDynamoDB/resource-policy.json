@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"EventBridgeInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncFlavorToDynamoDB\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-NovaStatusRule\"}}},{\"Sid\":\"CatalogRuleInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncFlavorToDynamoDB\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-NovaSyncCatalogRule\"}}}]}",
+  "RevisionId": "98ae7c6f-787e-45b0-8db7-3ae982f05a3c"
+}

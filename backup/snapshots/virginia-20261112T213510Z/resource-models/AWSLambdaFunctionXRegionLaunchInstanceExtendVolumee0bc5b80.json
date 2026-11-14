@@ -1,0 +1,69 @@
+{
+  "type": "AWS::Lambda::Function",
+  "identifier": "XRegion-LaunchInstance-ExtendVolume",
+  "properties": {
+    "MemorySize": 128,
+    "Description": "Step 3 of LaunchInstance: extends Cinder volume size according to request",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "VpcConfig": {
+      "Ipv6AllowedForDualStack": false,
+      "SecurityGroupIds": [
+        "sg-06ed3f375ea95f881"
+      ],
+      "SubnetIds": [
+        "subnet-0909efd155bc3b18e"
+      ]
+    },
+    "Timeout": 150,
+    "RuntimeManagementConfig": {
+      "UpdateRuntimeOn": "Auto"
+    },
+    "Handler": "extend_volume.lambda_handler",
+    "SnapStartResponse": {
+      "OptimizationStatus": "Off",
+      "ApplyOn": "None"
+    },
+    "Code": {},
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "FileSystemConfigs": [],
+    "FunctionName": "XRegion-LaunchInstance-ExtendVolume",
+    "Runtime": "python3.12",
+    "PackageType": "Zip",
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-ExtendVolume"
+    },
+    "RecursiveLoop": "Terminate",
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0123913e3357df916",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-0ed6a1623d49ebe3a",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "ExtendVolume",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-07738a186534cb5ba",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "Arn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-ExtendVolume",
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "Architectures": [
+      "x86_64"
+    ]
+  }
+}

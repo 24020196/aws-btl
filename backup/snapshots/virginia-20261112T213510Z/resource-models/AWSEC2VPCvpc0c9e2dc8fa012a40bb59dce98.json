@@ -1,0 +1,27 @@
+{
+  "type": "AWS::EC2::VPC",
+  "identifier": "vpc-0c9e2dc8fa012a40b",
+  "properties": {
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "InstanceTenancy": "default",
+    "CidrBlockAssociations": [
+      "vpc-cidr-assoc-07afdd9d8c2379d01"
+    ],
+    "CidrBlock": "10.20.0.0/16",
+    "DefaultNetworkAcl": "acl-0ecb015e0dea1fc21",
+    "EnableDnsSupport": true,
+    "Ipv6CidrBlocks": [],
+    "DefaultSecurityGroup": "sg-0166cdeadf9eb44d2",
+    "EnableDnsHostnames": true,
+    "Tags": [
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      },
+      {
+        "Value": "RegionA-vpc",
+        "Key": "Name"
+      }
+    ]
+  }
+}

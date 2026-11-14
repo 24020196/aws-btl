@@ -1,0 +1,26 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "openstack_step_functions_role",
+    "RoleId": "AROAUHZWMZAD7WL7KQNMM",
+    "Arn": "arn:aws:iam::291634989063:role/openstack_step_functions_role",
+    "CreateDate": "2026-11-06 04:01:30+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "states.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-12 21:23:37+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "Parameter": {
+    "Name": "/xregion/ap-southeast-2/launch/admission",
+    "Type": "String",
+    "Value": "{\"mode\": \"open\"}",
+    "Version": 16,
+    "LastModifiedDate": "2026-11-12 11:53:04.608000+07:00",
+    "ARN": "arn:aws:ssm:ap-southeast-2:291634989063:parameter/xregion/ap-southeast-2/launch/admission",
+    "DataType": "text"
+  }
+}

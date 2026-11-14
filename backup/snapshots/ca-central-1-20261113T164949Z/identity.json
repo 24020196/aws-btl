@@ -1,0 +1,17 @@
+{
+  "UserId": "AIDAUHZWMZAD7JI6O3N4M",
+  "Account": "291634989063",
+  "Arn": "arn:aws:iam::291634989063:user/lam",
+  "ResponseMetadata": {
+    "RequestId": "39ed7346-ec2a-4259-b907-e50eb6d0936b",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "39ed7346-ec2a-4259-b907-e50eb6d0936b",
+      "x-amz-sts-extended-request-id": "MTpjYS1jZW50cmFsLTE6UzoxNzk0NTg4NTkyMDE0OlI6MTJsQTB4aEI=",
+      "content-type": "text/xml",
+      "content-length": "400",
+      "date": "Fri, 13 Nov 2026 16:49:52 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

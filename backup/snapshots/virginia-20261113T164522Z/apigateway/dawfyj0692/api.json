@@ -1,0 +1,18 @@
+{
+  "id": "dawfyj0692",
+  "name": "XRegion-EventGateway",
+  "description": "API Gateway Ingestion Gateway phuc vu he thong dieu phoi da vung IaaS XRegion.",
+  "createdDate": "2026-11-12 01:18:15+07:00",
+  "version": "2026-11-07T11:30:32Z",
+  "apiKeySource": "HEADER",
+  "endpointConfiguration": {
+    "types": [
+      "EDGE"
+    ],
+    "ipAddressType": "ipv4"
+  },
+  "disableExecuteApiEndpoint": false,
+  "rootResourceId": "tqwdncrs38",
+  "securityPolicy": "TLS_1_0",
+  "apiStatus": "AVAILABLE"
+}

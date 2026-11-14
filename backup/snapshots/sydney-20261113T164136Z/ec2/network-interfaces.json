@@ -1,0 +1,301 @@
+[
+  {
+    "AvailabilityZone": "ap-southeast-2a",
+    "Description": "RegionB-SecondaryENI",
+    "Groups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "InterfaceType": "interface",
+    "Ipv6Addresses": [],
+    "MacAddress": "02:ff:f6:f1:b7:9f",
+    "NetworkInterfaceId": "eni-0d0115d19cfb16f55",
+    "OwnerId": "291634989063",
+    "PublicDnsName": "",
+    "PrivateIpAddress": "10.20.10.189",
+    "PrivateIpAddresses": [
+      {
+        "Primary": true,
+        "PrivateIpAddress": "10.20.10.189"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.10.214"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.10.202"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.10.236"
+      }
+    ],
+    "RequesterId": "AIDAUHZWMZAD7JI6O3N4M",
+    "RequesterManaged": false,
+    "SourceDestCheck": false,
+    "Status": "available",
+    "SubnetId": "subnet-0ed6959cba851d0bb",
+    "TagSet": [],
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "AvailabilityZoneId": "apse2-az1"
+  },
+  {
+    "Attachment": {
+      "AttachmentId": "ela-attach-07decc60948a30ede",
+      "DeleteOnTermination": false,
+      "DeviceIndex": 1,
+      "InstanceOwnerId": "amazon-aws",
+      "Status": "attached"
+    },
+    "AvailabilityZone": "ap-southeast-2a",
+    "Description": "AWS Lambda VPC ENI-XRegion-NovaLifecycleManager",
+    "Groups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "InterfaceType": "lambda",
+    "Ipv6Addresses": [],
+    "MacAddress": "02:ff:c4:b2:97:61",
+    "NetworkInterfaceId": "eni-0879fa3ef314a66a8",
+    "OwnerId": "291634989063",
+    "PublicDnsName": "",
+    "PrivateIpAddress": "10.20.10.135",
+    "PrivateIpAddresses": [
+      {
+        "Primary": true,
+        "PrivateIpAddress": "10.20.10.135"
+      }
+    ],
+    "RequesterId": "AROAUHZWMZAD54KIFXOUI:587227272958",
+    "RequesterManaged": false,
+    "SourceDestCheck": true,
+    "Status": "in-use",
+    "SubnetId": "subnet-0ed6959cba851d0bb",
+    "TagSet": [],
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "AvailabilityZoneId": "apse2-az1"
+  },
+  {
+    "Attachment": {
+      "AttachTime": "2026-11-07 17:17:56+00:00",
+      "AttachmentId": "eni-attach-0fcf6cdf683e891cc",
+      "DeleteOnTermination": false,
+      "DeviceIndex": 1,
+      "NetworkCardIndex": 0,
+      "InstanceId": "i-056d7f3dd24156234",
+      "InstanceOwnerId": "291634989063",
+      "Status": "attached"
+    },
+    "AvailabilityZone": "ap-southeast-2a",
+    "Description": "RegionB-SecondaryENI-Public",
+    "Groups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "InterfaceType": "interface",
+    "Ipv6Addresses": [],
+    "MacAddress": "02:ff:e3:85:1a:d3",
+    "NetworkInterfaceId": "eni-091eaee3e69e3f42d",
+    "OwnerId": "291634989063",
+    "PublicDnsName": "",
+    "PrivateIpAddress": "10.20.1.253",
+    "PrivateIpAddresses": [
+      {
+        "Primary": true,
+        "PrivateIpAddress": "10.20.1.253"
+      },
+      {
+        "Association": {
+          "AllocationId": "eipalloc-0247efeef81529db6",
+          "AssociationId": "eipassoc-0f8ca3565a5ce2336",
+          "IpOwnerId": "291634989063",
+          "PublicDnsName": "",
+          "PublicIp": "15.134.59.23"
+        },
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.236"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.10"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.11"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.12"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.13"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.14"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.15"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.17"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.18"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.20"
+      },
+      {
+        "Primary": false,
+        "PrivateDnsName": "",
+        "PrivateIpAddress": "10.20.1.21"
+      }
+    ],
+    "RequesterId": "AIDAUHZWMZAD7JI6O3N4M",
+    "RequesterManaged": false,
+    "SourceDestCheck": false,
+    "Status": "in-use",
+    "SubnetId": "subnet-0c2058b1b74fae060",
+    "TagSet": [
+      {
+        "Key": "Name",
+        "Value": "RegionB-SecondaryENI-Public"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "AvailabilityZoneId": "apse2-az1"
+  },
+  {
+    "Attachment": {
+      "AttachmentId": "ela-attach-017d2a1b974a3ba3f",
+      "DeleteOnTermination": false,
+      "DeviceIndex": 1,
+      "InstanceOwnerId": "amazon-aws",
+      "Status": "attached"
+    },
+    "AvailabilityZone": "ap-southeast-2a",
+    "Description": "Instance Connect Endpoint (id: eice-047f08b79ddaccefc)",
+    "Groups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "InterfaceType": "ec2_instance_connect_endpoint",
+    "Ipv6Addresses": [],
+    "MacAddress": "02:ff:c4:58:82:55",
+    "NetworkInterfaceId": "eni-07a33475d9db31b55",
+    "OwnerId": "291634989063",
+    "PublicDnsName": "",
+    "PrivateIpAddress": "10.20.10.237",
+    "PrivateIpAddresses": [
+      {
+        "Primary": true,
+        "PrivateIpAddress": "10.20.10.237"
+      }
+    ],
+    "RequesterId": "916854354808",
+    "RequesterManaged": false,
+    "SourceDestCheck": false,
+    "Status": "in-use",
+    "SubnetId": "subnet-0ed6959cba851d0bb",
+    "TagSet": [
+      {
+        "Key": "InstanceConnectEndpointId",
+        "Value": "eice-047f08b79ddaccefc"
+      }
+    ],
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "AvailabilityZoneId": "apse2-az1"
+  },
+  {
+    "Attachment": {
+      "AttachTime": "2026-11-04 13:37:57+00:00",
+      "AttachmentId": "eni-attach-0ac2d4415f38a3c4d",
+      "DeleteOnTermination": true,
+      "DeviceIndex": 0,
+      "NetworkCardIndex": 0,
+      "InstanceId": "i-056d7f3dd24156234",
+      "InstanceOwnerId": "291634989063",
+      "Status": "attached"
+    },
+    "AvailabilityZone": "ap-southeast-2a",
+    "Description": "",
+    "Groups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "InterfaceType": "interface",
+    "Ipv6Addresses": [],
+    "MacAddress": "02:ff:c8:48:37:03",
+    "NetworkInterfaceId": "eni-06e2c5fff0d132380",
+    "OwnerId": "291634989063",
+    "PublicDnsName": "",
+    "PrivateIpAddress": "10.20.10.183",
+    "PrivateIpAddresses": [
+      {
+        "Primary": true,
+        "PrivateIpAddress": "10.20.10.183"
+      }
+    ],
+    "RequesterManaged": false,
+    "SourceDestCheck": true,
+    "Status": "in-use",
+    "SubnetId": "subnet-0ed6959cba851d0bb",
+    "TagSet": [],
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "AvailabilityZoneId": "apse2-az1"
+  }
+]

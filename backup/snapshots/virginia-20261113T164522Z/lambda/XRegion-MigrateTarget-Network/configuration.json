@@ -1,0 +1,72 @@
+{
+  "FunctionName": "XRegion-MigrateTarget-Network",
+  "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-MigrateTarget-Network",
+  "Runtime": "python3.12",
+  "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+  "Handler": "migrate_target_network.lambda_handler",
+  "CodeSize": 15936,
+  "Description": "",
+  "Timeout": 180,
+  "MemorySize": 256,
+  "LastModified": "2026-11-13T07:28:03.000+0000",
+  "CodeSha256": "sdcxEHidvInv6kawguO5L+mR82JBr2rcU7IV9TCkNcM=",
+  "Version": "$LATEST",
+  "VpcConfig": {
+    "SubnetIds": [
+      "subnet-0909efd155bc3b18e"
+    ],
+    "SecurityGroupIds": [
+      "sg-06ed3f375ea95f881"
+    ],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "Ipv6AllowedForDualStack": false
+  },
+  "Environment": {
+    "Variables": {
+      "EBS_POOL_ENABLED": "true",
+      "OS_PASSWORD": "12345678",
+      "PUBLIC_SUBNET_ID": "subnet-0123913e3357df916",
+      "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+      "OS_USERNAME": "admin",
+      "DEFAULT_AZ": "us-east-1a",
+      "GLANCE_URL": "http://10.20.10.183:9292/v2",
+      "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+      "OS_PROJECT_NAME": "service",
+      "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+      "CINDER_URL": "http://10.20.10.183:8776/v3",
+      "OPENSTACK_PUBLIC_ENI": "eni-0ed6a1623d49ebe3a",
+      "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+      "DEST_REGION": "ap-southeast-2",
+      "NETWORK_STAGE": "Reserve",
+      "NETWORK_ADMISSION": "maintenance",
+      "GATEWAY_HOST_ID": "i-07738a186534cb5ba",
+      "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+      "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+      "SOURCE_REGION": "us-east-1"
+    }
+  },
+  "TracingConfig": {
+    "Mode": "PassThrough"
+  },
+  "RevisionId": "3aa8f60d-4ecf-4de2-8b94-896846670afd",
+  "State": "Active",
+  "LastUpdateStatus": "Successful",
+  "PackageType": "Zip",
+  "Architectures": [
+    "x86_64"
+  ],
+  "EphemeralStorage": {
+    "Size": 512
+  },
+  "SnapStart": {
+    "ApplyOn": "None",
+    "OptimizationStatus": "Off"
+  },
+  "RuntimeVersionConfig": {
+    "RuntimeVersionArn": "arn:aws:lambda:us-east-1::runtime:9d15a516fef11563a8c452bd8d3fe5a5a120b73013e74783e925235557467534"
+  },
+  "LoggingConfig": {
+    "LogFormat": "Text",
+    "LogGroup": "/aws/lambda/XRegion-MigrateTarget-Network"
+  }
+}

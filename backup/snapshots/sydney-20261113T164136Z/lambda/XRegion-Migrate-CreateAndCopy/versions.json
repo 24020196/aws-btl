@@ -1,0 +1,41 @@
+[
+  {
+    "FunctionName": "XRegion-Migrate-CreateAndCopy",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-CreateAndCopy:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_create_and_copy.lambda_handler",
+    "CodeSize": 1372,
+    "Description": "SPEC-SF-08 XRegion-Migrate-CreateAndCopy",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:04:00.000+0000",
+    "CodeSha256": "hnDuTh8dr4JuZrIKZymx+HB1Xn4eoSyCQgwZMu5OvNQ=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEST_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "8702a699-5692-494c-990f-68e89e287a06",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-CreateAndCopy"
+    }
+  }
+]

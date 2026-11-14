@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-MigrateSourceRollbackRule",
+  "Arn": "arn:aws:events:us-east-1:291634989063:rule/XRegion-MigrateSourceRollbackRule",
+  "EventPattern": "{\"source\": [\"xregion.migration.orchestrator\"], \"detail-type\": [\"instance.migration.rollback\"]}",
+  "State": "ENABLED",
+  "EventBusName": "default"
+}

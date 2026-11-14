@@ -1,0 +1,35 @@
+[
+  {
+    "FunctionName": "XRegion-EIPPoolManager",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-EIPPoolManager:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "eip_pool_manager.lambda_handler",
+    "CodeSize": 2770,
+    "Description": "XRegion EIP reserve pool manager with auto-replenish retry mechanism",
+    "Timeout": 30,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:22.000+0000",
+    "CodeSha256": "6ZG7Y1jmguhbSJCgPUli5y+d5QUgSV44S577qUB3+co=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "56967f22-dfb7-4818-a747-e40b100317ba",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-EIPPoolManager"
+    }
+  }
+]

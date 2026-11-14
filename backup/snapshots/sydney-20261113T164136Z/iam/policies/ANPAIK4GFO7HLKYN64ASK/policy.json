@@ -1,0 +1,14 @@
+{
+  "PolicyName": "AmazonAPIGatewayPushToCloudWatchLogs",
+  "PolicyId": "ANPAIK4GFO7HLKYN64ASK",
+  "Arn": "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
+  "Path": "/service-role/",
+  "DefaultVersionId": "v1",
+  "AttachmentCount": 1,
+  "PermissionsBoundaryUsageCount": 0,
+  "IsAttachable": true,
+  "Description": "Allows API Gateway to push logs to user's account.",
+  "CreateDate": "2015-11-11 23:41:46+00:00",
+  "UpdateDate": "2015-11-11 23:41:46+00:00",
+  "Tags": []
+}

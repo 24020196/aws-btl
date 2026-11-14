@@ -1,0 +1,17 @@
+{
+  "Attributes": {
+    "QueueArn": "arn:aws:sqs:us-east-1:291634989063:XRegion-InstanceLifecycle-DLQ",
+    "ApproximateNumberOfMessages": "0",
+    "ApproximateNumberOfMessagesNotVisible": "0",
+    "ApproximateNumberOfMessagesDelayed": "0",
+    "CreatedTimestamp": "1794420694",
+    "LastModifiedTimestamp": "1794500975",
+    "VisibilityTimeout": "30",
+    "MaximumMessageSize": "1048576",
+    "MessageRetentionPeriod": "345600",
+    "DelaySeconds": "0",
+    "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowEventBridgeRulesUsEast1\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"sqs:SendMessage\",\"Resource\":\"arn:aws:sqs:us-east-1:291634989063:XRegion-InstanceLifecycle-DLQ\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":[\"arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceLifecycleRule\",\"arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceLaunchRule\",\"arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceTerminateRule\"]}}}]}",
+    "ReceiveMessageWaitTimeSeconds": "0",
+    "SqsManagedSseEnabled": "true"
+  }
+}

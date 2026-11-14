@@ -1,0 +1,14 @@
+[
+  {
+    "LastModified": "2026-11-10 02:11:34.608000+07:00",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup:$LATEST",
+    "MaximumRetryAttempts": 1,
+    "MaximumEventAgeInSeconds": 3600,
+    "DestinationConfig": {
+      "OnSuccess": {},
+      "OnFailure": {
+        "Destination": "arn:aws:sqs:ap-southeast-2:291634989063:XRegion-SecurityGroupSync-Canary-dlq"
+      }
+    }
+  }
+]

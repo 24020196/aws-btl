@@ -1,0 +1,80 @@
+[
+  {
+    "FunctionName": "XRegion-SyncFlavorToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncFlavorToDynamoDB:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 868,
+    "Description": "Syncs OpenStack Nova Flavors to DynamoDB XRegion-Flavors",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T19:04:32.000+0000",
+    "CodeSha256": "w58/FHNDoSo7nvWA0RtVynSJ5umiW1dMggATIH33i80=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "84742eff-0326-46c8-8945-54858d43645d",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncFlavorToDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncFlavorToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncFlavorToDynamoDB:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 834,
+    "Description": "Syncs OpenStack Nova Flavors to DynamoDB XRegion-Flavors",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-11T18:12:31.732+0000",
+    "CodeSha256": "7yfTih+l5AMuGGxeSDDnD5XZWwEh35EI/YubFLLFaj8=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "19ff9984-cef9-4aff-bbb3-a5c2bef9b606",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncFlavorToDynamoDB"
+    }
+  }
+]

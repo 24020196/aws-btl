@@ -1,0 +1,45 @@
+{
+  "type": "AWS::EC2::NetworkInterface",
+  "identifier": "eni-0ed6a1623d49ebe3a",
+  "properties": {
+    "Description": "RegionA-SecondaryENI-Public",
+    "PrivateIpAddress": "10.20.1.253",
+    "PrimaryIpv6Address": "",
+    "PrivateIpAddresses": [
+      {
+        "PrivateIpAddress": "10.20.1.253",
+        "Primary": true
+      }
+    ],
+    "SecondaryPrivateIpAddressCount": 0,
+    "Ipv6PrefixCount": 0,
+    "PrimaryPrivateIpAddress": "10.20.1.253",
+    "Ipv4Prefixes": [],
+    "Ipv4PrefixCount": 0,
+    "EnablePrimaryIpv6": false,
+    "GroupSet": [
+      "sg-06ed3f375ea95f881"
+    ],
+    "Ipv6Prefixes": [],
+    "SubnetId": "subnet-0123913e3357df916",
+    "SourceDestCheck": false,
+    "InterfaceType": "interface",
+    "SecondaryPrivateIpAddresses": [],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "Id": "eni-0ed6a1623d49ebe3a",
+    "Tags": [
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      },
+      {
+        "Value": "RegionA-SecondaryENI-Public",
+        "Key": "Name"
+      }
+    ],
+    "PublicIpDnsNameOptions": {
+      "DnsHostnameType": "public-ipv4-dns-name",
+      "PublicIpv4DnsName": "ec2-44-212-151-241.compute-1.amazonaws.com"
+    }
+  }
+}

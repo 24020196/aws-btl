@@ -1,0 +1,18 @@
+[
+  {
+    "Attachments": [
+      {
+        "State": "available",
+        "VpcId": "vpc-0923b0726b21010dd"
+      }
+    ],
+    "InternetGatewayId": "igw-0ca1678c413b18f76",
+    "OwnerId": "291634989063",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "testRegionB"
+      }
+    ]
+  }
+]

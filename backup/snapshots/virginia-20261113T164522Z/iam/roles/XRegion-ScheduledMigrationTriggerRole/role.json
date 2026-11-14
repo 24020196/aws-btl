@@ -1,0 +1,26 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "XRegion-ScheduledMigrationTriggerRole",
+    "RoleId": "AROAUHZWMZADU4IZTRMDX",
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-ScheduledMigrationTriggerRole",
+    "CreateDate": "2026-11-13 11:26:07+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:18:40+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

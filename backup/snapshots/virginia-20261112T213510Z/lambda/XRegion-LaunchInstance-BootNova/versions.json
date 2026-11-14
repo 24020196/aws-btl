@@ -1,0 +1,132 @@
+[
+  {
+    "FunctionName": "XRegion-LaunchInstance-BootNova",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-BootNova:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13639,
+    "Description": "Step 4 of LaunchInstance: boots Nova VM from Cinder bootable volume and polls ACTIVE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T20:13:16.000+0000",
+    "CodeSha256": "FhasQggfyn4Uhp5u7kgPpTnJw1/GNK3Jk1h4hp3cmBg=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0909efd155bc3b18e"
+      ],
+      "SecurityGroupIds": [
+        "sg-06ed3f375ea95f881"
+      ],
+      "VpcId": "vpc-0c9e2dc8fa012a40b",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0123913e3357df916",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-0ed6a1623d49ebe3a",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-07738a186534cb5ba",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "10b439b8-f8b8-40e2-bf3f-0eb5a21631e3",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-BootNova"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-BootNova",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-BootNova:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 11881,
+    "Description": "Step 4 of LaunchInstance: boots Nova VM from Cinder bootable volume and polls ACTIVE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-11T18:12:17.947+0000",
+    "CodeSha256": "joFBH239asHh9lDcXQbFnTCQ6BpF5pRNPXiFLlF4+OY=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-04bea2c49919460fc"
+      ],
+      "SecurityGroupIds": [
+        "sg-007ef3a0b94d53ce9"
+      ],
+      "VpcId": "vpc-02c7d26a539293275",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-02608023a28062a95",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "GLANCE_URL": "http://10.10.10.99:9292/v2",
+        "NEUTRON_URL": "http://10.10.10.99:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.10.10.99:8774/v2.1",
+        "CINDER_URL": "http://10.10.10.99:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-0403544b8996a3b5a",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-054f3fe75f9160889",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.10.10.99:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "1127070e-f792-42cc-9e19-fb473229dd8a",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-BootNova"
+    }
+  }
+]

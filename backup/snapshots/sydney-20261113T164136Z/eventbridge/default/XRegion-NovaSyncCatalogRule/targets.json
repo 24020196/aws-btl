@@ -1,0 +1,10 @@
+[
+  {
+    "Id": "SyncFlavorTarget",
+    "Arn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncFlavorToDynamoDB"
+  },
+  {
+    "Id": "SyncImageTarget",
+    "Arn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncImageToDynamoDB"
+  }
+]

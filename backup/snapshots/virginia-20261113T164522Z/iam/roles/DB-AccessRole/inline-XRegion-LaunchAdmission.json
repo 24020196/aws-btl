@@ -1,0 +1,19 @@
+{
+  "RoleName": "DB-AccessRole",
+  "PolicyName": "XRegion-LaunchAdmission",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:ssm:ap-southeast-2:291634989063:parameter/xregion/ap-southeast-2/launch/admission",
+          "arn:aws:ssm:us-east-1:291634989063:parameter/xregion/us-east-1/launch/admission"
+        ],
+        "Action": [
+          "ssm:GetParameter"
+        ]
+      }
+    ]
+  }
+}

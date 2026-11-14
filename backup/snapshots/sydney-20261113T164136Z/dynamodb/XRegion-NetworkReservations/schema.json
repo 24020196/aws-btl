@@ -1,0 +1,59 @@
+{
+  "Table": {
+    "AttributeDefinitions": [
+      {
+        "AttributeName": "resource_key",
+        "AttributeType": "S"
+      }
+    ],
+    "TableName": "XRegion-NetworkReservations",
+    "KeySchema": [
+      {
+        "AttributeName": "resource_key",
+        "KeyType": "HASH"
+      }
+    ],
+    "TableStatus": "ACTIVE",
+    "CreationDateTime": "2026-11-09 01:01:22.102000+07:00",
+    "ProvisionedThroughput": {
+      "NumberOfDecreasesToday": 0,
+      "ReadCapacityUnits": 0,
+      "WriteCapacityUnits": 0
+    },
+    "TableSizeBytes": 12294,
+    "ItemCount": 26,
+    "TableArn": "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkReservations",
+    "TableId": "f0816edc-7e98-4185-b9da-b2eaeb85069b",
+    "BillingModeSummary": {
+      "BillingMode": "PAY_PER_REQUEST",
+      "LastUpdateToPayPerRequestDateTime": "2026-11-09 01:01:22.102000+07:00"
+    },
+    "StreamSpecification": {
+      "StreamEnabled": true,
+      "StreamViewType": "NEW_AND_OLD_IMAGES"
+    },
+    "LatestStreamLabel": "2026-11-12T14:59:42.409",
+    "LatestStreamArn": "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkReservations/stream/2026-11-12T14:59:42.409",
+    "GlobalTableVersion": "2019.11.21",
+    "Replicas": [
+      {
+        "RegionName": "us-east-1",
+        "ReplicaStatus": "ACTIVE",
+        "WarmThroughput": {
+          "ReadUnitsPerSecond": 12000,
+          "WriteUnitsPerSecond": 4000,
+          "Status": "ACTIVE"
+        },
+        "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES"
+      }
+    ],
+    "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES",
+    "DeletionProtectionEnabled": false,
+    "DisassociationProtectionEnabled": true,
+    "WarmThroughput": {
+      "ReadUnitsPerSecond": 12000,
+      "WriteUnitsPerSecond": 4000,
+      "Status": "ACTIVE"
+    }
+  }
+}

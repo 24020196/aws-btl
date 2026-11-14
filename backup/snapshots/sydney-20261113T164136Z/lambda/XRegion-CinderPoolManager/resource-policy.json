@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"AllowEventBridgeInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-CinderPoolManager\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLaunchRule\"}}}]}",
+  "RevisionId": "b3b450af-9023-4e96-8c79-56048d67adad"
+}

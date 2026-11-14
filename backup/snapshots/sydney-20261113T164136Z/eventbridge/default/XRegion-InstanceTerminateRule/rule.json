@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-InstanceTerminateRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceTerminateRule",
+  "EventPattern": "{\"source\": [\"xregion.backend.instance\"], \"detail-type\": [\"instance.terminate\", \"instance.lifecycle\"], \"detail\": {\"action\": [\"TERMINATE\", \"DELETE\", {\"exists\": false}]}}",
+  "State": "ENABLED",
+  "EventBusName": "default"
+}

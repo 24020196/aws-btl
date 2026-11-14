@@ -1,0 +1,14 @@
+{
+  "PolicyName": "AWSLambdaVPCAccessExecutionRole",
+  "PolicyId": "ANPAJVTME3YLVNL72YR2K",
+  "Arn": "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+  "Path": "/service-role/",
+  "DefaultVersionId": "v3",
+  "AttachmentCount": 4,
+  "PermissionsBoundaryUsageCount": 0,
+  "IsAttachable": true,
+  "Description": "Provides minimum permissions for a Lambda function to execute while accessing a resource within a VPC - create, describe, delete network interfaces and write permissions to CloudWatch Logs. ",
+  "CreateDate": "2016-02-11 23:15:26+00:00",
+  "UpdateDate": "2024-01-05 22:38:26+00:00",
+  "Tags": []
+}

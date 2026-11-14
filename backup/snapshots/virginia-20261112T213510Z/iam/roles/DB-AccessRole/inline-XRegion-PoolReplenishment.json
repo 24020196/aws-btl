@@ -1,0 +1,23 @@
+{
+  "RoleName": "DB-AccessRole",
+  "PolicyName": "XRegion-PoolReplenishment",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-CinderPoolManager",
+          "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-EIPPoolManager",
+          "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup",
+          "arn:aws:lambda:us-east-1:291634989063:function:XRegion-CinderPoolManager",
+          "arn:aws:lambda:us-east-1:291634989063:function:XRegion-EIPPoolManager",
+          "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncSecurityGroup"
+        ],
+        "Action": [
+          "lambda:InvokeFunction"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-InstanceMigrationRule",
+  "Arn": "arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceMigrationRule",
+  "EventPattern": "{\"source\": [\"xregion.backend.migration\", \"xregion.backend.instance\"], \"detail-type\": [\"Migration Lifecycle Event\", \"instance.migration\"]}",
+  "State": "ENABLED",
+  "EventBusName": "default"
+}

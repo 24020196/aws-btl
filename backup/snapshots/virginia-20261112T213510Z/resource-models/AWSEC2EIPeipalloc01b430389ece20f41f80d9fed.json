@@ -1,0 +1,29 @@
+{
+  "type": "AWS::EC2::EIP",
+  "identifier": "eipalloc-01b430389ece20f41",
+  "properties": {
+    "PublicIp": "18.233.62.182",
+    "AllocationId": "eipalloc-01b430389ece20f41",
+    "PublicIpv4Pool": "amazon",
+    "Domain": "vpc",
+    "Tags": [
+      {
+        "Value": "eip-reserve-1794497405",
+        "Key": "Name"
+      },
+      {
+        "Value": "1794497405",
+        "Key": "IdleSince"
+      },
+      {
+        "Value": "XRegion-EIPPoolManager",
+        "Key": "ManagedBy"
+      },
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      }
+    ],
+    "NetworkBorderGroup": "us-east-1"
+  }
+}

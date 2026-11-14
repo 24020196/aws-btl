@@ -1,0 +1,49 @@
+{
+  "type": "AWS::EC2::SecurityGroup",
+  "identifier": "sg-06ed3f375ea95f881",
+  "properties": {
+    "GroupDescription": "RegionA-EC2-securityGroup",
+    "GroupName": "RegionA-securityGroup",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "Id": "sg-06ed3f375ea95f881",
+    "SecurityGroupIngress": [
+      {
+        "CidrIp": "0.0.0.0/0",
+        "FromPort": -1,
+        "ToPort": -1,
+        "IpProtocol": "-1"
+      },
+      {
+        "CidrIpv6": "::/0",
+        "FromPort": -1,
+        "ToPort": -1,
+        "IpProtocol": "-1"
+      }
+    ],
+    "SecurityGroupEgress": [
+      {
+        "CidrIp": "0.0.0.0/0",
+        "FromPort": -1,
+        "ToPort": -1,
+        "IpProtocol": "-1"
+      },
+      {
+        "CidrIpv6": "::/0",
+        "FromPort": -1,
+        "ToPort": -1,
+        "IpProtocol": "-1"
+      }
+    ],
+    "Tags": [
+      {
+        "Value": "RegionA-securityGroup",
+        "Key": "Name"
+      },
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      }
+    ],
+    "GroupId": "sg-06ed3f375ea95f881"
+  }
+}

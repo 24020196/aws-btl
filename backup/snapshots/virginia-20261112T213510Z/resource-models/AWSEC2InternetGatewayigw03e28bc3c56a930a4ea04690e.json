@@ -1,0 +1,17 @@
+{
+  "type": "AWS::EC2::InternetGateway",
+  "identifier": "igw-03e28bc3c56a930a4",
+  "properties": {
+    "InternetGatewayId": "igw-03e28bc3c56a930a4",
+    "Tags": [
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      },
+      {
+        "Value": "RegionA-igw",
+        "Key": "Name"
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"EventBridge-SnapshotCleanerRule\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:us-east-1:291634989063:function:XRegion-SnapshotCleaner\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:us-east-1:291634989063:rule/XRegion-SnapshotCleanerRule\"}}}]}",
+  "RevisionId": "f02afb6c-54f2-4cf3-b359-d2b33ad9f1bf"
+}

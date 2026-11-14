@@ -1,0 +1,18 @@
+{
+  "type": "AWS::EC2::RouteTable",
+  "identifier": "rtb-0bbc388cf499e0f5d",
+  "properties": {
+    "RouteTableId": "rtb-0bbc388cf499e0f5d",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "Tags": [
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      },
+      {
+        "Value": "RegionA-routePublic",
+        "Key": "Name"
+      }
+    ]
+  }
+}

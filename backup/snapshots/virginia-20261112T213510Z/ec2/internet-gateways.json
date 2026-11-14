@@ -1,0 +1,22 @@
+[
+  {
+    "Attachments": [
+      {
+        "State": "available",
+        "VpcId": "vpc-0c9e2dc8fa012a40b"
+      }
+    ],
+    "InternetGatewayId": "igw-03e28bc3c56a930a4",
+    "OwnerId": "291634989063",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "Name",
+        "Value": "RegionA-igw"
+      }
+    ]
+  }
+]

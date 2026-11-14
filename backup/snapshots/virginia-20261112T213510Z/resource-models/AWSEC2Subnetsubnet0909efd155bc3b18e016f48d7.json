@@ -1,0 +1,34 @@
+{
+  "type": "AWS::EC2::Subnet",
+  "identifier": "subnet-0909efd155bc3b18e",
+  "properties": {
+    "MapPublicIpOnLaunch": false,
+    "EnableDns64": false,
+    "AvailabilityZoneId": "use1-az1",
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.20.10.0/24",
+    "SubnetId": "subnet-0909efd155bc3b18e",
+    "BlockPublicAccessStates": {
+      "InternetGatewayBlockMode": "off"
+    },
+    "AssignIpv6AddressOnCreation": false,
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "NetworkAclAssociationId": "aclassoc-0be681bcd370530fb",
+    "PrivateDnsNameOptionsOnLaunch": {
+      "EnableResourceNameDnsARecord": false,
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "Ipv6Native": false,
+    "Tags": [
+      {
+        "Value": "RegionA-privateSubnet1",
+        "Key": "Name"
+      },
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      }
+    ]
+  }
+}

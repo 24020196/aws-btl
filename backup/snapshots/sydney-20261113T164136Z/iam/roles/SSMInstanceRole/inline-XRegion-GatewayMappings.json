@@ -1,0 +1,23 @@
+{
+  "RoleName": "SSMInstanceRole",
+  "PolicyName": "XRegion-GatewayMappings",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings/index/gateway_host_id-index",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings/index/gateway_host_id-index"
+        ],
+        "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:UpdateItem"
+        ]
+      }
+    ]
+  }
+}

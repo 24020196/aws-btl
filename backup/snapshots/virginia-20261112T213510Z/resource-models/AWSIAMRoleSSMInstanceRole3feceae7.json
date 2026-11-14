@@ -1,0 +1,99 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "SSMInstanceRole",
+  "properties": {
+    "Path": "/",
+    "ManagedPolicyArns": [
+      "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    ],
+    "MaxSessionDuration": 3600,
+    "RoleName": "SSMInstanceRole",
+    "Description": "Allows EC2 instances to call AWS services on your behalf.",
+    "Policies": [
+      {
+        "PolicyName": "EC2EventBridgePutPolicy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "events:PutEvents"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      },
+      {
+        "PolicyName": "XRegion-GatewayMappings",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:Query",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings",
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings/index/gateway_host_id-index",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings/index/gateway_host_id-index"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+      },
+      {
+        "PolicyName": "XRegion-NetworkCommandLogs",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams"
+              ],
+              "Resource": [
+                "arn:aws:logs:ap-southeast-2:291634989063:log-group:/xregion/network/ssm:*",
+                "arn:aws:logs:us-east-1:291634989063:log-group:/xregion/network/ssm:*"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+      },
+      {
+        "PolicyName": "XRegionAssumeCinderEbsRole",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Resource": "arn:aws:iam::291634989063:role/XRegion-CinderEbsRole",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "ec2.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/SSMInstanceRole",
+    "RoleId": "AROAUHZWMZADTQQKQAYFY"
+  }
+}

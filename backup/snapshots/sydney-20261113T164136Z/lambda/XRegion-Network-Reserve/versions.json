@@ -1,0 +1,63 @@
+[
+  {
+    "FunctionName": "XRegion-Network-Reserve",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Reserve:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:27.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "Reserve",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "3bcd3166-9753-41e9-9f7e-0bc0b62d065b",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-Reserve"
+    }
+  }
+]

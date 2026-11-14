@@ -1,0 +1,45 @@
+[
+  {
+    "AllocationId": "eipalloc-09400803ca63f68a1",
+    "AssociationId": "eipassoc-02ac43fffad1b332e",
+    "Domain": "vpc",
+    "NetworkInterfaceId": "eni-0ed6a1623d49ebe3a",
+    "NetworkInterfaceOwnerId": "291634989063",
+    "PrivateIpAddress": "10.20.1.253",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-SecondaryENI-Public-EIP"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "PublicIpv4Pool": "amazon",
+    "NetworkBorderGroup": "us-east-1",
+    "InstanceId": "i-07738a186534cb5ba",
+    "PublicIp": "44.212.151.241"
+  },
+  {
+    "AllocationId": "eipalloc-02c7d4788fff25b66",
+    "AssociationId": "eipassoc-053f64418a1e66fa4",
+    "Domain": "vpc",
+    "NetworkInterfaceId": "eni-01bcbc358520e4ac7",
+    "NetworkInterfaceOwnerId": "291634989063",
+    "PrivateIpAddress": "10.20.1.63",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-natgw-eip"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "PublicIpv4Pool": "amazon",
+    "NetworkBorderGroup": "us-east-1",
+    "PublicIp": "72.44.58.97"
+  }
+]

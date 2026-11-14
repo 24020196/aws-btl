@@ -1,0 +1,9 @@
+{
+  "Name": "XRegion-NetworkGateway",
+  "CreatedDate": "2026-11-13 03:29:00.547000+07:00",
+  "DocumentVersion": "1",
+  "Status": "Active",
+  "Content": "{\"schemaVersion\":\"2.2\",\"description\":\"Apply a validated Nova NAT mapping\",\"parameters\":{\"operation\":{\"type\":\"String\",\"allowedValues\":[\"APPLY\",\"REMOVE\",\"VERIFY\"],\"interpolationType\":\"ENV_VAR\"},\"novaId\":{\"type\":\"String\",\"allowedPattern\":\"^[0-9a-fA-F-]{36}$\",\"interpolationType\":\"ENV_VAR\"},\"guestPrivateIp\":{\"type\":\"String\",\"default\":\"\",\"allowedPattern\":\"^(|(?:\\\\d{1,3}\\\\.){3}\\\\d{1,3})$\",\"interpolationType\":\"ENV_VAR\"}},\"mainSteps\":[{\"action\":\"aws:runShellScript\",\"name\":\"networkMapping\",\"inputs\":{\"timeoutSeconds\":\"600\",\"runCommand\":[\"/opt/xregion-network-venv/bin/python /usr/local/libexec/xregion-network/gateway.py \\\"$SSM_operation\\\" \\\"$SSM_novaId\\\" \\\"$SSM_guestPrivateIp\\\"\"]}}]}",
+  "DocumentType": "Command",
+  "DocumentFormat": "JSON"
+}

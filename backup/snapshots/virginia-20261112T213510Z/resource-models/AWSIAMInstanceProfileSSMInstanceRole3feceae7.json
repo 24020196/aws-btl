@@ -1,0 +1,12 @@
+{
+  "type": "AWS::IAM::InstanceProfile",
+  "identifier": "SSMInstanceRole",
+  "properties": {
+    "Path": "/",
+    "InstanceProfileName": "SSMInstanceRole",
+    "Roles": [
+      "SSMInstanceRole"
+    ],
+    "Arn": "arn:aws:iam::291634989063:instance-profile/SSMInstanceRole"
+  }
+}

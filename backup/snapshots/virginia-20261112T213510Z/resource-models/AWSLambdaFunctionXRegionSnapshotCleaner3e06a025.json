@@ -1,0 +1,44 @@
+{
+  "type": "AWS::Lambda::Function",
+  "identifier": "XRegion-SnapshotCleaner",
+  "properties": {
+    "MemorySize": 256,
+    "Description": "",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "Timeout": 180,
+    "RuntimeManagementConfig": {
+      "UpdateRuntimeOn": "Auto"
+    },
+    "Handler": "snapshot_cleaner.lambda_handler",
+    "SnapStartResponse": {
+      "OptimizationStatus": "Off",
+      "ApplyOn": "None"
+    },
+    "Code": {},
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "FileSystemConfigs": [],
+    "FunctionName": "XRegion-SnapshotCleaner",
+    "Runtime": "python3.12",
+    "PackageType": "Zip",
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SnapshotCleaner"
+    },
+    "RecursiveLoop": "Terminate",
+    "Environment": {
+      "Variables": {
+        "REMOTE_REGION": "ap-southeast-2",
+        "GRACE_PERIOD_SECONDS": "1800"
+      }
+    },
+    "Arn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SnapshotCleaner",
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "Architectures": [
+      "x86_64"
+    ]
+  }
+}

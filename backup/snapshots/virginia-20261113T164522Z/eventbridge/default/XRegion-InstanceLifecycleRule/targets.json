@@ -1,0 +1,15 @@
+[
+  {
+    "Id": "LifecycleStepFunctionTarget",
+    "Arn": "arn:aws:states:us-east-1:291634989063:stateMachine:LifecycleInstance",
+    "RoleArn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "InputPath": "$.detail",
+    "DeadLetterConfig": {
+      "Arn": "arn:aws:sqs:us-east-1:291634989063:XRegion-InstanceLifecycle-DLQ"
+    },
+    "RetryPolicy": {
+      "MaximumRetryAttempts": 2,
+      "MaximumEventAgeInSeconds": 300
+    }
+  }
+]

@@ -1,0 +1,189 @@
+[
+  {
+    "responseType": "INTEGRATION_FAILURE",
+    "statusCode": "504",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "RESOURCE_NOT_FOUND",
+    "statusCode": "404",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "REQUEST_TOO_LARGE",
+    "statusCode": "413",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "THROTTLED",
+    "statusCode": "429",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "UNSUPPORTED_MEDIA_TYPE",
+    "statusCode": "415",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "AUTHORIZER_CONFIGURATION_ERROR",
+    "statusCode": "500",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "DEFAULT_5XX",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "DEFAULT_4XX",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "BAD_REQUEST_PARAMETERS",
+    "statusCode": "400",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "BAD_REQUEST_BODY",
+    "statusCode": "400",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "WAF_FILTERED",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "EXPIRED_TOKEN",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "ACCESS_DENIED",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "INVALID_API_KEY",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "UNAUTHORIZED",
+    "statusCode": "401",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "API_CONFIGURATION_ERROR",
+    "statusCode": "500",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "QUOTA_EXCEEDED",
+    "statusCode": "429",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "INTEGRATION_TIMEOUT",
+    "statusCode": "504",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "MISSING_AUTHENTICATION_TOKEN",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "INVALID_SIGNATURE",
+    "statusCode": "403",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  },
+  {
+    "responseType": "AUTHORIZER_FAILURE",
+    "statusCode": "500",
+    "responseParameters": {},
+    "responseTemplates": {
+      "application/json": "{\"message\":$context.error.messageString}"
+    },
+    "defaultResponse": true
+  }
+]

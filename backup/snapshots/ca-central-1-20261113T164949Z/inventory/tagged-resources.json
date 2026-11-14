@@ -1,0 +1,43 @@
+[
+  {
+    "ResourceARN": "arn:aws:ec2:ca-central-1:291634989063:instance/i-0dffaaf42ee1f8745",
+    "Tags": [
+      {
+        "Key": "aws:autoscaling:groupName",
+        "Value": "awseb-e-aj3ubitcec-stack-AWSEBAutoScalingGroup-l5RyQwVyejNE"
+      },
+      {
+        "Key": "aws:cloudformation:stack-name",
+        "Value": "awseb-e-aj3ubitcec-stack"
+      },
+      {
+        "Key": "aws:cloudformation:stack-id",
+        "Value": "arn:aws:cloudformation:ca-central-1:291634989063:stack/awseb-e-aj3ubitcec-stack/e70fae80-df48-11f1-8a3e-06fff229a471"
+      },
+      {
+        "Key": "elasticbeanstalk:environment-name",
+        "Value": "Xregion-app-env"
+      },
+      {
+        "Key": "aws:cloudformation:logical-id",
+        "Value": "AWSEBAutoScalingGroup"
+      },
+      {
+        "Key": "elasticbeanstalk:environment-id",
+        "Value": "e-aj3ubitcec"
+      },
+      {
+        "Key": "aws:ec2launchtemplate:version",
+        "Value": "1"
+      },
+      {
+        "Key": "aws:ec2launchtemplate:id",
+        "Value": "lt-0387b2f77d0b75568"
+      },
+      {
+        "Key": "Name",
+        "Value": "Xregion-app-env"
+      }
+    ]
+  }
+]

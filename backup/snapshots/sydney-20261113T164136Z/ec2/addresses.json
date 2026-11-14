@@ -1,0 +1,24 @@
+[
+  {
+    "AllocationId": "eipalloc-0247efeef81529db6",
+    "AssociationId": "eipassoc-0f8ca3565a5ce2336",
+    "Domain": "vpc",
+    "NetworkInterfaceId": "eni-091eaee3e69e3f42d",
+    "NetworkInterfaceOwnerId": "291634989063",
+    "PrivateIpAddress": "10.20.1.236",
+    "Tags": [
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-AutoAssignEIP"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "PublicIpv4Pool": "amazon",
+    "NetworkBorderGroup": "ap-southeast-2",
+    "InstanceId": "i-056d7f3dd24156234",
+    "PublicIp": "15.134.59.23"
+  }
+]

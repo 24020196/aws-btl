@@ -1,0 +1,37 @@
+{
+  "account": "291634989063",
+  "region": "ca-central-1",
+  "counts": {
+    "lambda": 0,
+    "stepfunctions": 0,
+    "dynamodb": 0,
+    "eventbridge_rules": 0,
+    "rest_apis": 0,
+    "ec2_instances": 0,
+    "vpcs": 0,
+    "ssm_documents": 0,
+    "ssm_parameters": 0,
+    "iam_roles": 0,
+    "log_groups": 0,
+    "sqs_queues": 0,
+    "schedules": 0
+  },
+  "read_errors_or_absent_optional_features": [
+    {
+      "path": "ssm/documents/XRegion-NetworkGateway/description.json",
+      "service": "ssm",
+      "operation": "describe_document",
+      "code": "InvalidDocument"
+    },
+    {
+      "path": "ssm/parameters/launch-admission.json",
+      "service": "ssm",
+      "operation": "get_parameter",
+      "code": "ParameterNotFound"
+    }
+  ],
+  "database_items_exported": false,
+  "ebs_included": false,
+  "ebs_snapshots_created": false,
+  "source": "live AWS deployed resources; phase1 candidate excluded"
+}

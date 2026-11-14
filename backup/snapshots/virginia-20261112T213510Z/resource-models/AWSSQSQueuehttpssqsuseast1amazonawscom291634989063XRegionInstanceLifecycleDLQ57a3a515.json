@@ -1,0 +1,15 @@
+{
+  "type": "AWS::SQS::Queue",
+  "identifier": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-InstanceLifecycle-DLQ",
+  "properties": {
+    "SqsManagedSseEnabled": true,
+    "ReceiveMessageWaitTimeSeconds": 0,
+    "DelaySeconds": 0,
+    "MessageRetentionPeriod": 345600,
+    "MaximumMessageSize": 1048576,
+    "VisibilityTimeout": 30,
+    "Arn": "arn:aws:sqs:us-east-1:291634989063:XRegion-InstanceLifecycle-DLQ",
+    "QueueName": "XRegion-InstanceLifecycle-DLQ",
+    "QueueUrl": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-InstanceLifecycle-DLQ"
+  }
+}

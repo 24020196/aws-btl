@@ -1,0 +1,59 @@
+{
+  "type": "AWS::Lambda::Function",
+  "identifier": "XRegion-SyncSecurityGroup",
+  "properties": {
+    "MemorySize": 256,
+    "Description": "SG sync worker canary (dry-run by default)",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "VpcConfig": {
+      "Ipv6AllowedForDualStack": false,
+      "SecurityGroupIds": [
+        "sg-06ed3f375ea95f881"
+      ],
+      "SubnetIds": [
+        "subnet-0909efd155bc3b18e"
+      ]
+    },
+    "Timeout": 120,
+    "RuntimeManagementConfig": {
+      "UpdateRuntimeOn": "Auto"
+    },
+    "Handler": "sync_security_group.lambda_handler",
+    "SnapStartResponse": {
+      "OptimizationStatus": "Off",
+      "ApplyOn": "None"
+    },
+    "Code": {},
+    "Role": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "FileSystemConfigs": [],
+    "FunctionName": "XRegion-SyncSecurityGroup",
+    "Runtime": "python3.12",
+    "PackageType": "Zip",
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncSecurityGroup"
+    },
+    "RecursiveLoop": "Terminate",
+    "Environment": {
+      "Variables": {
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "XREGION_SG_SYNC_LIVE": "true",
+        "OS_USERNAME": "admin",
+        "XREGION_SG_SYNC_LEASE_MS": "180000",
+        "XREGION_SG_SYNC_MANAGED_ALLOWLIST": "*",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "Arn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncSecurityGroup",
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "Architectures": [
+      "x86_64"
+    ]
+  }
+}

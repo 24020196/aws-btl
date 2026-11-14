@@ -1,0 +1,29 @@
+[
+  {
+    "CreateTime": "2026-11-04 13:53:47+00:00",
+    "NatGatewayAddresses": [
+      {
+        "AllocationId": "eipalloc-04032c7af60f3bb8a",
+        "PublicIp": "13.236.83.190",
+        "AssociationId": "eipassoc-00b7c6f6c49856e1d",
+        "Status": "succeeded",
+        "AvailabilityZone": "ap-southeast-2a",
+        "AvailabilityZoneId": "apse2-az1"
+      }
+    ],
+    "NatGatewayId": "nat-17b71ce42da8d5610",
+    "State": "available",
+    "VpcId": "vpc-0923b0726b21010dd",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionB-NatGateway"
+      }
+    ],
+    "ConnectivityType": "public",
+    "AvailabilityMode": "regional",
+    "AutoScalingIps": "enabled",
+    "AutoProvisionZones": "enabled",
+    "RouteTableId": "rtb-0c8f4fed87fcd6a05"
+  }
+]

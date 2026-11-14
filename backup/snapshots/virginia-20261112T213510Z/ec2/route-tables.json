@@ -1,0 +1,109 @@
+[
+  {
+    "Associations": [
+      {
+        "Main": true,
+        "RouteTableAssociationId": "rtbassoc-0b1bc923c656d26e5",
+        "RouteTableId": "rtb-08e3dc3b96744e810",
+        "AssociationState": {
+          "State": "associated"
+        }
+      }
+    ],
+    "PropagatingVgws": [],
+    "RouteTableId": "rtb-08e3dc3b96744e810",
+    "Routes": [
+      {
+        "DestinationCidrBlock": "10.20.0.0/16",
+        "GatewayId": "local",
+        "Origin": "CreateRouteTable",
+        "State": "active"
+      }
+    ],
+    "Tags": [],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "OwnerId": "291634989063"
+  },
+  {
+    "Associations": [
+      {
+        "Main": false,
+        "RouteTableAssociationId": "rtbassoc-051896a7337d34046",
+        "RouteTableId": "rtb-04cb3cf3fbd29b37d",
+        "SubnetId": "subnet-0909efd155bc3b18e",
+        "AssociationState": {
+          "State": "associated"
+        }
+      }
+    ],
+    "PropagatingVgws": [],
+    "RouteTableId": "rtb-04cb3cf3fbd29b37d",
+    "Routes": [
+      {
+        "DestinationCidrBlock": "10.20.0.0/16",
+        "GatewayId": "local",
+        "Origin": "CreateRouteTable",
+        "State": "active"
+      },
+      {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": "nat-0c026dd26fee01ec2",
+        "Origin": "CreateRoute",
+        "State": "active"
+      }
+    ],
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-routePrivate"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "OwnerId": "291634989063"
+  },
+  {
+    "Associations": [
+      {
+        "Main": false,
+        "RouteTableAssociationId": "rtbassoc-00697ae5cbbf701c6",
+        "RouteTableId": "rtb-0bbc388cf499e0f5d",
+        "SubnetId": "subnet-0123913e3357df916",
+        "AssociationState": {
+          "State": "associated"
+        }
+      }
+    ],
+    "PropagatingVgws": [],
+    "RouteTableId": "rtb-0bbc388cf499e0f5d",
+    "Routes": [
+      {
+        "DestinationCidrBlock": "10.20.0.0/16",
+        "GatewayId": "local",
+        "Origin": "CreateRouteTable",
+        "State": "active"
+      },
+      {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": "igw-03e28bc3c56a930a4",
+        "Origin": "CreateRoute",
+        "State": "active"
+      }
+    ],
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "Name",
+        "Value": "RegionA-routePublic"
+      }
+    ],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "OwnerId": "291634989063"
+  }
+]

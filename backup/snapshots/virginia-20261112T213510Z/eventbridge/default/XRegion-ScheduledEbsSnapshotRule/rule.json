@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-ScheduledEbsSnapshotRule",
+  "Arn": "arn:aws:events:us-east-1:291634989063:rule/XRegion-ScheduledEbsSnapshotRule",
+  "State": "ENABLED",
+  "ScheduleExpression": "cron(0,30 * * * ? *)",
+  "EventBusName": "default"
+}

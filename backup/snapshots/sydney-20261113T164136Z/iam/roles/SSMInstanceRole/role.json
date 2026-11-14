@@ -1,0 +1,27 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "SSMInstanceRole",
+    "RoleId": "AROAUHZWMZADTQQKQAYFY",
+    "Arn": "arn:aws:iam::291634989063:role/SSMInstanceRole",
+    "CreateDate": "2026-11-05 07:31:34+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "ec2.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "Description": "Allows EC2 instances to call AWS services on your behalf.",
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:33:39+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

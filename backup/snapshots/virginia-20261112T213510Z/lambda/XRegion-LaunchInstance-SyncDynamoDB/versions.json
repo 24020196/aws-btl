@@ -1,0 +1,124 @@
+[
+  {
+    "FunctionName": "XRegion-LaunchInstance-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13639,
+    "Description": "Step 6 of LaunchInstance: persists compute record into XRegion-Nova and marks volume IN_USE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T20:13:19.000+0000",
+    "CodeSha256": "FhasQggfyn4Uhp5u7kgPpTnJw1/GNK3Jk1h4hp3cmBg=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0123913e3357df916",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-0ed6a1623d49ebe3a",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "SyncDynamoDB",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-07738a186534cb5ba",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "292adc40-d5eb-4ec7-9209-28a94c7698ff",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-SyncDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 14868,
+    "Description": "Step 6 of LaunchInstance: persists compute record into XRegion-Nova and marks volume IN_USE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-11T18:12:21.285+0000",
+    "CodeSha256": "b1uyb2z+Yh85jLbSE9Z5hlg5X2ozhHUz/ebL6Xt/soE=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-02608023a28062a95",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "us-east-1a",
+        "GLANCE_URL": "http://10.10.10.99:9292/v2",
+        "NEUTRON_URL": "http://10.10.10.99:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.10.10.99:8774/v2.1",
+        "CINDER_URL": "http://10.10.10.99:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-0403544b8996a3b5a",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "SyncDynamoDB",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-054f3fe75f9160889",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.10.10.99:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "818b318d-c623-49ad-9685-b132fe1bce60",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-SyncDynamoDB"
+    }
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-InstanceLifecycleRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLifecycleRule",
+  "EventPattern": "{\"source\": [\"xregion.backend.instance\"], \"detail-type\": [\"instance.lifecycle\"], \"detail\": {\"action\": [\"START\", \"STOP\", \"REBOOT\"]}}",
+  "State": "ENABLED",
+  "Description": "SPEC-SF-06 START/STOP/REBOOT -> LifecycleInstance",
+  "EventBusName": "default"
+}

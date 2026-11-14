@@ -1,0 +1,40 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "XRegion-ApiGatewayToEventBridgeRole",
+  "properties": {
+    "Path": "/",
+    "MaxSessionDuration": 3600,
+    "RoleName": "XRegion-ApiGatewayToEventBridgeRole",
+    "Policies": [
+      {
+        "PolicyName": "EventBridgePutEventsPolicy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "events:PutEvents"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "apigateway.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-ApiGatewayToEventBridgeRole",
+    "RoleId": "AROAUHZWMZADX4JDJFYU7"
+  }
+}

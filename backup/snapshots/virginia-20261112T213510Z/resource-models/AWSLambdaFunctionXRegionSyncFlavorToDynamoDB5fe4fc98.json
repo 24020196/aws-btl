@@ -1,0 +1,43 @@
+{
+  "type": "AWS::Lambda::Function",
+  "identifier": "XRegion-SyncFlavorToDynamoDB",
+  "properties": {
+    "MemorySize": 128,
+    "Description": "Syncs OpenStack Nova Flavors to DynamoDB XRegion-Flavors",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "VpcConfig": {
+      "Ipv6AllowedForDualStack": false,
+      "SecurityGroupIds": [],
+      "SubnetIds": []
+    },
+    "Timeout": 15,
+    "RuntimeManagementConfig": {
+      "UpdateRuntimeOn": "Auto"
+    },
+    "Handler": "lambda_function.lambda_handler",
+    "SnapStartResponse": {
+      "OptimizationStatus": "Off",
+      "ApplyOn": "None"
+    },
+    "Code": {},
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "FileSystemConfigs": [],
+    "FunctionName": "XRegion-SyncFlavorToDynamoDB",
+    "Runtime": "python3.12",
+    "PackageType": "Zip",
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncFlavorToDynamoDB"
+    },
+    "RecursiveLoop": "Terminate",
+    "Arn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncFlavorToDynamoDB",
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "Architectures": [
+      "x86_64"
+    ]
+  }
+}

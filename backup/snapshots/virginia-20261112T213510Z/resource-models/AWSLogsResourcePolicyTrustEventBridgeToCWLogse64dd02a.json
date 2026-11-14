@@ -1,0 +1,8 @@
+{
+  "type": "AWS::Logs::ResourcePolicy",
+  "identifier": "TrustEventBridgeToCWLogs",
+  "properties": {
+    "PolicyName": "TrustEventBridgeToCWLogs",
+    "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"TrustEventBridgeToCWLogs\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":[\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Resource\":\"arn:aws:logs:us-east-1:291634989063:log-group:/aws/events/*:*\"}]}"
+  }
+}

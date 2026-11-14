@@ -1,0 +1,27 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "DB-AccessRole",
+    "RoleId": "AROAUHZWMZAD54KIFXOUI",
+    "Arn": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "CreateDate": "2026-11-06 01:45:06+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "Description": "Allows Lambda functions to call AWS services on your behalf.",
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:45:20+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

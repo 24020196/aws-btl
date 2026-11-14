@@ -1,0 +1,41 @@
+[
+  {
+    "FunctionName": "XRegion-Migrate-TriggerTargetLaunch",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-TriggerTargetLaunch:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_trigger_target_launch.lambda_handler",
+    "CodeSize": 1755,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:10:23.000+0000",
+    "CodeSha256": "7fLQkWeIU4FGJu5j7/QIFKITiFXuWSgqXJwCHcOEvYs=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEST_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "250c6bed-8b5a-4d9e-8aa3-d47f9ca9c506",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-TriggerTargetLaunch"
+    }
+  }
+]

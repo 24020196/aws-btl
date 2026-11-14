@@ -1,0 +1,54 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "description" : "API Gateway Ingestion Gateway phuc vu he thong dieu phoi da vung IaaS XRegion.",
+    "version" : "2026-11-07T11:30:32Z",
+    "title" : "XRegion-EventGateway"
+  },
+  "host" : "dawfyj0692.execute-api.us-east-1.amazonaws.com",
+  "basePath" : "/prod",
+  "schemes" : [ "https" ],
+  "paths" : {
+    "/events" : {
+      "post" : {
+        "consumes" : [ "application/json" ],
+        "responses" : {
+          "200" : {
+            "description" : "200 response"
+          }
+        },
+        "security" : [ {
+          "sigv4" : [ ]
+        } ],
+        "x-amazon-apigateway-integration" : {
+          "credentials" : "arn:aws:iam::291634989063:role/XRegion-ApiGatewayToEventBridgeRole",
+          "uri" : "arn:aws:apigateway:us-east-1:events:action/PutEvents",
+          "httpMethod" : "POST",
+          "responses" : {
+            "200" : {
+              "statusCode" : "200"
+            }
+          },
+          "requestParameters" : {
+            "integration.request.header.X-Amz-Target" : "'AWSEvents.PutEvents'",
+            "integration.request.header.Content-Type" : "'application/x-amz-json-1.1'"
+          },
+          "requestTemplates" : {
+            "application/json" : "{\n  \"Entries\": [\n    {\n      \"Source\": \"$input.path('$.source')\",\n      \"DetailType\": \"$input.path('$.detailType')\",\n      \"Detail\": \"$util.escapeJavaScript($input.json('$.detail'))\",\n      \"EventBusName\": \"default\"\n    }\n  ]\n}"
+          },
+          "passthroughBehavior" : "when_no_match",
+          "type" : "aws"
+        }
+      }
+    }
+  },
+  "securityDefinitions" : {
+    "sigv4" : {
+      "x-amazon-apigateway-authtype" : "awsSigv4",
+      "type" : "apiKey",
+      "name" : "Authorization",
+      "in" : "header"
+    }
+  },
+  "x-amazon-apigateway-security-policy" : "TLS_1_0"
+}

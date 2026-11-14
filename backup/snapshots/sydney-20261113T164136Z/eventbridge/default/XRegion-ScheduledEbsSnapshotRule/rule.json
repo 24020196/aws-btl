@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-ScheduledEbsSnapshotRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-ScheduledEbsSnapshotRule",
+  "State": "ENABLED",
+  "Description": "Trigger XRegion-ScheduledEbsSnapshot every 30 mins (minute 0 and 30)",
+  "ScheduleExpression": "cron(0,30 * * * ? *)",
+  "EventBusName": "default"
+}

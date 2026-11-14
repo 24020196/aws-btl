@@ -1,0 +1,89 @@
+[
+  {
+    "GroupId": "sg-06ed3f375ea95f881",
+    "IpPermissionsEgress": [
+      {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [],
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [
+          {
+            "CidrIpv6": "::/0"
+          }
+        ],
+        "PrefixListIds": []
+      }
+    ],
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-securityGroup"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "SecurityGroupArn": "arn:aws:ec2:us-east-1:291634989063:security-group/sg-06ed3f375ea95f881",
+    "OwnerId": "291634989063",
+    "GroupName": "RegionA-securityGroup",
+    "Description": "RegionA-EC2-securityGroup",
+    "IpPermissions": [
+      {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [],
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [
+          {
+            "CidrIpv6": "::/0"
+          }
+        ],
+        "PrefixListIds": []
+      }
+    ]
+  },
+  {
+    "GroupId": "sg-0166cdeadf9eb44d2",
+    "IpPermissionsEgress": [
+      {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [],
+        "IpRanges": [
+          {
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Ipv6Ranges": [],
+        "PrefixListIds": []
+      }
+    ],
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "SecurityGroupArn": "arn:aws:ec2:us-east-1:291634989063:security-group/sg-0166cdeadf9eb44d2",
+    "OwnerId": "291634989063",
+    "GroupName": "default",
+    "Description": "default VPC security group",
+    "IpPermissions": [
+      {
+        "IpProtocol": "-1",
+        "UserIdGroupPairs": [
+          {
+            "UserId": "291634989063",
+            "GroupId": "sg-0166cdeadf9eb44d2"
+          }
+        ],
+        "IpRanges": [],
+        "Ipv6Ranges": [],
+        "PrefixListIds": []
+      }
+    ]
+  }
+]

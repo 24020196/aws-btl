@@ -1,0 +1,18 @@
+{
+  "RoleName": "DB-AccessRole",
+  "PolicyName": "XRegionCrossRegionApiGatewayInvoke",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": "*",
+        "Action": [
+          "execute-api:Invoke",
+          "events:PutEvents",
+          "states:StartExecution"
+        ]
+      }
+    ]
+  }
+}

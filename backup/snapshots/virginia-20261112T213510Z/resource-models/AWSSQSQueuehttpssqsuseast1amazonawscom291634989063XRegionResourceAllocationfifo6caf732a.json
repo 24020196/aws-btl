@@ -1,0 +1,19 @@
+{
+  "type": "AWS::SQS::Queue",
+  "identifier": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-ResourceAllocation.fifo",
+  "properties": {
+    "ReceiveMessageWaitTimeSeconds": 0,
+    "FifoThroughputLimit": "perQueue",
+    "FifoQueue": true,
+    "MaximumMessageSize": 1048576,
+    "VisibilityTimeout": 60,
+    "QueueUrl": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-ResourceAllocation.fifo",
+    "SqsManagedSseEnabled": true,
+    "DelaySeconds": 0,
+    "MessageRetentionPeriod": 345600,
+    "DeduplicationScope": "queue",
+    "ContentBasedDeduplication": true,
+    "Arn": "arn:aws:sqs:us-east-1:291634989063:XRegion-ResourceAllocation.fifo",
+    "QueueName": "XRegion-ResourceAllocation.fifo"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "AWS::EC2::NatGateway",
+  "identifier": "nat-0c026dd26fee01ec2",
+  "properties": {
+    "PrivateIpAddress": "10.20.1.63",
+    "ConnectivityType": "public",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "EniId": "eni-01bcbc358520e4ac7",
+    "AvailabilityMode": "zonal",
+    "AllocationId": "eipalloc-02c7d4788fff25b66",
+    "SubnetId": "subnet-0123913e3357df916",
+    "NatGatewayId": "nat-0c026dd26fee01ec2",
+    "Tags": [
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      },
+      {
+        "Value": "RegionA-natgw",
+        "Key": "Name"
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-SnapshotCleanerRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-SnapshotCleanerRule",
+  "State": "ENABLED",
+  "Description": "Hourly cleanup of orphan EBS snapshots and deleted cross-region source snapshots at Region B",
+  "ScheduleExpression": "rate(1 hour)",
+  "EventBusName": "default"
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "AvailabilityZoneId": "use1-az1",
+    "MapCustomerOwnedIpOnLaunch": false,
+    "OwnerId": "291634989063",
+    "AssignIpv6AddressOnCreation": false,
+    "Ipv6CidrBlockAssociationSet": [],
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-privateSubnet1"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "SubnetArn": "arn:aws:ec2:us-east-1:291634989063:subnet/subnet-0909efd155bc3b18e",
+    "EnableDns64": false,
+    "Ipv6Native": false,
+    "PrivateDnsNameOptionsOnLaunch": {
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsARecord": false,
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "BlockPublicAccessStates": {
+      "InternetGatewayBlockMode": "off"
+    },
+    "SubnetId": "subnet-0909efd155bc3b18e",
+    "State": "available",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "CidrBlock": "10.20.10.0/24",
+    "AvailableIpAddressCount": 248,
+    "AvailabilityZone": "us-east-1a",
+    "DefaultForAz": false,
+    "MapPublicIpOnLaunch": false
+  },
+  {
+    "AvailabilityZoneId": "use1-az1",
+    "MapCustomerOwnedIpOnLaunch": false,
+    "OwnerId": "291634989063",
+    "AssignIpv6AddressOnCreation": false,
+    "Ipv6CidrBlockAssociationSet": [],
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-publicSubnet1"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "SubnetArn": "arn:aws:ec2:us-east-1:291634989063:subnet/subnet-0123913e3357df916",
+    "EnableDns64": false,
+    "Ipv6Native": false,
+    "PrivateDnsNameOptionsOnLaunch": {
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsARecord": false,
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "BlockPublicAccessStates": {
+      "InternetGatewayBlockMode": "off"
+    },
+    "SubnetId": "subnet-0123913e3357df916",
+    "State": "available",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "CidrBlock": "10.20.1.0/24",
+    "AvailableIpAddressCount": 244,
+    "AvailabilityZone": "us-east-1a",
+    "DefaultForAz": false,
+    "MapPublicIpOnLaunch": false
+  }
+]

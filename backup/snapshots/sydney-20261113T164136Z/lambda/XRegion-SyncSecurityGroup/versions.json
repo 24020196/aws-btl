@@ -1,0 +1,112 @@
+[
+  {
+    "FunctionName": "XRegion-SyncSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "Handler": "sync_security_group.lambda_handler",
+    "CodeSize": 10706,
+    "Description": "SG sync worker canary (dry-run by default)",
+    "Timeout": 120,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T11:55:47.000+0000",
+    "CodeSha256": "ChGXUMCSCkfj53jx4sW/IvGMI9rRtb4SVN8ETNjx4W8=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "XREGION_SG_SYNC_LIVE": "true",
+        "OS_USERNAME": "admin",
+        "XREGION_SG_SYNC_LEASE_MS": "180000",
+        "XREGION_SG_SYNC_MANAGED_ALLOWLIST": "*",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "ecdbeff7-be4d-4cad-b1b6-046b75ae2613",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncSecurityGroup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "Handler": "sync_security_group.lambda_handler",
+    "CodeSize": 9898,
+    "Description": "SG sync worker canary (dry-run by default)",
+    "Timeout": 120,
+    "MemorySize": 256,
+    "LastModified": "2026-11-09T19:11:31.573+0000",
+    "CodeSha256": "7m83v70J0c253MxKjyGRoZjT/xlJGiREHyAphzSXjTc=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "XREGION_SG_SYNC_LIVE": "false",
+        "OS_USERNAME": "admin",
+        "XREGION_SG_SYNC_LEASE_MS": "180000",
+        "XREGION_SG_SYNC_MANAGED_ALLOWLIST": "",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "3a215f7d-919a-4883-9ebc-4852f332acc7",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncSecurityGroup"
+    }
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "FunctionName": "XRegion-SyncImageToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncImageToDynamoDB:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 830,
+    "Description": "Syncs OpenStack Glance Images to DynamoDB XRegion-Images",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-07T08:29:03.018+0000",
+    "CodeSha256": "GwOLdv6HHOVGHe6q4Ja2gu+w3A765ZIeCrHIbxB6Pag=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "6503c6d5-37a7-4f70-8014-73087c236e77",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncImageToDynamoDB"
+    }
+  }
+]
