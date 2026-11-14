@@ -1,0 +1,48 @@
+[
+  {
+    "id": "f8hmq7",
+    "parentId": "z3rrlpxnv8",
+    "pathPart": "events",
+    "path": "/events",
+    "resourceMethods": {
+      "POST": {
+        "httpMethod": "POST",
+        "authorizationType": "AWS_IAM",
+        "apiKeyRequired": false,
+        "methodResponses": {
+          "200": {
+            "statusCode": "200"
+          }
+        },
+        "methodIntegration": {
+          "type": "AWS",
+          "httpMethod": "POST",
+          "uri": "arn:aws:apigateway:ap-southeast-2:events:action/PutEvents",
+          "credentials": "arn:aws:iam::291634989063:role/XRegion-ApiGatewayToEventBridgeRole",
+          "requestParameters": {
+            "integration.request.header.Content-Type": "'application/x-amz-json-1.1'",
+            "integration.request.header.X-Amz-Target": "'AWSEvents.PutEvents'"
+          },
+          "requestTemplates": {
+            "application/json": "{\n  \"Entries\": [\n    {\n      \"Source\": \"$input.path('$.source')\",\n      \"DetailType\": \"$input.path('$.detailType')\",\n      \"Detail\": \"$util.escapeJavaScript($input.json('$.detail'))\",\n      \"EventBusName\": \"default\"\n    }\n  ]\n}"
+          },
+          "passthroughBehavior": "WHEN_NO_MATCH",
+          "timeoutInMillis": 29000,
+          "cacheNamespace": "f8hmq7",
+          "cacheKeyParameters": [],
+          "integrationResponses": {
+            "200": {
+              "statusCode": "200",
+              "selectionPattern": "200"
+            }
+          },
+          "responseTransferMode": "BUFFERED"
+        }
+      }
+    }
+  },
+  {
+    "id": "z3rrlpxnv8",
+    "path": "/"
+  }
+]

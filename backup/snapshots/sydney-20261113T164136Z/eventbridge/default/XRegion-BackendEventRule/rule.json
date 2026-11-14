@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-BackendEventRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-BackendEventRule",
+  "EventPattern": "{\n  \"source\": [\n    \"xregion.backend.instance\",\n    \"xregion.backend.key\",\n    \"xregion.backend.migration\",\n    \"xregion.backend.security\"\n  ],\n  \"detail-type\": [\n    \"security.create\",\n    \"key.import\",\n    \"instance.launch\",\n    \"instance.lifecycle\",\n    \"Instance Lifecycle Request\",\n    \"Keypair Created Event\",\n    \"Migration Lifecycle Event\"\n  ]\n}\n",
+  "State": "ENABLED",
+  "EventBusName": "default"
+}

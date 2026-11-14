@@ -1,0 +1,31 @@
+{
+  "InstanceProfile": {
+    "Path": "/",
+    "InstanceProfileName": "SSMInstanceRole",
+    "InstanceProfileId": "AIPAUHZWMZADRJTZW3OMQ",
+    "Arn": "arn:aws:iam::291634989063:instance-profile/SSMInstanceRole",
+    "CreateDate": "2026-11-05 07:31:35+00:00",
+    "Roles": [
+      {
+        "Path": "/",
+        "RoleName": "SSMInstanceRole",
+        "RoleId": "AROAUHZWMZADTQQKQAYFY",
+        "Arn": "arn:aws:iam::291634989063:role/SSMInstanceRole",
+        "CreateDate": "2026-11-05 07:31:34+00:00",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    ],
+    "Tags": []
+  }
+}

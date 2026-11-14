@@ -1,0 +1,11 @@
+{
+  "Parameter": {
+    "Name": "/xregion/us-east-1/launch/admission",
+    "Type": "String",
+    "Value": "{\"mode\": \"open\", \"canary\": {\"username\": \"admin\", \"name\": \"ping-test-canary\", \"key_id\": \"key-canary-uuid\"}}",
+    "Version": 2,
+    "LastModifiedDate": "2026-11-12 22:12:00.385000+07:00",
+    "ARN": "arn:aws:ssm:us-east-1:291634989063:parameter/xregion/us-east-1/launch/admission",
+    "DataType": "text"
+  }
+}

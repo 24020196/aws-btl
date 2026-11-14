@@ -1,0 +1,463 @@
+{
+  "account": "291634989063",
+  "region": "us-east-1",
+  "counts": {
+    "lambda": 42,
+    "stepfunctions": 6,
+    "dynamodb": 12,
+    "eventbridge_rules": 14,
+    "rest_apis": 1,
+    "ec2_instances": 1,
+    "vpcs": 1,
+    "ssm_documents": 1,
+    "ssm_parameters": 1,
+    "iam_roles": 8,
+    "log_groups": 39,
+    "sqs_queues": 3,
+    "schedules": 0
+  },
+  "read_errors_or_absent_optional_features": [
+    {
+      "path": "lambda/XRegion-Network-Reserve/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Reserve/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Dispatch/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Dispatch/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-Network/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-Network/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-KeySyncManager/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-SnapshotCleaner/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-StopSource/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-StopSource/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-SyncFlavorToDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-CheckCommand/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-CheckCommand/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-SyncDynamoDB/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-SyncDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-CinderPoolManager/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-AssignSecurityGroup/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-AssignSecurityGroup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-ScheduledMigrationTrigger/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-ScheduledMigrationTrigger/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-ExtendVolume/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-ExtendVolume/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-SourceCleanup/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-SourceCleanup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-ResourceCleaner/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteNova/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteNova/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-SnapshotCrossRegionCopy/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-Volume/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-Volume/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-CleanSnapshots/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-CleanSnapshots/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-TriggerSourceRollback/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-TriggerSourceRollback/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteSecurityGroup/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteSecurityGroup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-SyncDynamoDB/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-SyncDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-SyncSecurityGroup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-EIPPoolManager/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-CreateAndCopy/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-CreateAndCopy/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-Rollback/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-AssignSecurityGroup/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-AssignSecurityGroup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-TriggerTargetLaunch/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-TriggerTargetLaunch/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteVolume/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-TerminateInstance-DeleteVolume/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-CheckPool/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-CheckPool/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-BootNova/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-BootNova/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-InstanceLifecycle/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-InstanceLifecycle/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-BootNova/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-BootNova/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Commit/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Commit/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-SyncDynamoDB/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-SyncDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-AllocateResource/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-LaunchInstance-AllocateResource/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-TriggerSourceCleanup/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-MigrateTarget-TriggerSourceCleanup/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-SyncImageToDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-SyncDynamoDB/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-SyncDynamoDB/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-BootTarget/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Migrate-BootTarget/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-ScheduledEbsSnapshot/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Release/resource-policy.json",
+      "service": "lambda",
+      "operation": "get_policy",
+      "code": "ResourceNotFoundException"
+    },
+    {
+      "path": "lambda/XRegion-Network-Release/url.json",
+      "service": "lambda",
+      "operation": "get_function_url_config",
+      "code": "ResourceNotFoundException"
+    }
+  ],
+  "database_items_exported": false,
+  "ebs_included": false,
+  "ebs_snapshots_created": false,
+  "source": "live AWS deployed resources; phase1 candidate excluded"
+}

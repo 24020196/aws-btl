@@ -1,0 +1,312 @@
+{
+  "Comment": "SPEC-SF-09 v1.6.0: Cleanup old source Nova VM and return EIP to Warm Pool after MigrateTargetBoot SyncDynamoDB",
+  "StartAt": "LoadSourceContext_SetAction",
+  "TimeoutSeconds": 300,
+  "States": {
+    "LoadSourceContext_SetAction": {
+      "Type": "Pass",
+      "Result": "load",
+      "ResultPath": "$.action",
+      "Next": "LoadSourceContext"
+    },
+    "LoadSourceContext": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "ChoiceHasMapping",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "ChoiceHasMapping": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.has_mapping",
+          "BooleanEquals": true,
+          "Next": "RemoveSourceNat_SetAction"
+        }
+      ],
+      "Default": "DeleteSourceNova_SetAction"
+    },
+    "RemoveSourceNat_SetAction": {
+      "Type": "Pass",
+      "Result": "dispatch_nat_remove",
+      "ResultPath": "$.action",
+      "Next": "RemoveSourceNat"
+    },
+    "RemoveSourceNat": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "WaitSourceNat",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "WaitSourceNat": {
+      "Type": "Wait",
+      "Seconds": 3,
+      "Next": "CheckSourceNat_SetAction"
+    },
+    "CheckSourceNat_SetAction": {
+      "Type": "Pass",
+      "Result": "check_nat",
+      "ResultPath": "$.action",
+      "Next": "CheckSourceNat"
+    },
+    "CheckSourceNat": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "ChoiceSourceNat",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "ChoiceSourceNat": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.command_status",
+          "StringEquals": "SUCCEEDED",
+          "Next": "DeleteSourceNova_SetAction"
+        }
+      ],
+      "Default": "WaitSourceNat"
+    },
+    "DeleteSourceNova_SetAction": {
+      "Type": "Pass",
+      "Result": "delete_nova",
+      "ResultPath": "$.action",
+      "Next": "DeleteSourceNova"
+    },
+    "DeleteSourceNova": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "ChoiceReleaseNetwork",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "ChoiceReleaseNetwork": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.has_mapping",
+          "BooleanEquals": true,
+          "Next": "ReleaseSourceNetworkAndEIP_SetAction"
+        }
+      ],
+      "Default": "DeleteSourceSecurityGroup_SetAction"
+    },
+    "ReleaseSourceNetworkAndEIP_SetAction": {
+      "Type": "Pass",
+      "Result": "release_network",
+      "ResultPath": "$.action",
+      "Next": "ReleaseSourceNetworkAndEIP"
+    },
+    "ReleaseSourceNetworkAndEIP": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "DeleteSourceSecurityGroup_SetAction",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "DeleteSourceSecurityGroup_SetAction": {
+      "Type": "Pass",
+      "Result": "delete_sg",
+      "ResultPath": "$.action",
+      "Next": "DeleteSourceSecurityGroup"
+    },
+    "DeleteSourceSecurityGroup": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "DeleteSourceVolumeAndSnapshot_SetAction",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "DeleteSourceVolumeAndSnapshot_SetAction": {
+      "Type": "Pass",
+      "Result": "delete_volume_and_snapshot",
+      "ResultPath": "$.action",
+      "Next": "DeleteSourceVolumeAndSnapshot"
+    },
+    "DeleteSourceVolumeAndSnapshot": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SourceCleanup",
+        "Payload.$": "$"
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "SourceCleanupSuccess",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "SourceCleanupFailed"
+        }
+      ]
+    },
+    "SourceCleanupSuccess": {
+      "Type": "Succeed"
+    },
+    "SourceCleanupFailed": {
+      "Type": "Fail",
+      "Error": "SourceCleanupFailed",
+      "Cause": "MigrateSourceCleanup failed while cleaning up source resources"
+    }
+  }
+}

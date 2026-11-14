@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-ResourceCleanerCron",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-ResourceCleanerCron",
+  "State": "ENABLED",
+  "Description": "SPEC-02 v1.2.0 FIFO cleanup for idle EIPs (>2) and EBS/Cinder volumes (>5)",
+  "ScheduleExpression": "rate(1 hour)",
+  "EventBusName": "default"
+}

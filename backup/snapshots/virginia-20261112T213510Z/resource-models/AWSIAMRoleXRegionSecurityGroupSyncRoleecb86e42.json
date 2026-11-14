@@ -1,0 +1,94 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "XRegion-SecurityGroupSyncRole",
+  "properties": {
+    "Path": "/",
+    "ManagedPolicyArns": [
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+      "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+    ],
+    "MaxSessionDuration": 3600,
+    "RoleName": "XRegion-SecurityGroupSyncRole",
+    "Description": "Minimal role for XRegion SG sync worker canary",
+    "Policies": [
+      {
+        "PolicyName": "XRegion-SG-Sync-Worker",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-SecurityGroups",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-SecurityGroups"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "dynamodb:GetItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances",
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova",
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "dynamodb:Query"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova/index/*",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova/index/*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": [
+                "arn:aws:logs:ap-southeast-2:291634989063:log-group:/aws/lambda/XRegion-SyncSecurityGroup:*",
+                "arn:aws:logs:us-east-1:291634989063:log-group:/aws/lambda/XRegion-SyncSecurityGroup:*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "sqs:SendMessage"
+              ],
+              "Resource": [
+                "arn:aws:sqs:ap-southeast-2:291634989063:XRegion-SecurityGroupSync-Canary-dlq",
+                "arn:aws:sqs:us-east-1:291634989063:XRegion-SecurityGroupSync-Canary-dlq"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "RoleId": "AROAUHZWMZADW4YTJ3LKN"
+  }
+}

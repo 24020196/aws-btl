@@ -1,0 +1,17 @@
+{
+  "id": "oqp7jmg7je",
+  "name": "XRegion-EventGateway",
+  "description": "Direct EventBridge Ingestion Gateway",
+  "createdDate": "2026-11-07 01:01:08+07:00",
+  "apiKeySource": "HEADER",
+  "endpointConfiguration": {
+    "types": [
+      "EDGE"
+    ],
+    "ipAddressType": "ipv4"
+  },
+  "disableExecuteApiEndpoint": false,
+  "rootResourceId": "z3rrlpxnv8",
+  "securityPolicy": "TLS_1_0",
+  "apiStatus": "AVAILABLE"
+}

@@ -1,0 +1,39 @@
+{
+  "stateMachineArn": "arn:aws:states:ap-southeast-2:291634989063:stateMachine:TerminateInstance",
+  "name": "TerminateInstance",
+  "status": "ACTIVE",
+  "definition": "{\"Comment\": \"xregion linux-nat-v1 contract 1\", \"StartAt\": \"LoadNetworkContext\", \"TimeoutSeconds\": 300, \"States\": {\"LoadNetworkContext\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Release\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"RemoveNatMapping\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"RemoveNatMapping\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Dispatch\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"WaitNatCommand\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"WaitNatCommand\": {\"Type\": \"Wait\", \"Seconds\": 3, \"Next\": \"CheckNatCommand\"}, \"CheckNatCommand\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-CheckCommand\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"ChoiceNatCommand\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"ChoiceNatCommand\": {\"Type\": \"Choice\", \"Choices\": [{\"Variable\": \"$.command_status\", \"StringEquals\": \"SUCCEEDED\", \"Next\": \"DeleteNovaVM\"}], \"Default\": \"WaitNatCommand\"}, \"DeleteNovaVM\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteNova\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"FinalizeNetworkRelease\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"FinalizeNetworkRelease\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Release\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}, {\"ErrorEquals\": [\"TimeoutError\", \"TransactionCanceledException\", \"ConditionalCheckFailedException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"DeleteSecurityGroup\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"DeleteSecurityGroup\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"DeleteVolume\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"DeleteVolume\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteVolume\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"VolumeDeletionStatus\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"VolumeDeletionStatus\": {\"Type\": \"Choice\", \"Choices\": [{\"Variable\": \"$.volume_cleanup.status\", \"StringEquals\": \"DELETED\", \"Next\": \"SyncDynamoDB\"}], \"Default\": \"WaitVolumeDeletion\"}, \"WaitVolumeDeletion\": {\"Type\": \"Wait\", \"Seconds\": 5, \"Next\": \"DeleteVolume\"}, \"SyncDynamoDB\": {\"Type\": \"Task\", \"Resource\": \"arn:aws:states:::lambda:invoke\", \"Parameters\": {\"FunctionName\": \"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-SyncDynamoDB\", \"Payload.$\": \"$\"}, \"OutputPath\": \"$.Payload\", \"Retry\": [{\"ErrorEquals\": [\"Lambda.ServiceException\", \"Lambda.AWSLambdaException\", \"Lambda.SdkClientException\"], \"IntervalSeconds\": 2, \"MaxAttempts\": 2, \"BackoffRate\": 2}], \"Next\": \"TerminationSuccess\", \"Catch\": [{\"ErrorEquals\": [\"States.ALL\"], \"ResultPath\": \"$.error\", \"Next\": \"TerminationFailed\"}]}, \"TerminationSuccess\": {\"Type\": \"Succeed\"}, \"TerminationFailed\": {\"Type\": \"Fail\", \"Error\": \"TerminationError\"}}}",
+  "roleArn": "arn:aws:iam::291634989063:role/openstack_step_functions_role",
+  "type": "STANDARD",
+  "creationDate": "2026-11-07 23:31:11.512000+07:00",
+  "loggingConfiguration": {
+    "level": "ALL",
+    "includeExecutionData": false,
+    "destinations": [
+      {
+        "cloudWatchLogsLogGroup": {
+          "logGroupArn": "arn:aws:logs:ap-southeast-2:291634989063:log-group:/aws/vendedlogs/states/XRegion-TerminateInstance:*"
+        }
+      }
+    ]
+  },
+  "tracingConfiguration": {
+    "enabled": false
+  },
+  "revisionId": "2a8770c5-caf5-425c-bc4e-1ff27c86f938",
+  "encryptionConfiguration": {
+    "type": "AWS_OWNED_KEY"
+  },
+  "ResponseMetadata": {
+    "RequestId": "3cf6280d-8445-4bd7-8258-78bc51c976c3",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "3cf6280d-8445-4bd7-8258-78bc51c976c3",
+      "date": "Fri, 13 Nov 2026 16:44:03 GMT",
+      "content-type": "application/x-amz-json-1.0",
+      "content-length": "6700",
+      "connection": "keep-alive"
+    },
+    "RetryAttempts": 0
+  }
+}

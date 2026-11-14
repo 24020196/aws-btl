@@ -1,0 +1,75 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "XRegion-InstanceRecovery-ExecutionRole",
+  "properties": {
+    "Path": "/",
+    "MaxSessionDuration": 3600,
+    "RoleName": "XRegion-InstanceRecovery-ExecutionRole",
+    "Policies": [
+      {
+        "PolicyName": "InstanceRecovery",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances",
+                "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances",
+                "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "states:DescribeExecution"
+              ],
+              "Resource": [
+                "arn:aws:states:ap-southeast-2:291634989063:execution:TerminateInstance:*",
+                "arn:aws:states:us-east-1:291634989063:execution:TerminateInstance:*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-InstanceRecovery-ExecutionRole",
+    "RoleId": "AROAUHZWMZAD5PXRJD4KT"
+  }
+}

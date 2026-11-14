@@ -1,0 +1,8 @@
+[
+  {
+    "Id": "MigrateSourceCleanupTarget",
+    "Arn": "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateSourceCleanup",
+    "RoleArn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "InputPath": "$.detail"
+  }
+]

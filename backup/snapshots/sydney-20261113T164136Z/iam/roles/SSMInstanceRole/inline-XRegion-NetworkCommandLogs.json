@@ -1,0 +1,21 @@
+{
+  "RoleName": "SSMInstanceRole",
+  "PolicyName": "XRegion-NetworkCommandLogs",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:logs:ap-southeast-2:291634989063:log-group:/xregion/network/ssm:*",
+          "arn:aws:logs:us-east-1:291634989063:log-group:/xregion/network/ssm:*"
+        ],
+        "Action": [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+      }
+    ]
+  }
+}

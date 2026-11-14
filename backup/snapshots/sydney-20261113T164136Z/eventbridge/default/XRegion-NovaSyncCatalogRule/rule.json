@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-NovaSyncCatalogRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-NovaSyncCatalogRule",
+  "EventPattern": "{\n  \"source\": [\n    \"openstack.glance\",\n    \"openstack.nova\"\n  ],\n  \"detail-type\": [\n    \"Glance Image State Change\",\n    \"Nova Flavor State Change\"\n  ]\n}\n",
+  "State": "ENABLED",
+  "Description": "Trigger Lambdas to sync OpenStack Glance Images and Nova Flavors to DynamoDB",
+  "EventBusName": "default"
+}

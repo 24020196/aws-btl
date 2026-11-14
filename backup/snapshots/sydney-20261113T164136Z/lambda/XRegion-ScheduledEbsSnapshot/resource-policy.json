@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"EventBridgeScheduledSnapshot\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-ScheduledEbsSnapshot\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-ScheduledEbsSnapshotRule\"}}}]}",
+  "RevisionId": "607bc489-648e-413a-a274-63e48e3d54fc"
+}

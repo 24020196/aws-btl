@@ -1,0 +1,80 @@
+[
+  {
+    "FunctionName": "XRegion-SyncImageToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncImageToDynamoDB:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 818,
+    "Description": "Syncs OpenStack Glance Images to DynamoDB XRegion-Images",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T19:04:38.000+0000",
+    "CodeSha256": "w6HHUII0hZH35pRJsdsgPNtZuHlcNn1QOzx0ScgyAXA=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "7befbfb2-6fab-428c-a22d-f44af8c51c9a",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncImageToDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncImageToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncImageToDynamoDB:1",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 830,
+    "Description": "Syncs OpenStack Glance Images to DynamoDB XRegion-Images",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-11T18:12:32.480+0000",
+    "CodeSha256": "GwOLdv6HHOVGHe6q4Ja2gu+w3A765ZIeCrHIbxB6Pag=",
+    "Version": "1",
+    "VpcConfig": {
+      "SubnetIds": [],
+      "SecurityGroupIds": [],
+      "VpcId": "",
+      "Ipv6AllowedForDualStack": false
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "11fa27a6-3c16-4613-a7bc-528eab8a7366",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncImageToDynamoDB"
+    }
+  }
+]

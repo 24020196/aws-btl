@@ -1,0 +1,33 @@
+[
+  {
+    "OwnerId": "291634989063",
+    "InstanceTenancy": "default",
+    "CidrBlockAssociationSet": [
+      {
+        "AssociationId": "vpc-cidr-assoc-07afdd9d8c2379d01",
+        "CidrBlock": "10.20.0.0/16",
+        "CidrBlockState": {
+          "State": "associated"
+        }
+      }
+    ],
+    "IsDefault": false,
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "Name",
+        "Value": "RegionA-vpc"
+      }
+    ],
+    "BlockPublicAccessStates": {
+      "InternetGatewayBlockMode": "off"
+    },
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "State": "available",
+    "CidrBlock": "10.20.0.0/16",
+    "DhcpOptionsId": "dopt-010da9231b09b1082"
+  }
+]

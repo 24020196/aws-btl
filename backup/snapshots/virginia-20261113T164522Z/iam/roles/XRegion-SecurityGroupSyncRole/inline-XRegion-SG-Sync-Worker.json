@@ -1,0 +1,65 @@
+{
+  "RoleName": "XRegion-SecurityGroupSyncRole",
+  "PolicyName": "XRegion-SG-Sync-Worker",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-SecurityGroups",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-SecurityGroups"
+        ],
+        "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings"
+        ],
+        "Action": [
+          "dynamodb:GetItem"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova/index/*",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova/index/*"
+        ],
+        "Action": [
+          "dynamodb:Query"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:logs:ap-southeast-2:291634989063:log-group:/aws/lambda/XRegion-SyncSecurityGroup:*",
+          "arn:aws:logs:us-east-1:291634989063:log-group:/aws/lambda/XRegion-SyncSecurityGroup:*"
+        ],
+        "Action": [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:sqs:ap-southeast-2:291634989063:XRegion-SecurityGroupSync-Canary-dlq",
+          "arn:aws:sqs:us-east-1:291634989063:XRegion-SecurityGroupSync-Canary-dlq"
+        ],
+        "Action": [
+          "sqs:SendMessage"
+        ]
+      }
+    ]
+  }
+}

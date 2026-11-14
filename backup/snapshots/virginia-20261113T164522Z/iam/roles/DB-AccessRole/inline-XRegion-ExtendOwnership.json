@@ -1,0 +1,33 @@
+{
+  "RoleName": "DB-AccessRole",
+  "PolicyName": "XRegion-ExtendOwnership",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Volumes",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkReservations",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Volumes",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkReservations"
+        ],
+        "Action": [
+          "dynamodb:GetItem"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Volumes",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Volumes"
+        ],
+        "Action": [
+          "dynamodb:UpdateItem"
+        ]
+      }
+    ]
+  }
+}

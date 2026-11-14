@@ -1,0 +1,59 @@
+{
+  "Table": {
+    "AttributeDefinitions": [
+      {
+        "AttributeName": "scenario_id",
+        "AttributeType": "S"
+      }
+    ],
+    "TableName": "XRegion-MigrationScenarios",
+    "KeySchema": [
+      {
+        "AttributeName": "scenario_id",
+        "KeyType": "HASH"
+      }
+    ],
+    "TableStatus": "ACTIVE",
+    "CreationDateTime": "2026-11-13 22:43:07.259000+07:00",
+    "ProvisionedThroughput": {
+      "NumberOfDecreasesToday": 0,
+      "ReadCapacityUnits": 0,
+      "WriteCapacityUnits": 0
+    },
+    "TableSizeBytes": 0,
+    "ItemCount": 0,
+    "TableArn": "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-MigrationScenarios",
+    "TableId": "cefefaa3-1c3e-467f-a9a5-8ca5f2f8f8f3",
+    "BillingModeSummary": {
+      "BillingMode": "PAY_PER_REQUEST",
+      "LastUpdateToPayPerRequestDateTime": "2026-11-13 22:46:42.021000+07:00"
+    },
+    "StreamSpecification": {
+      "StreamEnabled": true,
+      "StreamViewType": "NEW_AND_OLD_IMAGES"
+    },
+    "LatestStreamLabel": "2026-11-13T15:47:15.023",
+    "LatestStreamArn": "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-MigrationScenarios/stream/2026-11-13T15:47:15.023",
+    "GlobalTableVersion": "2019.11.21",
+    "Replicas": [
+      {
+        "RegionName": "ap-southeast-2",
+        "ReplicaStatus": "ACTIVE",
+        "WarmThroughput": {
+          "ReadUnitsPerSecond": 12000,
+          "WriteUnitsPerSecond": 4000,
+          "Status": "ACTIVE"
+        },
+        "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES"
+      }
+    ],
+    "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES",
+    "DeletionProtectionEnabled": false,
+    "DisassociationProtectionEnabled": true,
+    "WarmThroughput": {
+      "ReadUnitsPerSecond": 12000,
+      "WriteUnitsPerSecond": 4000,
+      "Status": "ACTIVE"
+    }
+  }
+}

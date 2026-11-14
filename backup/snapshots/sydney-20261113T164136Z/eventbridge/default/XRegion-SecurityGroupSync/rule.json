@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-SecurityGroupSync",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-SecurityGroupSync",
+  "EventPattern": "{\"source\": [\"xregion.backend.security\"], \"detail-type\": [\"security-group.updated\"]}",
+  "State": "ENABLED",
+  "Description": "Route security-group.updated events to XRegion-SyncSecurityGroup",
+  "EventBusName": "default"
+}

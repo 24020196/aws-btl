@@ -1,0 +1,8 @@
+[
+  {
+    "Id": "StepFunctionMigrateTarget",
+    "Arn": "arn:aws:states:ap-southeast-2:291634989063:stateMachine:MigrateInstance",
+    "RoleArn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "InputPath": "$.detail"
+  }
+]

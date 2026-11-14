@@ -1,0 +1,14 @@
+{
+  "RoleName": "SSMInstanceRole",
+  "PolicyName": "XRegionAssumeCinderEbsRole",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Resource": "arn:aws:iam::291634989063:role/XRegion-CinderEbsRole"
+      }
+    ]
+  }
+}

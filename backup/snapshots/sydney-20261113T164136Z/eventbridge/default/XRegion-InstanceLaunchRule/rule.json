@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-InstanceLaunchRule",
+  "Arn": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLaunchRule",
+  "EventPattern": "{\n  \"source\": [\n    \"xregion.backend.instance\"\n  ],\n  \"detail-type\": [\n    \"instance.launch\"\n  ]\n}\n",
+  "State": "ENABLED",
+  "Description": "Trigger Step Function OpenStack-NovaVM-EBS-Provisioner on instance.launch event",
+  "EventBusName": "default"
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "FunctionName": "XRegion-CinderPoolManager",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-CinderPoolManager:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "cinder_pool_manager.lambda_handler",
+    "CodeSize": 16535,
+    "Description": "XRegion Cinder bootable volume reserve pool manager by Glance image type",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:48:52.000+0000",
+    "CodeSha256": "VwVwuhK+c4oCSvBTvACPjXQbyQMCAqJVeL9JA8VsOQM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "CinderPoolManager",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "ec9c342d-098a-464c-8147-bedf6a0c1719",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-CinderPoolManager"
+    }
+  }
+]

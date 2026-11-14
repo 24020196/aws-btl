@@ -1,0 +1,6 @@
+[
+  {
+    "Id": "Worker",
+    "Arn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup"
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "Document": {
+    "Hash": "6ae93777b700afbe0dac00cb2d7ce36043c31a80d20280d70b58ed0523fd140d",
+    "HashType": "Sha256",
+    "Name": "XRegion-NetworkGateway",
+    "VersionName": "guest-private-ip-v3",
+    "Owner": "291634989063",
+    "CreatedDate": "2026-11-10 23:39:32.517000+07:00",
+    "Status": "Active",
+    "DocumentVersion": "3",
+    "Description": "Apply a validated Nova NAT mapping",
+    "Parameters": [
+      {
+        "Name": "operation",
+        "Type": "String"
+      },
+      {
+        "Name": "novaId",
+        "Type": "String"
+      },
+      {
+        "Name": "guestPrivateIp",
+        "Type": "String",
+        "DefaultValue": ""
+      }
+    ],
+    "PlatformTypes": [
+      "Linux",
+      "MacOS"
+    ],
+    "DocumentType": "Command",
+    "SchemaVersion": "2.2",
+    "LatestVersion": "3",
+    "DefaultVersion": "3",
+    "DocumentFormat": "JSON",
+    "Tags": [],
+    "Category": [],
+    "CategoryEnum": []
+  }
+}

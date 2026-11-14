@@ -1,0 +1,8 @@
+{
+  "Name": "XRegion-SnapshotCleanerRule",
+  "Arn": "arn:aws:events:us-east-1:291634989063:rule/XRegion-SnapshotCleanerRule",
+  "State": "ENABLED",
+  "Description": "Tu dong don dep EBS Snapshot mo coi dinh ky 1h/lan tai Region A",
+  "ScheduleExpression": "rate(1 hour)",
+  "EventBusName": "default"
+}

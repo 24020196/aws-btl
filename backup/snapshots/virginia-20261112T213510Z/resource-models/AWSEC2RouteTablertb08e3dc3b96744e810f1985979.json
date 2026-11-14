@@ -1,0 +1,8 @@
+{
+  "type": "AWS::EC2::RouteTable",
+  "identifier": "rtb-08e3dc3b96744e810",
+  "properties": {
+    "RouteTableId": "rtb-08e3dc3b96744e810",
+    "VpcId": "vpc-0c9e2dc8fa012a40b"
+  }
+}

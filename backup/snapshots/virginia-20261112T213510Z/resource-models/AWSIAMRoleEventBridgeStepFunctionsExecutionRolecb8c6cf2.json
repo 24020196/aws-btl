@@ -1,0 +1,49 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "EventBridge-StepFunctions-ExecutionRole",
+  "properties": {
+    "Path": "/",
+    "MaxSessionDuration": 3600,
+    "RoleName": "EventBridge-StepFunctions-ExecutionRole",
+    "Policies": [
+      {
+        "PolicyName": "AllowStartStepFunctionExecution",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "states:StartExecution"
+              ],
+              "Resource": [
+                "arn:aws:states:ap-southeast-2:291634989063:stateMachine:LaunchInstance",
+                "arn:aws:states:ap-southeast-2:291634989063:stateMachine:LifecycleInstance",
+                "arn:aws:states:ap-southeast-2:291634989063:stateMachine:TerminateInstance",
+                "arn:aws:states:ap-southeast-2:291634989063:stateMachine:MigrateInstance",
+                "arn:aws:states:us-east-1:291634989063:stateMachine:LaunchInstance",
+                "arn:aws:states:us-east-1:291634989063:stateMachine:LifecycleInstance",
+                "arn:aws:states:us-east-1:291634989063:stateMachine:TerminateInstance",
+                "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateInstance"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "events.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "RoleId": "AROAUHZWMZAD2NSG7MEUF"
+  }
+}

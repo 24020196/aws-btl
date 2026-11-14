@@ -1,0 +1,785 @@
+{
+  "vpc-0c9e2dc8fa012a40b": {
+    "Ref": "VPCvpc0c9e2dc8fa012a40bb59dce98"
+  },
+  "subnet-0909efd155bc3b18e": {
+    "Ref": "Subnetsubnet0909efd155bc3b18e016f48d7"
+  },
+  "subnet-0123913e3357df916": {
+    "Ref": "Subnetsubnet0123913e3357df9166c9c23b8"
+  },
+  "igw-03e28bc3c56a930a4": {
+    "Ref": "InternetGatewayigw03e28bc3c56a930a4ea04690e"
+  },
+  "attach-igw-03e28bc3c56a930a4": {
+    "Ref": "VPCGatewayAttachmentattachigw03e28bc3c56a930a49bdb32b1"
+  },
+  "rtb-08e3dc3b96744e810": {
+    "Ref": "RouteTablertb08e3dc3b96744e810f1985979"
+  },
+  "rtb-04cb3cf3fbd29b37d": {
+    "Ref": "RouteTablertb04cb3cf3fbd29b37d7573fd61"
+  },
+  "rtb-0bbc388cf499e0f5d": {
+    "Ref": "RouteTablertb0bbc388cf499e0f5d3ef914b4"
+  },
+  "sg-06ed3f375ea95f881": {
+    "Ref": "SecurityGroupsg06ed3f375ea95f881260b5c8e"
+  },
+  "sg-06ed3f375ea95f881-Ingress-0": {
+    "Ref": "SecurityGroupIngresssg06ed3f375ea95f881Ingress0129330d5"
+  },
+  "sg-06ed3f375ea95f881-Ingress-1": {
+    "Ref": "SecurityGroupIngresssg06ed3f375ea95f881Ingress172e11250"
+  },
+  "sg-06ed3f375ea95f881-Egress-0": {
+    "Ref": "SecurityGroupEgresssg06ed3f375ea95f881Egress0146a7d41"
+  },
+  "sg-06ed3f375ea95f881-Egress-1": {
+    "Ref": "SecurityGroupEgresssg06ed3f375ea95f881Egress162cc70bd"
+  },
+  "sg-0166cdeadf9eb44d2": {
+    "Fn::GetAtt": [
+      "VPCvpc0c9e2dc8fa012a40bb59dce98",
+      "DefaultSecurityGroup"
+    ]
+  },
+  "eipalloc-01b430389ece20f41": {
+    "Fn::GetAtt": [
+      "EIPeipalloc01b430389ece20f41f80d9fed",
+      "AllocationId"
+    ]
+  },
+  "eipalloc-0285f780e8e00df64": {
+    "Fn::GetAtt": [
+      "EIPeipalloc0285f780e8e00df6428cd7994",
+      "AllocationId"
+    ]
+  },
+  "eipalloc-0f45621a2f11c97ec": {
+    "Fn::GetAtt": [
+      "EIPeipalloc0f45621a2f11c97ec22bc6d17",
+      "AllocationId"
+    ]
+  },
+  "eipalloc-09400803ca63f68a1": {
+    "Fn::GetAtt": [
+      "EIPeipalloc09400803ca63f68a1bf248e68",
+      "AllocationId"
+    ]
+  },
+  "eipalloc-02c7d4788fff25b66": {
+    "Fn::GetAtt": [
+      "EIPeipalloc02c7d4788fff25b6604e439d0",
+      "AllocationId"
+    ]
+  },
+  "nat-0c026dd26fee01ec2": {
+    "Ref": "NatGatewaynat0c026dd26fee01ec25f2d9df9"
+  },
+  "rtb-04cb3cf3fbd29b37d-1": {
+    "Ref": "Routertb04cb3cf3fbd29b37d16a3581ea"
+  },
+  "rtb-0bbc388cf499e0f5d-1": {
+    "Ref": "Routertb0bbc388cf499e0f5d1e55b97d6"
+  },
+  "route-subnet-0909efd155bc3b18e": {
+    "Ref": "SubnetRouteTableAssociationroutesubnet0909efd155bc3b18e7b76950d"
+  },
+  "route-subnet-0123913e3357df916": {
+    "Ref": "SubnetRouteTableAssociationroutesubnet0123913e3357df91613a14490"
+  },
+  "DB-AccessRole": {
+    "Ref": "RoleDBAccessRoleae9c1ae9"
+  },
+  "arn:aws:iam::291634989063:role/DB-AccessRole": {
+    "Fn::GetAtt": [
+      "RoleDBAccessRoleae9c1ae9",
+      "Arn"
+    ]
+  },
+  "EventBridge-StepFunctions-ExecutionRole": {
+    "Ref": "RoleEventBridgeStepFunctionsExecutionRolecb8c6cf2"
+  },
+  "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole": {
+    "Fn::GetAtt": [
+      "RoleEventBridgeStepFunctionsExecutionRolecb8c6cf2",
+      "Arn"
+    ]
+  },
+  "openstack_step_functions_role": {
+    "Ref": "Roleopenstackstepfunctionsroleb3be6682"
+  },
+  "arn:aws:iam::291634989063:role/openstack_step_functions_role": {
+    "Fn::GetAtt": [
+      "Roleopenstackstepfunctionsroleb3be6682",
+      "Arn"
+    ]
+  },
+  "SSMInstanceRole": {
+    "Ref": "InstanceProfileSSMInstanceRole3feceae7"
+  },
+  "arn:aws:iam::291634989063:role/SSMInstanceRole": {
+    "Fn::GetAtt": [
+      "RoleSSMInstanceRole3feceae7",
+      "Arn"
+    ]
+  },
+  "XRegion-ApiGatewayToEventBridgeRole": {
+    "Ref": "RoleXRegionApiGatewayToEventBridgeRolefb09b803"
+  },
+  "arn:aws:iam::291634989063:role/XRegion-ApiGatewayToEventBridgeRole": {
+    "Fn::GetAtt": [
+      "RoleXRegionApiGatewayToEventBridgeRolefb09b803",
+      "Arn"
+    ]
+  },
+  "XRegion-InstanceRecovery-ExecutionRole": {
+    "Ref": "RoleXRegionInstanceRecoveryExecutionRolef59544fb"
+  },
+  "arn:aws:iam::291634989063:role/XRegion-InstanceRecovery-ExecutionRole": {
+    "Fn::GetAtt": [
+      "RoleXRegionInstanceRecoveryExecutionRolef59544fb",
+      "Arn"
+    ]
+  },
+  "XRegion-NetworkLambdaRole": {
+    "Ref": "RoleXRegionNetworkLambdaRole0336db58"
+  },
+  "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole": {
+    "Fn::GetAtt": [
+      "RoleXRegionNetworkLambdaRole0336db58",
+      "Arn"
+    ]
+  },
+  "XRegion-SecurityGroupSyncRole": {
+    "Ref": "RoleXRegionSecurityGroupSyncRoleecb86e42"
+  },
+  "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole": {
+    "Fn::GetAtt": [
+      "RoleXRegionSecurityGroupSyncRoleecb86e42",
+      "Arn"
+    ]
+  },
+  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-InstanceLifecycle-DLQ": {
+    "Ref": "Queuehttpssqsuseast1amazonawscom291634989063XRegionInstanceLifecycleDLQ57a3a515"
+  },
+  "arn:aws:sqs:us-east-1:291634989063:XRegion-InstanceLifecycle-DLQ": {
+    "Fn::GetAtt": [
+      "Queuehttpssqsuseast1amazonawscom291634989063XRegionInstanceLifecycleDLQ57a3a515",
+      "Arn"
+    ]
+  },
+  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-InstanceLifecycle-DLQpolicy": {
+    "Ref": "QueuePolicyhttpssqsuseast1amazonawscom291634989063XRegionInstanceLifecycleDLQpolicy662d932f"
+  },
+  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-ResourceAllocation.fifo": {
+    "Ref": "Queuehttpssqsuseast1amazonawscom291634989063XRegionResourceAllocationfifo6caf732a"
+  },
+  "arn:aws:sqs:us-east-1:291634989063:XRegion-ResourceAllocation.fifo": {
+    "Fn::GetAtt": [
+      "Queuehttpssqsuseast1amazonawscom291634989063XRegionResourceAllocationfifo6caf732a",
+      "Arn"
+    ]
+  },
+  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-SecurityGroupSync-Canary-dlq": {
+    "Ref": "Queuehttpssqsuseast1amazonawscom291634989063XRegionSecurityGroupSyncCanarydlq5c62aa72"
+  },
+  "arn:aws:sqs:us-east-1:291634989063:XRegion-SecurityGroupSync-Canary-dlq": {
+    "Fn::GetAtt": [
+      "Queuehttpssqsuseast1amazonawscom291634989063XRegionSecurityGroupSyncCanarydlq5c62aa72",
+      "Arn"
+    ]
+  },
+  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-SecurityGroupSync-Canary-dlqpolicy": {
+    "Ref": "QueuePolicyhttpssqsuseast1amazonawscom291634989063XRegionSecurityGroupSyncCanarydlqpolicy1eba9af6"
+  },
+  "XRegion-Flavors": {
+    "Ref": "TableXRegionFlavors80208082"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Flavors": {
+    "Fn::GetAtt": [
+      "TableXRegionFlavors80208082",
+      "Arn"
+    ]
+  },
+  "XRegion-Images": {
+    "Ref": "TableXRegionImages2bb2999c"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Images": {
+    "Fn::GetAtt": [
+      "TableXRegionImages2bb2999c",
+      "Arn"
+    ]
+  },
+  "XRegion-Instances": {
+    "Ref": "TableXRegionInstancesffa5119b"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances": {
+    "Fn::GetAtt": [
+      "TableXRegionInstancesffa5119b",
+      "Arn"
+    ]
+  },
+  "XRegion-Keys": {
+    "Ref": "TableXRegionKeys7e46b6fa"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Keys": {
+    "Fn::GetAtt": [
+      "TableXRegionKeys7e46b6fa",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrations": {
+    "Ref": "TableXRegionMigrationsee865cab"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Migrations": {
+    "Fn::GetAtt": [
+      "TableXRegionMigrationsee865cab",
+      "Arn"
+    ]
+  },
+  "XRegion-NetworkMappings": {
+    "Ref": "TableXRegionNetworkMappings5070de1f"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings": {
+    "Fn::GetAtt": [
+      "TableXRegionNetworkMappings5070de1f",
+      "Arn"
+    ]
+  },
+  "XRegion-NetworkReservations": {
+    "Ref": "TableXRegionNetworkReservations42a3f325"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkReservations": {
+    "Fn::GetAtt": [
+      "TableXRegionNetworkReservations42a3f325",
+      "Arn"
+    ]
+  },
+  "XRegion-Nova": {
+    "Ref": "TableXRegionNovac8f97fe9"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Nova": {
+    "Fn::GetAtt": [
+      "TableXRegionNovac8f97fe9",
+      "Arn"
+    ]
+  },
+  "XRegion-SecurityGroups": {
+    "Ref": "TableXRegionSecurityGroups70776f63"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-SecurityGroups": {
+    "Fn::GetAtt": [
+      "TableXRegionSecurityGroups70776f63",
+      "Arn"
+    ]
+  },
+  "XRegion-Users": {
+    "Ref": "TableXRegionUsersec608871"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Users": {
+    "Fn::GetAtt": [
+      "TableXRegionUsersec608871",
+      "Arn"
+    ]
+  },
+  "XRegion-Volumes": {
+    "Ref": "TableXRegionVolumes69b5ac9f"
+  },
+  "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Volumes": {
+    "Fn::GetAtt": [
+      "TableXRegionVolumes69b5ac9f",
+      "Arn"
+    ]
+  },
+  "/aws/events/xregion-backend-events": {
+    "Ref": "LogGroupawseventsxregionbackendevents989f553c"
+  },
+  "/aws/lambda/XRegion-CinderPoolManager": {
+    "Ref": "LogGroupawslambdaXRegionCinderPoolManager8a355251"
+  },
+  "/aws/lambda/XRegion-EIPPoolManager": {
+    "Ref": "LogGroupawslambdaXRegionEIPPoolManagerb1719122"
+  },
+  "/aws/lambda/XRegion-InstanceLifecycle": {
+    "Ref": "LogGroupawslambdaXRegionInstanceLifecycleb1a08fb8"
+  },
+  "/aws/lambda/XRegion-KeySyncManager": {
+    "Ref": "LogGroupawslambdaXRegionKeySyncManager39f69a26"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-AllocateResource": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceAllocateResourceb0d87818"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-AssignSecurityGroup": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceAssignSecurityGroup3d2595c1"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-BootNova": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceBootNova68e01325"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-CheckPool": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceCheckPool03a4ea09"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-ExtendVolume": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceExtendVolumeb10c5dfb"
+  },
+  "/aws/lambda/XRegion-LaunchInstance-SyncDynamoDB": {
+    "Ref": "LogGroupawslambdaXRegionLaunchInstanceSyncDynamoDBdcb01e0b"
+  },
+  "/aws/lambda/XRegion-Network-CheckCommand": {
+    "Ref": "LogGroupawslambdaXRegionNetworkCheckCommand9ccd2666"
+  },
+  "/aws/lambda/XRegion-Network-Commit": {
+    "Ref": "LogGroupawslambdaXRegionNetworkCommit7d09cc11"
+  },
+  "/aws/lambda/XRegion-Network-Dispatch": {
+    "Ref": "LogGroupawslambdaXRegionNetworkDispatchfb1dcce7"
+  },
+  "/aws/lambda/XRegion-Network-Release": {
+    "Ref": "LogGroupawslambdaXRegionNetworkRelease36946c8e"
+  },
+  "/aws/lambda/XRegion-Network-Reserve": {
+    "Ref": "LogGroupawslambdaXRegionNetworkReserve035e5338"
+  },
+  "/aws/lambda/XRegion-ScheduledEbsSnapshot": {
+    "Ref": "LogGroupawslambdaXRegionScheduledEbsSnapshot92c1c084"
+  },
+  "/aws/lambda/XRegion-SnapshotCleaner": {
+    "Ref": "LogGroupawslambdaXRegionSnapshotCleaner392e1707"
+  },
+  "/aws/lambda/XRegion-SnapshotCrossRegionCopy": {
+    "Ref": "LogGroupawslambdaXRegionSnapshotCrossRegionCopyc373c4f4"
+  },
+  "/aws/lambda/XRegion-SyncSecurityGroup": {
+    "Ref": "LogGroupawslambdaXRegionSyncSecurityGroup03d4ebe3"
+  },
+  "/aws/lambda/XRegion-TerminateInstance-DeleteNova": {
+    "Ref": "LogGroupawslambdaXRegionTerminateInstanceDeleteNova430998a1"
+  },
+  "/aws/lambda/XRegion-TerminateInstance-DeleteSecurityGroup": {
+    "Ref": "LogGroupawslambdaXRegionTerminateInstanceDeleteSecurityGroupe7f35507"
+  },
+  "/aws/lambda/XRegion-TerminateInstance-DeleteVolume": {
+    "Ref": "LogGroupawslambdaXRegionTerminateInstanceDeleteVolume1efc700e"
+  },
+  "/aws/lambda/XRegion-TerminateInstance-SyncDynamoDB": {
+    "Ref": "LogGroupawslambdaXRegionTerminateInstanceSyncDynamoDB6c6b9858"
+  },
+  "TrustEventBridgeToCWLogs": {
+    "Ref": "ResourcePolicyTrustEventBridgeToCWLogse64dd02a"
+  },
+  "XRegion-CinderPoolManager": {
+    "Ref": "FunctionXRegionCinderPoolManager4e8970f7"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-CinderPoolManager": {
+    "Fn::GetAtt": [
+      "FunctionXRegionCinderPoolManager4e8970f7",
+      "Arn"
+    ]
+  },
+  "XRegion-EIPPoolManager": {
+    "Ref": "FunctionXRegionEIPPoolManagere9813a17"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-EIPPoolManager": {
+    "Fn::GetAtt": [
+      "FunctionXRegionEIPPoolManagere9813a17",
+      "Arn"
+    ]
+  },
+  "XRegion-InstanceLifecycle": {
+    "Ref": "FunctionXRegionInstanceLifecyclea3187dd9"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-InstanceLifecycle": {
+    "Fn::GetAtt": [
+      "FunctionXRegionInstanceLifecyclea3187dd9",
+      "Arn"
+    ]
+  },
+  "XRegion-InstanceRecovery": {
+    "Ref": "FunctionXRegionInstanceRecovery288df1c3"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-InstanceRecovery": {
+    "Fn::GetAtt": [
+      "FunctionXRegionInstanceRecovery288df1c3",
+      "Arn"
+    ]
+  },
+  "XRegion-KeySyncManager": {
+    "Ref": "FunctionXRegionKeySyncManagerede0aaf0"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-KeySyncManager": {
+    "Fn::GetAtt": [
+      "FunctionXRegionKeySyncManagerede0aaf0",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-AllocateResource": {
+    "Ref": "FunctionXRegionLaunchInstanceAllocateResource1973a14a"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-AllocateResource": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceAllocateResource1973a14a",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-AssignSecurityGroup": {
+    "Ref": "FunctionXRegionLaunchInstanceAssignSecurityGroup2f786b6e"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-AssignSecurityGroup": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceAssignSecurityGroup2f786b6e",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-BootNova": {
+    "Ref": "FunctionXRegionLaunchInstanceBootNova5bdb1750"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-BootNova": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceBootNova5bdb1750",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-CheckPool": {
+    "Ref": "FunctionXRegionLaunchInstanceCheckPool0df24745"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-CheckPool": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceCheckPool0df24745",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-ExtendVolume": {
+    "Ref": "FunctionXRegionLaunchInstanceExtendVolumee0bc5b80"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-ExtendVolume": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceExtendVolumee0bc5b80",
+      "Arn"
+    ]
+  },
+  "XRegion-LaunchInstance-SyncDynamoDB": {
+    "Ref": "FunctionXRegionLaunchInstanceSyncDynamoDBd44f40e0"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB": {
+    "Fn::GetAtt": [
+      "FunctionXRegionLaunchInstanceSyncDynamoDBd44f40e0",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-BootTarget": {
+    "Ref": "FunctionXRegionMigrateBootTarget27805f6b"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-BootTarget": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateBootTarget27805f6b",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-CleanSnapshots": {
+    "Ref": "FunctionXRegionMigrateCleanSnapshots5dbec6d8"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-CleanSnapshots": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateCleanSnapshots5dbec6d8",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-CreateAndCopy": {
+    "Ref": "FunctionXRegionMigrateCreateAndCopy0f0c98f1"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-CreateAndCopy": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateCreateAndCopy0f0c98f1",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-Rollback": {
+    "Ref": "FunctionXRegionMigrateRollback178db275"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-Rollback": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateRollback178db275",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-StopSource": {
+    "Ref": "FunctionXRegionMigrateStopSourcebadaba47"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-StopSource": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateStopSourcebadaba47",
+      "Arn"
+    ]
+  },
+  "XRegion-Migrate-SyncDynamoDB": {
+    "Ref": "FunctionXRegionMigrateSyncDynamoDB2e03af94"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Migrate-SyncDynamoDB": {
+    "Fn::GetAtt": [
+      "FunctionXRegionMigrateSyncDynamoDB2e03af94",
+      "Arn"
+    ]
+  },
+  "XRegion-Network-CheckCommand": {
+    "Ref": "FunctionXRegionNetworkCheckCommand19c21129"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-CheckCommand": {
+    "Fn::GetAtt": [
+      "FunctionXRegionNetworkCheckCommand19c21129",
+      "Arn"
+    ]
+  },
+  "XRegion-Network-Commit": {
+    "Ref": "FunctionXRegionNetworkCommite4429701"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Commit": {
+    "Fn::GetAtt": [
+      "FunctionXRegionNetworkCommite4429701",
+      "Arn"
+    ]
+  },
+  "XRegion-Network-Dispatch": {
+    "Ref": "FunctionXRegionNetworkDispatchbd788b16"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Dispatch": {
+    "Fn::GetAtt": [
+      "FunctionXRegionNetworkDispatchbd788b16",
+      "Arn"
+    ]
+  },
+  "XRegion-Network-Release": {
+    "Ref": "FunctionXRegionNetworkReleased57456a0"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Release": {
+    "Fn::GetAtt": [
+      "FunctionXRegionNetworkReleased57456a0",
+      "Arn"
+    ]
+  },
+  "XRegion-Network-Reserve": {
+    "Ref": "FunctionXRegionNetworkReservee65646c0"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Reserve": {
+    "Fn::GetAtt": [
+      "FunctionXRegionNetworkReservee65646c0",
+      "Arn"
+    ]
+  },
+  "XRegion-ScheduledEbsSnapshot": {
+    "Ref": "FunctionXRegionScheduledEbsSnapshot871371ae"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-ScheduledEbsSnapshot": {
+    "Fn::GetAtt": [
+      "FunctionXRegionScheduledEbsSnapshot871371ae",
+      "Arn"
+    ]
+  },
+  "XRegion-SnapshotCleaner": {
+    "Ref": "FunctionXRegionSnapshotCleaner3e06a025"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SnapshotCleaner": {
+    "Fn::GetAtt": [
+      "FunctionXRegionSnapshotCleaner3e06a025",
+      "Arn"
+    ]
+  },
+  "XRegion-SnapshotCrossRegionCopy": {
+    "Ref": "FunctionXRegionSnapshotCrossRegionCopyfcf1e35c"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SnapshotCrossRegionCopy": {
+    "Fn::GetAtt": [
+      "FunctionXRegionSnapshotCrossRegionCopyfcf1e35c",
+      "Arn"
+    ]
+  },
+  "XRegion-SyncFlavorToDynamoDB": {
+    "Ref": "FunctionXRegionSyncFlavorToDynamoDB5fe4fc98"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncFlavorToDynamoDB": {
+    "Fn::GetAtt": [
+      "FunctionXRegionSyncFlavorToDynamoDB5fe4fc98",
+      "Arn"
+    ]
+  },
+  "XRegion-SyncImageToDynamoDB": {
+    "Ref": "FunctionXRegionSyncImageToDynamoDBe112dbae"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncImageToDynamoDB": {
+    "Fn::GetAtt": [
+      "FunctionXRegionSyncImageToDynamoDBe112dbae",
+      "Arn"
+    ]
+  },
+  "XRegion-SyncSecurityGroup": {
+    "Ref": "FunctionXRegionSyncSecurityGroup1e516881"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-SyncSecurityGroup": {
+    "Fn::GetAtt": [
+      "FunctionXRegionSyncSecurityGroup1e516881",
+      "Arn"
+    ]
+  },
+  "XRegion-TerminateInstance-DeleteNova": {
+    "Ref": "FunctionXRegionTerminateInstanceDeleteNova348d1c09"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteNova": {
+    "Fn::GetAtt": [
+      "FunctionXRegionTerminateInstanceDeleteNova348d1c09",
+      "Arn"
+    ]
+  },
+  "XRegion-TerminateInstance-DeleteSecurityGroup": {
+    "Ref": "FunctionXRegionTerminateInstanceDeleteSecurityGroup908382f9"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup": {
+    "Fn::GetAtt": [
+      "FunctionXRegionTerminateInstanceDeleteSecurityGroup908382f9",
+      "Arn"
+    ]
+  },
+  "XRegion-TerminateInstance-DeleteVolume": {
+    "Ref": "FunctionXRegionTerminateInstanceDeleteVolume043b868e"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteVolume": {
+    "Fn::GetAtt": [
+      "FunctionXRegionTerminateInstanceDeleteVolume043b868e",
+      "Arn"
+    ]
+  },
+  "XRegion-TerminateInstance-SyncDynamoDB": {
+    "Ref": "FunctionXRegionTerminateInstanceSyncDynamoDB73ae668b"
+  },
+  "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-SyncDynamoDB": {
+    "Fn::GetAtt": [
+      "FunctionXRegionTerminateInstanceSyncDynamoDB73ae668b",
+      "Arn"
+    ]
+  },
+  "arn:aws:states:us-east-1:291634989063:stateMachine:LaunchInstance": {
+    "Ref": "StateMachinearnawsstatesuseast1291634989063stateMachineLaunchInstance71b196f0"
+  },
+  "arn:aws:states:us-east-1:291634989063:stateMachine:LifecycleInstance": {
+    "Ref": "StateMachinearnawsstatesuseast1291634989063stateMachineLifecycleInstance3aa8f3b3"
+  },
+  "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateInstance": {
+    "Ref": "StateMachinearnawsstatesuseast1291634989063stateMachineMigrateInstancef4039132"
+  },
+  "arn:aws:states:us-east-1:291634989063:stateMachine:TerminateInstance": {
+    "Ref": "StateMachinearnawsstatesuseast1291634989063stateMachineTerminateInstanceed5e236a"
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-BackendEventRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionBackendEventRuled1f63204",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceLaunchRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionInstanceLaunchRuleccc3763e",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceLifecycleRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionInstanceLifecycleRuleb423763f",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceMigrationRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionInstanceMigrationRule9de83e2d",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-InstanceTerminateRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionInstanceTerminateRule7a5fc8db",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-NovaSyncCatalogRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionNovaSyncCatalogRule6c34dc5a",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-ScheduledEbsSnapshotRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionScheduledEbsSnapshotRule55519cbe",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-SecurityGroupSync": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionSecurityGroupSync78bf88ef",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-SnapshotCleanerRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionSnapshotCleanerRuleeccaf500",
+      "Arn"
+    ]
+  },
+  "arn:aws:events:us-east-1:291634989063:rule/XRegion-SnapshotCrossRegionCopyRule": {
+    "Fn::GetAtt": [
+      "Rulearnawseventsuseast1291634989063ruleXRegionSnapshotCrossRegionCopyRule66946e12",
+      "Arn"
+    ]
+  },
+  "XRegion-CinderPoolManager0": {
+    "Ref": "PermissionXRegionCinderPoolManager0f5858985"
+  },
+  "XRegion-CinderPoolManager1": {
+    "Ref": "PermissionXRegionCinderPoolManager17058e9ee"
+  },
+  "XRegion-EIPPoolManager0": {
+    "Ref": "PermissionXRegionEIPPoolManager06a25ca7b"
+  },
+  "XRegion-KeySyncManager0": {
+    "Ref": "PermissionXRegionKeySyncManager07cd7218a"
+  },
+  "XRegion-ScheduledEbsSnapshot0": {
+    "Ref": "PermissionXRegionScheduledEbsSnapshot039a0d619"
+  },
+  "XRegion-SnapshotCleaner0": {
+    "Ref": "PermissionXRegionSnapshotCleaner0620e632e"
+  },
+  "XRegion-SnapshotCrossRegionCopy0": {
+    "Ref": "PermissionXRegionSnapshotCrossRegionCopy00a2bc585"
+  },
+  "XRegion-SyncFlavorToDynamoDB0": {
+    "Ref": "PermissionXRegionSyncFlavorToDynamoDB067bd0064"
+  },
+  "XRegion-SyncImageToDynamoDB0": {
+    "Ref": "PermissionXRegionSyncImageToDynamoDB0abeae699"
+  },
+  "XRegion-SyncSecurityGroup0": {
+    "Ref": "PermissionXRegionSyncSecurityGroup043768493"
+  },
+  "dawfyj0692": {
+    "Ref": "RestApidawfyj069215da182d"
+  },
+  "dawfyj0692proddeployment": {
+    "Ref": "Deploymentdawfyj0692proddeployment3c4a84ae"
+  },
+  "dawfyj0692prod": {
+    "Ref": "Stagedawfyj0692proddc7f78ba"
+  },
+  "i-07738a186534cb5ba": {
+    "Ref": "Instancei07738a186534cb5ba16d46f40"
+  },
+  "eni-0ed6a1623d49ebe3a": {
+    "Ref": "NetworkInterfaceeni0ed6a1623d49ebe3aa72bf957"
+  },
+  "eni-0ed6a1623d49ebe3aattach": {
+    "Ref": "NetworkInterfaceAttachmenteni0ed6a1623d49ebe3aattachc169e54f"
+  },
+  "eni-061b06c52aab778be": {
+    "Fn::GetAtt": [
+      "Instancei07738a186534cb5ba16d46f40",
+      "PrimaryNetworkInterfaceId"
+    ]
+  }
+}

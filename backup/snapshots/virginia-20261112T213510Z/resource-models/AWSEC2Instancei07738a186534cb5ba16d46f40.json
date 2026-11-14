@@ -1,0 +1,187 @@
+{
+  "type": "AWS::EC2::Instance",
+  "identifier": "i-07738a186534cb5ba",
+  "properties": {
+    "Tenancy": "default",
+    "SecurityGroups": [
+      "RegionA-securityGroup"
+    ],
+    "PrivateDnsName": "ip-10-20-10-183.ec2.internal",
+    "PrivateIpAddress": "10.20.10.183",
+    "BlockDeviceMappings": [
+      {
+        "Ebs": {
+          "SnapshotId": "",
+          "VolumeType": "gp3",
+          "KmsKeyId": "arn:aws:kms:us-east-1:291634989063:key/d3bdbb93-889f-4ab2-9213-bae424ff7d0b",
+          "Encrypted": true,
+          "Iops": 3000,
+          "VolumeSize": 1,
+          "DeleteOnTermination": false
+        },
+        "DeviceName": "/dev/sdi"
+      },
+      {
+        "Ebs": {
+          "SnapshotId": "snap-0c31987a8314b634f",
+          "VolumeType": "gp3",
+          "Encrypted": false,
+          "Iops": 3000,
+          "VolumeSize": 80,
+          "DeleteOnTermination": false
+        },
+        "DeviceName": "/dev/sda1"
+      },
+      {
+        "Ebs": {
+          "SnapshotId": "",
+          "VolumeType": "gp3",
+          "KmsKeyId": "arn:aws:kms:us-east-1:291634989063:key/d3bdbb93-889f-4ab2-9213-bae424ff7d0b",
+          "Encrypted": true,
+          "Iops": 3000,
+          "VolumeSize": 1,
+          "DeleteOnTermination": false
+        },
+        "DeviceName": "/dev/sdg"
+      },
+      {
+        "Ebs": {
+          "SnapshotId": "",
+          "VolumeType": "gp3",
+          "KmsKeyId": "arn:aws:kms:us-east-1:291634989063:key/d3bdbb93-889f-4ab2-9213-bae424ff7d0b",
+          "Encrypted": true,
+          "Iops": 3000,
+          "VolumeSize": 1,
+          "DeleteOnTermination": false
+        },
+        "DeviceName": "/dev/sdf"
+      }
+    ],
+    "IamInstanceProfile": "SSMInstanceRole",
+    "SubnetId": "subnet-0909efd155bc3b18e",
+    "EbsOptimized": false,
+    "Volumes": [
+      {
+        "VolumeId": "vol-0f8e28a9890948b7a",
+        "Device": "/dev/sdi"
+      },
+      {
+        "VolumeId": "vol-059ace59232c27ec5",
+        "Device": "/dev/sda1"
+      },
+      {
+        "VolumeId": "vol-02fd730262427cbbf",
+        "Device": "/dev/sdg"
+      },
+      {
+        "VolumeId": "vol-0cbf95506b3ca2694",
+        "Device": "/dev/sdf"
+      }
+    ],
+    "PrivateIp": "10.20.10.183",
+    "EnclaveOptions": {
+      "Enabled": false
+    },
+    "NetworkInterfaces": [
+      {
+        "Description": "RegionA-SecondaryENI-Public",
+        "PrivateIpAddress": "10.20.1.253",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.20.1.253",
+            "Primary": true
+          }
+        ],
+        "SecondaryPrivateIpAddressCount": 0,
+        "DeviceIndex": "1",
+        "GroupSet": [
+          "sg-06ed3f375ea95f881"
+        ],
+        "Ipv6Addresses": [],
+        "SubnetId": "subnet-0123913e3357df916",
+        "AssociatePublicIpAddress": true,
+        "NetworkInterfaceId": "eni-0ed6a1623d49ebe3a",
+        "AssociateCarrierIpAddress": false,
+        "Ipv6AddressCount": 0,
+        "DeleteOnTermination": false
+      },
+      {
+        "Description": "RegionA-PrimaryENI",
+        "PrivateIpAddress": "10.20.10.183",
+        "PrivateIpAddresses": [
+          {
+            "PrivateIpAddress": "10.20.10.183",
+            "Primary": true
+          },
+          {
+            "PrivateIpAddress": "10.20.10.250",
+            "Primary": false
+          }
+        ],
+        "SecondaryPrivateIpAddressCount": 1,
+        "DeviceIndex": "0",
+        "GroupSet": [
+          "sg-06ed3f375ea95f881"
+        ],
+        "Ipv6Addresses": [],
+        "SubnetId": "subnet-0909efd155bc3b18e",
+        "AssociatePublicIpAddress": false,
+        "NetworkInterfaceId": "eni-061b06c52aab778be",
+        "AssociateCarrierIpAddress": false,
+        "Ipv6AddressCount": 0,
+        "DeleteOnTermination": false
+      }
+    ],
+    "ImageId": "ami-02a9cdd4e98bc3c78",
+    "InstanceType": "m7i-flex.xlarge",
+    "Monitoring": false,
+    "Tags": [
+      {
+        "Value": "RegionA-tempEC2",
+        "Key": "Name"
+      },
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      }
+    ],
+    "HibernationOptions": {
+      "Configured": false
+    },
+    "MetadataOptions": {
+      "HttpPutResponseHopLimit": 2,
+      "HttpProtocolIpv6": "disabled",
+      "HttpTokens": "required",
+      "InstanceMetadataTags": "disabled",
+      "HttpEndpoint": "enabled"
+    },
+    "InstanceId": "i-07738a186534cb5ba",
+    "InstanceInitiatedShutdownBehavior": "stop",
+    "CpuOptions": {
+      "ThreadsPerCore": 2,
+      "CoreCount": 2
+    },
+    "AvailabilityZone": "us-east-1a",
+    "PrivateDnsNameOptions": {
+      "EnableResourceNameDnsARecord": false,
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "PublicDnsName": "",
+    "SecurityGroupIds": [
+      "sg-06ed3f375ea95f881"
+    ],
+    "DisableApiTermination": false,
+    "KeyName": "testRegionA",
+    "SourceDestCheck": false,
+    "PlacementGroupName": "",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "State": {
+      "Code": "80",
+      "Name": "stopped"
+    },
+    "CreditSpecification": {
+      "CPUCredits": "standard"
+    }
+  }
+}

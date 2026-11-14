@@ -1,0 +1,26 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "EventBridge-StepFunctions-ExecutionRole",
+    "RoleId": "AROAUHZWMZAD2NSG7MEUF",
+    "Arn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "CreateDate": "2026-11-07 05:42:01+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "events.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:20:48+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

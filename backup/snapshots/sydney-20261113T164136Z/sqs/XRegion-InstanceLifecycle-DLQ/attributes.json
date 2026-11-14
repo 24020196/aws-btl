@@ -1,0 +1,17 @@
+{
+  "Attributes": {
+    "QueueArn": "arn:aws:sqs:ap-southeast-2:291634989063:XRegion-InstanceLifecycle-DLQ",
+    "ApproximateNumberOfMessages": "0",
+    "ApproximateNumberOfMessagesNotVisible": "0",
+    "ApproximateNumberOfMessagesDelayed": "0",
+    "CreatedTimestamp": "1794339581",
+    "LastModifiedTimestamp": "1794339592",
+    "VisibilityTimeout": "30",
+    "MaximumMessageSize": "1048576",
+    "MessageRetentionPeriod": "345600",
+    "DelaySeconds": "0",
+    "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowEventBridgeLifecycleRule\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"sqs:SendMessage\",\"Resource\":\"arn:aws:sqs:ap-southeast-2:291634989063:XRegion-InstanceLifecycle-DLQ\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLifecycleRule\"}}}]}",
+    "ReceiveMessageWaitTimeSeconds": "0",
+    "SqsManagedSseEnabled": "true"
+  }
+}

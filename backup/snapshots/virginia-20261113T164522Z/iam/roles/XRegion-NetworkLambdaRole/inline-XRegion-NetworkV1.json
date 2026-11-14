@@ -1,0 +1,99 @@
+{
+  "RoleName": "XRegion-NetworkLambdaRole",
+  "PolicyName": "XRegion-NetworkV1",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkReservations",
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-NetworkMappings/index/*",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkReservations",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-NetworkMappings/index/*"
+        ],
+        "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:TransactWriteItems"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:ssm:ap-southeast-2:291634989063:document/XRegion-NetworkGateway",
+          "arn:aws:ec2:ap-southeast-2:291634989063:instance/i-056d7f3dd24156234",
+          "arn:aws:ssm:us-east-1:291634989063:document/XRegion-NetworkGateway",
+          "arn:aws:ec2:us-east-1:291634989063:instance/i-07738a186534cb5ba"
+        ],
+        "Action": [
+          "ssm:SendCommand"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": "*",
+        "Action": [
+          "ssm:GetCommandInvocation"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": "*",
+        "Action": [
+          "ec2:DescribeAddresses",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeInstances"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:ec2:ap-southeast-2:291634989063:network-interface/eni-091eaee3e69e3f42d",
+          "arn:aws:ec2:us-east-1:291634989063:network-interface/eni-0ed6a1623d49ebe3a"
+        ],
+        "Action": [
+          "ec2:AssignPrivateIpAddresses",
+          "ec2:UnassignPrivateIpAddresses"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:ec2:ap-southeast-2:291634989063:elastic-ip/*",
+          "arn:aws:ec2:ap-southeast-2:291634989063:network-interface/eni-091eaee3e69e3f42d",
+          "arn:aws:ec2:us-east-1:291634989063:elastic-ip/*",
+          "arn:aws:ec2:us-east-1:291634989063:network-interface/eni-0ed6a1623d49ebe3a"
+        ],
+        "Action": [
+          "ec2:AssociateAddress",
+          "ec2:DisassociateAddress",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:logs:ap-southeast-2:291634989063:log-group:/aws/lambda/XRegion-Network-*:*",
+          "arn:aws:logs:ap-southeast-2:291634989063:log-group:/xregion/network/ssm:*",
+          "arn:aws:logs:us-east-1:291634989063:log-group:/aws/lambda/XRegion-Network-*:*",
+          "arn:aws:logs:us-east-1:291634989063:log-group:/xregion/network/ssm:*"
+        ],
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+      }
+    ]
+  }
+}

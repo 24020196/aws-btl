@@ -1,0 +1,33 @@
+[
+  {
+    "OwnerId": "291634989063",
+    "InstanceTenancy": "default",
+    "CidrBlockAssociationSet": [
+      {
+        "AssociationId": "vpc-cidr-assoc-0f664fbbef0be2607",
+        "CidrBlock": "10.20.0.0/16",
+        "CidrBlockState": {
+          "State": "associated"
+        }
+      }
+    ],
+    "IsDefault": false,
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionB"
+      },
+      {
+        "Key": "project",
+        "Value": "AWS"
+      }
+    ],
+    "BlockPublicAccessStates": {
+      "InternetGatewayBlockMode": "off"
+    },
+    "VpcId": "vpc-0923b0726b21010dd",
+    "State": "available",
+    "CidrBlock": "10.20.0.0/16",
+    "DhcpOptionsId": "dopt-0a1c39a8772c277df"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "RoleName": "openstack_step_functions_role",
+  "PolicyName": "StepFunctionsInvokeLambda",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "lambda:InvokeFunction"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }
+}

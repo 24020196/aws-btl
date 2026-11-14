@@ -1,0 +1,8 @@
+[
+  {
+    "Id": "StepFunctionTerminateTarget",
+    "Arn": "arn:aws:states:us-east-1:291634989063:stateMachine:TerminateInstance",
+    "RoleArn": "arn:aws:iam::291634989063:role/EventBridge-StepFunctions-ExecutionRole",
+    "InputPath": "$.detail"
+  }
+]

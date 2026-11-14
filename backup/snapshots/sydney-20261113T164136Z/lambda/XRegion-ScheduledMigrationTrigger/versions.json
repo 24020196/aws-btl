@@ -1,0 +1,41 @@
+[
+  {
+    "FunctionName": "XRegion-ScheduledMigrationTrigger",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-ScheduledMigrationTrigger:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-ScheduledMigrationTriggerRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 2544,
+    "Description": "",
+    "Timeout": 30,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T15:53:40.000+0000",
+    "CodeSha256": "ymAP85sYezDy8p97kdA2wGHVAuFU+XjkcI/26eDPUOA=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EVENT_GATEWAY_URL": "https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events",
+        "REGION_NAME": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "2362f269-f6eb-49a5-a28f-e9358fef8f56",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-ScheduledMigrationTrigger"
+    }
+  }
+]

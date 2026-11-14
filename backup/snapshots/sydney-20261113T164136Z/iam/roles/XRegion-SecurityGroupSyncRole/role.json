@@ -1,0 +1,27 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "XRegion-SecurityGroupSyncRole",
+    "RoleId": "AROAUHZWMZADW4YTJ3LKN",
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "CreateDate": "2026-11-09 19:11:14+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "lambda.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "Description": "Minimal role for XRegion SG sync worker canary",
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:20:48+00:00",
+      "Region": "ap-southeast-2"
+    }
+  }
+}

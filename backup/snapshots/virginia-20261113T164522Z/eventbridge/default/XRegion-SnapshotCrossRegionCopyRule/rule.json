@@ -1,0 +1,7 @@
+{
+  "Name": "XRegion-SnapshotCrossRegionCopyRule",
+  "Arn": "arn:aws:events:us-east-1:291634989063:rule/XRegion-SnapshotCrossRegionCopyRule",
+  "State": "ENABLED",
+  "ScheduleExpression": "cron(15,45 * * * ? *)",
+  "EventBusName": "default"
+}

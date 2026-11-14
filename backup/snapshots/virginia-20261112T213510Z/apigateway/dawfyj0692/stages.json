@@ -1,0 +1,12 @@
+[
+  {
+    "deploymentId": "zyi3bo",
+    "stageName": "prod",
+    "cacheClusterEnabled": false,
+    "cacheClusterStatus": "NOT_AVAILABLE",
+    "methodSettings": {},
+    "tracingEnabled": false,
+    "createdDate": "2026-11-12 01:18:15+07:00",
+    "lastUpdatedDate": "2026-11-12 01:18:15+07:00"
+  }
+]

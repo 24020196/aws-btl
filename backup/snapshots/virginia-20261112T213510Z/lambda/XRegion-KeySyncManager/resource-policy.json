@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"EB-XRegion-BackendEventRule-KeySyncManagerTarget\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:us-east-1:291634989063:function:XRegion-KeySyncManager\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:us-east-1:291634989063:rule/XRegion-BackendEventRule\"}}}]}",
+  "RevisionId": "16ddeb13-8c5c-4fe2-8bf5-d875b2c0ecc2"
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "FunctionName": "XRegion-MigrateTarget-TriggerSourceCleanup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-TriggerSourceCleanup:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_trigger_source_cleanup.lambda_handler",
+    "CodeSize": 996,
+    "Description": "",
+    "Timeout": 60,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:27:49.659+0000",
+    "CodeSha256": "X0DJGo9+KcBZAoLWvdSuR4+xRBRYhLPGrTkUgVAN/5s=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "95b0e6e1-008c-437a-bdc5-c5a702d8b4c0",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-TriggerSourceCleanup"
+    }
+  }
+]

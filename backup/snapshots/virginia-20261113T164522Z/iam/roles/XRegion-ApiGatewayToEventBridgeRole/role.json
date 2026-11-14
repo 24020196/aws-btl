@@ -1,0 +1,26 @@
+{
+  "Role": {
+    "Path": "/",
+    "RoleName": "XRegion-ApiGatewayToEventBridgeRole",
+    "RoleId": "AROAUHZWMZADX4JDJFYU7",
+    "Arn": "arn:aws:iam::291634989063:role/XRegion-ApiGatewayToEventBridgeRole",
+    "CreateDate": "2026-11-06 18:00:54+00:00",
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "apigateway.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "MaxSessionDuration": 3600,
+    "RoleLastUsed": {
+      "LastUsedDate": "2026-11-13 16:20:48+00:00",
+      "Region": "us-east-1"
+    }
+  }
+}

@@ -1,0 +1,397 @@
+[
+  {
+    "Architecture": "x86_64",
+    "BlockDeviceMappings": [
+      {
+        "DeviceName": "/dev/sda1",
+        "Ebs": {
+          "AttachTime": "2026-11-12 19:59:01.245000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-059ace59232c27ec5",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdf",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:21:57.010000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-03f7da34118b18330",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdg",
+        "Ebs": {
+          "AttachTime": "2026-11-12 20:25:33.474000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-02fd730262427cbbf",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdh",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:22:01.214000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08055dd91addc866f",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdi",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:22:06.768000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0412e03a4d10c5db6",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdk",
+        "Ebs": {
+          "AttachTime": "2026-11-13 02:59:17.988000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-04197e687a9e30cbf",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdl",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:18.246000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-071533d749b84ab2c",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdm",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:27:33.926000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-02278c56bbc58555e",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdn",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:27:38.167000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-03b118d5291df81c9",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdo",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:27:42.389000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0197589ba5c778545",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdp",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:27:46.746000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08120580d4ffade7a",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdq",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:27:51.064000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0368e793483cfbb70",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdr",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:52:03.368000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-07224845a2e0b7892",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sds",
+        "Ebs": {
+          "AttachTime": "2026-11-13 07:29:42.797000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0ba2d8bbe38d36cf5",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdv",
+        "Ebs": {
+          "AttachTime": "2026-11-13 08:16:53.645000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-056451152081d174a",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdw",
+        "Ebs": {
+          "AttachTime": "2026-11-13 16:16:54.594000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08c7a3c4ac6bc43bf",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdx",
+        "Ebs": {
+          "AttachTime": "2026-11-13 11:37:24.217000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0505a332d1a20d651",
+          "EbsCardIndex": 0
+        }
+      }
+    ],
+    "ClientToken": "c6c9750a-a8a8-4855-9167-aff514ccd83f",
+    "EbsOptimized": false,
+    "EnaSupport": true,
+    "Hypervisor": "xen",
+    "IamInstanceProfile": {
+      "Arn": "arn:aws:iam::291634989063:instance-profile/SSMInstanceRole",
+      "Id": "AIPAUHZWMZADRJTZW3OMQ"
+    },
+    "NetworkInterfaces": [
+      {
+        "Association": {
+          "IpOwnerId": "291634989063",
+          "PublicDnsName": "ec2-44-212-151-241.compute-1.amazonaws.com",
+          "PublicIp": "44.212.151.241"
+        },
+        "Attachment": {
+          "AttachTime": "2026-11-12 19:57:13+00:00",
+          "AttachmentId": "eni-attach-06d265bc0e8ecb8b7",
+          "DeleteOnTermination": false,
+          "DeviceIndex": 1,
+          "Status": "attached",
+          "NetworkCardIndex": 0
+        },
+        "Description": "RegionA-SecondaryENI-Public",
+        "Groups": [
+          {
+            "GroupId": "sg-06ed3f375ea95f881",
+            "GroupName": "RegionA-securityGroup"
+          }
+        ],
+        "Ipv6Addresses": [],
+        "MacAddress": "02:ff:d8:91:45:1f",
+        "NetworkInterfaceId": "eni-0ed6a1623d49ebe3a",
+        "OwnerId": "291634989063",
+        "PrivateDnsName": "ip-10-20-1-253.ec2.internal",
+        "PrivateIpAddress": "10.20.1.253",
+        "PrivateIpAddresses": [
+          {
+            "Association": {
+              "IpOwnerId": "291634989063",
+              "PublicDnsName": "ec2-44-212-151-241.compute-1.amazonaws.com",
+              "PublicIp": "44.212.151.241"
+            },
+            "Primary": true,
+            "PrivateDnsName": "ip-10-20-1-253.ec2.internal",
+            "PrivateIpAddress": "10.20.1.253"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-1-11.ec2.internal",
+            "PrivateIpAddress": "10.20.1.11"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-1-12.ec2.internal",
+            "PrivateIpAddress": "10.20.1.12"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-1-13.ec2.internal",
+            "PrivateIpAddress": "10.20.1.13"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-1-14.ec2.internal",
+            "PrivateIpAddress": "10.20.1.14"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-1-15.ec2.internal",
+            "PrivateIpAddress": "10.20.1.15"
+          }
+        ],
+        "SourceDestCheck": false,
+        "Status": "in-use",
+        "SubnetId": "subnet-0123913e3357df916",
+        "VpcId": "vpc-0c9e2dc8fa012a40b",
+        "InterfaceType": "interface",
+        "Operator": {
+          "Managed": false
+        }
+      },
+      {
+        "Attachment": {
+          "AttachTime": "2026-11-12 19:57:13+00:00",
+          "AttachmentId": "eni-attach-091ebe6bfd53041cd",
+          "DeleteOnTermination": false,
+          "DeviceIndex": 0,
+          "Status": "attached",
+          "NetworkCardIndex": 0
+        },
+        "Description": "RegionA-PrimaryENI",
+        "Groups": [
+          {
+            "GroupId": "sg-06ed3f375ea95f881",
+            "GroupName": "RegionA-securityGroup"
+          }
+        ],
+        "Ipv6Addresses": [],
+        "MacAddress": "02:ff:d2:d0:28:e7",
+        "NetworkInterfaceId": "eni-061b06c52aab778be",
+        "OwnerId": "291634989063",
+        "PrivateDnsName": "ip-10-20-10-183.ec2.internal",
+        "PrivateIpAddress": "10.20.10.183",
+        "PrivateIpAddresses": [
+          {
+            "Primary": true,
+            "PrivateDnsName": "ip-10-20-10-183.ec2.internal",
+            "PrivateIpAddress": "10.20.10.183"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "ip-10-20-10-250.ec2.internal",
+            "PrivateIpAddress": "10.20.10.250"
+          }
+        ],
+        "SourceDestCheck": false,
+        "Status": "in-use",
+        "SubnetId": "subnet-0909efd155bc3b18e",
+        "VpcId": "vpc-0c9e2dc8fa012a40b",
+        "InterfaceType": "interface",
+        "Operator": {
+          "Managed": false
+        }
+      }
+    ],
+    "RootDeviceName": "/dev/sda1",
+    "RootDeviceType": "ebs",
+    "SecurityGroups": [
+      {
+        "GroupId": "sg-06ed3f375ea95f881",
+        "GroupName": "RegionA-securityGroup"
+      }
+    ],
+    "SourceDestCheck": false,
+    "StateReason": {
+      "Code": "Client.UserInitiatedShutdown",
+      "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+    },
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "RegionA-tempEC2"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      }
+    ],
+    "VirtualizationType": "hvm",
+    "CpuOptions": {
+      "CoreCount": 2,
+      "ThreadsPerCore": 2,
+      "NestedVirtualization": "enabled"
+    },
+    "CapacityReservationSpecification": {
+      "CapacityReservationPreference": "open"
+    },
+    "HibernationOptions": {
+      "Configured": false
+    },
+    "MetadataOptions": {
+      "State": "applied",
+      "HttpTokens": "required",
+      "HttpPutResponseHopLimit": 2,
+      "HttpEndpoint": "enabled",
+      "HttpProtocolIpv6": "disabled",
+      "InstanceMetadataTags": "disabled"
+    },
+    "EnclaveOptions": {
+      "Enabled": false
+    },
+    "BootMode": "uefi-preferred",
+    "PlatformDetails": "Linux/UNIX",
+    "UsageOperation": "RunInstances",
+    "UsageOperationUpdateTime": "2026-11-12 19:57:13+00:00",
+    "PrivateDnsNameOptions": {
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsARecord": false,
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "MaintenanceOptions": {
+      "AutoRecovery": "default",
+      "RebootMigration": "default"
+    },
+    "CurrentInstanceBootMode": "uefi",
+    "NetworkPerformanceOptions": {
+      "BandwidthWeighting": "default"
+    },
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "SecondaryInterfaces": [],
+    "InstanceId": "i-07738a186534cb5ba",
+    "ImageId": "ami-02a9cdd4e98bc3c78",
+    "State": {
+      "Code": 80,
+      "Name": "stopped"
+    },
+    "PrivateDnsName": "ip-10-20-10-183.ec2.internal",
+    "PublicDnsName": "",
+    "StateTransitionReason": "User initiated (2026-11-13 16:33:48 GMT)",
+    "KeyName": "testRegionA",
+    "AmiLaunchIndex": 0,
+    "ProductCodes": [],
+    "InstanceType": "m7i-flex.xlarge",
+    "LaunchTime": "2026-11-13 16:31:25+00:00",
+    "Placement": {
+      "AvailabilityZoneId": "use1-az1",
+      "GroupName": "",
+      "Tenancy": "default",
+      "AvailabilityZone": "us-east-1a"
+    },
+    "Monitoring": {
+      "State": "disabled"
+    },
+    "SubnetId": "subnet-0909efd155bc3b18e",
+    "VpcId": "vpc-0c9e2dc8fa012a40b",
+    "PrivateIpAddress": "10.20.10.183"
+  }
+]

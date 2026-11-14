@@ -1,0 +1,70 @@
+{
+  "Table": {
+    "AttributeDefinitions": [
+      {
+        "AttributeName": "instance_id",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "migration_id",
+        "AttributeType": "S"
+      }
+    ],
+    "TableName": "XRegion-Migrations",
+    "KeySchema": [
+      {
+        "AttributeName": "instance_id",
+        "KeyType": "HASH"
+      },
+      {
+        "AttributeName": "migration_id",
+        "KeyType": "RANGE"
+      }
+    ],
+    "TableStatus": "ACTIVE",
+    "CreationDateTime": "2026-11-06 07:40:54.578000+07:00",
+    "ProvisionedThroughput": {
+      "NumberOfDecreasesToday": 0,
+      "ReadCapacityUnits": 0,
+      "WriteCapacityUnits": 0
+    },
+    "TableSizeBytes": 31530,
+    "ItemCount": 42,
+    "TableArn": "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations",
+    "TableId": "7201c5dc-0ea9-45ad-8ae0-5ab0fb7d05c2",
+    "BillingModeSummary": {
+      "BillingMode": "PAY_PER_REQUEST",
+      "LastUpdateToPayPerRequestDateTime": "2026-11-06 07:40:54.578000+07:00"
+    },
+    "StreamSpecification": {
+      "StreamEnabled": true,
+      "StreamViewType": "NEW_AND_OLD_IMAGES"
+    },
+    "LatestStreamLabel": "2026-11-12T14:59:20.784",
+    "LatestStreamArn": "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations/stream/2026-11-12T14:59:20.784",
+    "GlobalTableVersion": "2019.11.21",
+    "Replicas": [
+      {
+        "RegionName": "us-east-1",
+        "ReplicaStatus": "ACTIVE",
+        "WarmThroughput": {
+          "ReadUnitsPerSecond": 12000,
+          "WriteUnitsPerSecond": 4000,
+          "Status": "ACTIVE"
+        },
+        "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES"
+      }
+    ],
+    "GlobalTableSettingsReplicationMode": "ENABLED_WITH_OVERRIDES",
+    "TableClassSummary": {
+      "TableClass": "STANDARD"
+    },
+    "DeletionProtectionEnabled": false,
+    "DisassociationProtectionEnabled": true,
+    "WarmThroughput": {
+      "ReadUnitsPerSecond": 12000,
+      "WriteUnitsPerSecond": 4000,
+      "Status": "ACTIVE"
+    }
+  }
+}

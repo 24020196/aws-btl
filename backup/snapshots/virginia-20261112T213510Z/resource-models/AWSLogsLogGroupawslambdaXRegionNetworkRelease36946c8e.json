@@ -1,0 +1,13 @@
+{
+  "type": "AWS::Logs::LogGroup",
+  "identifier": "/aws/lambda/XRegion-Network-Release",
+  "properties": {
+    "FieldIndexPolicies": [],
+    "BearerTokenAuthenticationEnabled": false,
+    "LogGroupClass": "STANDARD",
+    "LogGroupName": "/aws/lambda/XRegion-Network-Release",
+    "Arn": "arn:aws:logs:us-east-1:291634989063:log-group:/aws/lambda/XRegion-Network-Release:*",
+    "DeletionProtectionEnabled": false,
+    "DataProtectionPolicy": {}
+  }
+}

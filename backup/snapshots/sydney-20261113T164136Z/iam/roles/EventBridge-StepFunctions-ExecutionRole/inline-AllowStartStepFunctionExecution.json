@@ -1,0 +1,29 @@
+{
+  "RoleName": "EventBridge-StepFunctions-ExecutionRole",
+  "PolicyName": "AllowStartStepFunctionExecution",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:LaunchInstance",
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:LifecycleInstance",
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:TerminateInstance",
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:MigrateInstance",
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:MigrateTargetBoot",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:LaunchInstance",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:LifecycleInstance",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:TerminateInstance",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateInstance",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateTargetBoot",
+          "arn:aws:states:ap-southeast-2:291634989063:stateMachine:MigrateSourceCleanup",
+          "arn:aws:states:us-east-1:291634989063:stateMachine:MigrateSourceCleanup"
+        ],
+        "Action": [
+          "states:StartExecution"
+        ]
+      }
+    ]
+  }
+}

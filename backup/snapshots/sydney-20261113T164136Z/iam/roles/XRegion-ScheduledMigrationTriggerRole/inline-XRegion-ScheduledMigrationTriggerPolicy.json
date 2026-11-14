@@ -1,0 +1,60 @@
+{
+  "RoleName": "XRegion-ScheduledMigrationTriggerRole",
+  "PolicyName": "XRegion-ScheduledMigrationTriggerPolicy",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": "*",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-Instances/*",
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-MigrationScenarios",
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-Migrations",
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-Migrations/*",
+          "arn:aws:dynamodb:*:291634989063:table/XRegion-Nova"
+        ],
+        "Action": [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:execute-api:ap-southeast-2:291634989063:oqp7jmg7je/*",
+          "arn:aws:execute-api:us-east-1:291634989063:dawfyj0692/*"
+        ],
+        "Action": [
+          "execute-api:Invoke"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": "arn:aws:scheduler:*:291634989063:schedule/default/xregion-mig-*",
+        "Action": [
+          "scheduler:GetSchedule",
+          "scheduler:UpdateSchedule"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Resource": "arn:aws:iam::291634989063:role/XRegion-MigrationSchedulerInvokeRole",
+        "Action": [
+          "iam:PassRole"
+        ]
+      }
+    ]
+  }
+}

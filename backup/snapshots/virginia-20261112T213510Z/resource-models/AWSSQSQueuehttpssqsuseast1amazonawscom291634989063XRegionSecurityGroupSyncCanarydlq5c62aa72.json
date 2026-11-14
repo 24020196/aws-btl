@@ -1,0 +1,15 @@
+{
+  "type": "AWS::SQS::Queue",
+  "identifier": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-SecurityGroupSync-Canary-dlq",
+  "properties": {
+    "SqsManagedSseEnabled": true,
+    "ReceiveMessageWaitTimeSeconds": 0,
+    "DelaySeconds": 0,
+    "MessageRetentionPeriod": 1209600,
+    "MaximumMessageSize": 1048576,
+    "VisibilityTimeout": 30,
+    "Arn": "arn:aws:sqs:us-east-1:291634989063:XRegion-SecurityGroupSync-Canary-dlq",
+    "QueueName": "XRegion-SecurityGroupSync-Canary-dlq",
+    "QueueUrl": "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-SecurityGroupSync-Canary-dlq"
+  }
+}

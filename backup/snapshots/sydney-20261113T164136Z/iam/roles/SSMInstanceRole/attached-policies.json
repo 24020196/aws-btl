@@ -1,0 +1,6 @@
+[
+  {
+    "PolicyName": "AmazonSSMManagedInstanceCore",
+    "PolicyArn": "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+]

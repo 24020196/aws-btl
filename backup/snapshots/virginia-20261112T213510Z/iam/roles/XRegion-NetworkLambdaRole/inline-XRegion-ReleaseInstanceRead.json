@@ -1,0 +1,19 @@
+{
+  "RoleName": "XRegion-NetworkLambdaRole",
+  "PolicyName": "XRegion-ReleaseInstanceRead",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Resource": [
+          "arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances",
+          "arn:aws:dynamodb:us-east-1:291634989063:table/XRegion-Instances"
+        ],
+        "Action": [
+          "dynamodb:GetItem"
+        ]
+      }
+    ]
+  }
+}

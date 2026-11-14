@@ -1,0 +1,104 @@
+{
+  "type": "AWS::IAM::Role",
+  "identifier": "openstack_step_functions_role",
+  "properties": {
+    "Path": "/",
+    "MaxSessionDuration": 3600,
+    "RoleName": "openstack_step_functions_role",
+    "Policies": [
+      {
+        "PolicyName": "StepFunctionsInvokeLambda",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "lambda:InvokeFunction"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      },
+      {
+        "PolicyName": "XRegion-NatWorkflows",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "lambda:InvokeFunction"
+              ],
+              "Resource": [
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Reserve",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Reserve",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Commit",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Commit",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Dispatch",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Dispatch",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-CheckCommand",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-CheckCommand",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Verify",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Verify",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Release",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-Network-Release",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-CheckPool",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-CheckPool",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-AllocateResource",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-AllocateResource",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-ExtendVolume",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-ExtendVolume",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-BootNova",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-BootNova",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-AssignSecurityGroup",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-AssignSecurityGroup",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteNova",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteNova",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteVolume",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-DeleteVolume",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-ReleaseEIP",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-ReleaseEIP",
+                "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-SyncDynamoDB",
+                "arn:aws:lambda:us-east-1:291634989063:function:XRegion-TerminateInstance-SyncDynamoDB"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        }
+      }
+    ],
+    "AssumeRolePolicyDocument": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "sts:AssumeRole",
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "states.amazonaws.com"
+          }
+        }
+      ]
+    },
+    "Arn": "arn:aws:iam::291634989063:role/openstack_step_functions_role",
+    "RoleId": "AROAUHZWMZAD7WL7KQNMM"
+  }
+}

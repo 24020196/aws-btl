@@ -1,0 +1,4 @@
+{
+  "Policy": "{\"Version\":\"2012-10-17\",\"Id\":\"default\",\"Statement\":[{\"Sid\":\"AllowEventBridgeInvoke\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"lambda:InvokeFunction\",\"Resource\":\"arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-EIPPoolManager\",\"Condition\":{\"ArnLike\":{\"AWS:SourceArn\":\"arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLaunchRule\"}}}]}",
+  "RevisionId": "4eab2e48-5223-4ad4-872a-ef740d9eaec4"
+}

@@ -1,0 +1,21 @@
+{
+  "type": "AWS::EC2::EIP",
+  "identifier": "eipalloc-02c7d4788fff25b66",
+  "properties": {
+    "PublicIp": "72.44.58.97",
+    "AllocationId": "eipalloc-02c7d4788fff25b66",
+    "PublicIpv4Pool": "amazon",
+    "Domain": "vpc",
+    "Tags": [
+      {
+        "Value": "RegionA-natgw-eip",
+        "Key": "Name"
+      },
+      {
+        "Value": "xregion",
+        "Key": "Project"
+      }
+    ],
+    "NetworkBorderGroup": "us-east-1"
+  }
+}

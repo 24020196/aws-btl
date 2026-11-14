@@ -1,0 +1,10 @@
+[
+  {
+    "Id": "1",
+    "Arn": "arn:aws:logs:ap-southeast-2:291634989063:log-group:/aws/events/xregion-backend-events"
+  },
+  {
+    "Id": "KeySyncManagerTarget",
+    "Arn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-KeySyncManager"
+  }
+]

@@ -1,0 +1,40 @@
+[
+  {
+    "FunctionName": "XRegion-MigrateTarget-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-MigrateTarget-SyncDynamoDB:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_sync.lambda_handler",
+    "CodeSize": 7840,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T12:18:08.000+0000",
+    "CodeSha256": "qnazvIX76+WDxyLu05abFsakY3I5PsnzPPZsIiMs3O8=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEFAULT_REGION": "us-east-1"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "e80d3158-458d-41dc-903f-7e51494dea26",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-SyncDynamoDB"
+    }
+  }
+]

@@ -1,0 +1,6 @@
+[
+  "DynamoDB data and EBS resources/data are excluded",
+  "EC2 launch AMI does not reproduce manually installed OpenStack or current root disk state",
+  "Existing named resources must be imported or absent; this is not an in-place update stack",
+  "CloudFormation deployment has not been executed"
+]

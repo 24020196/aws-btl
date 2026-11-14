@@ -1,0 +1,40 @@
+[
+  {
+    "FunctionName": "XRegion-MigrateTarget-TriggerSourceRollback",
+    "FunctionArn": "arn:aws:lambda:us-east-1:291634989063:function:XRegion-MigrateTarget-TriggerSourceRollback:$LATEST",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_trigger_source_rollback.lambda_handler",
+    "CodeSize": 1437,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:28:05.000+0000",
+    "CodeSha256": "n3oOgxxuri5yYdfCWyHl1cHWT/t3qyiNnKZtQrX9F2g=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEFAULT_REGION": "us-east-1"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "2e632ba7-2218-4f8a-b49c-b69836fc09a0",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-TriggerSourceRollback"
+    }
+  }
+]

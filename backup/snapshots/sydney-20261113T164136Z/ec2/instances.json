@@ -1,0 +1,422 @@
+[
+  {
+    "Architecture": "x86_64",
+    "BlockDeviceMappings": [
+      {
+        "DeviceName": "/dev/sda1",
+        "Ebs": {
+          "AttachTime": "2026-11-05 15:55:30+00:00",
+          "DeleteOnTermination": true,
+          "Status": "attached",
+          "VolumeId": "vol-0b788d4555b67eb67",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdf",
+        "Ebs": {
+          "AttachTime": "2026-11-12 17:28:16.239000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0d43e89ec582645cd",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdg",
+        "Ebs": {
+          "AttachTime": "2026-11-12 14:08:56.389000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0241c0400ea68ed8b",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdh",
+        "Ebs": {
+          "AttachTime": "2026-11-12 14:12:56.145000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0deef8788526cc5ef",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdj",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:38.977000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-07e0f75b0270aaf2d",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdk",
+        "Ebs": {
+          "AttachTime": "2026-11-13 07:37:55.228000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0e1a952a2aac0f706",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdl",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:42.914000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-034f7a7da8cd63130",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdm",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:46.829000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0e947f009f58b7095",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdn",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:50.714000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-01cff689a0189a79f",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdo",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:46:54.661000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-051d2eba59738bc5a",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdp",
+        "Ebs": {
+          "AttachTime": "2026-11-13 05:47:23.302000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08aa9547130d7a5c9",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdq",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:10:55.577000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-058540bb721a1ced0",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdr",
+        "Ebs": {
+          "AttachTime": "2026-11-13 06:18:38.739000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-019c2cf29883b4d48",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdt",
+        "Ebs": {
+          "AttachTime": "2026-11-13 07:38:03.257000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08877125a3957d90a",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdu",
+        "Ebs": {
+          "AttachTime": "2026-11-13 07:38:07.315000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-08b4914d4762f7e74",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdv",
+        "Ebs": {
+          "AttachTime": "2026-11-13 08:13:40.908000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-05396c3bc9073399d",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdw",
+        "Ebs": {
+          "AttachTime": "2026-11-13 15:40:57.529000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-00cc1b0c0d45fc8f9",
+          "EbsCardIndex": 0
+        }
+      },
+      {
+        "DeviceName": "/dev/sdx",
+        "Ebs": {
+          "AttachTime": "2026-11-13 08:46:44.402000+00:00",
+          "DeleteOnTermination": false,
+          "Status": "attached",
+          "VolumeId": "vol-0920a313e07330448",
+          "EbsCardIndex": 0
+        }
+      }
+    ],
+    "ClientToken": "aac3b152-3c64-4f99-82eb-82fde3b347ea",
+    "EbsOptimized": true,
+    "EnaSupport": true,
+    "Hypervisor": "xen",
+    "IamInstanceProfile": {
+      "Arn": "arn:aws:iam::291634989063:instance-profile/SSMInstanceRole",
+      "Id": "AIPAUHZWMZADRJTZW3OMQ"
+    },
+    "NetworkInterfaces": [
+      {
+        "Attachment": {
+          "AttachTime": "2026-11-04 13:37:57+00:00",
+          "AttachmentId": "eni-attach-0ac2d4415f38a3c4d",
+          "DeleteOnTermination": true,
+          "DeviceIndex": 0,
+          "Status": "attached",
+          "NetworkCardIndex": 0
+        },
+        "Description": "",
+        "Groups": [
+          {
+            "GroupId": "sg-0cd9aa0a1804aba43",
+            "GroupName": "RegionB-securityGroup"
+          }
+        ],
+        "Ipv6Addresses": [],
+        "MacAddress": "02:ff:c8:48:37:03",
+        "NetworkInterfaceId": "eni-06e2c5fff0d132380",
+        "OwnerId": "291634989063",
+        "PrivateIpAddress": "10.20.10.183",
+        "PrivateIpAddresses": [
+          {
+            "Primary": true,
+            "PrivateIpAddress": "10.20.10.183"
+          }
+        ],
+        "SourceDestCheck": true,
+        "Status": "in-use",
+        "SubnetId": "subnet-0ed6959cba851d0bb",
+        "VpcId": "vpc-0923b0726b21010dd",
+        "InterfaceType": "interface",
+        "Operator": {
+          "Managed": false
+        }
+      },
+      {
+        "Attachment": {
+          "AttachTime": "2026-11-07 17:17:56+00:00",
+          "AttachmentId": "eni-attach-0fcf6cdf683e891cc",
+          "DeleteOnTermination": false,
+          "DeviceIndex": 1,
+          "Status": "attached",
+          "NetworkCardIndex": 0
+        },
+        "Description": "RegionB-SecondaryENI-Public",
+        "Groups": [
+          {
+            "GroupId": "sg-0cd9aa0a1804aba43",
+            "GroupName": "RegionB-securityGroup"
+          }
+        ],
+        "Ipv6Addresses": [],
+        "MacAddress": "02:ff:e3:85:1a:d3",
+        "NetworkInterfaceId": "eni-091eaee3e69e3f42d",
+        "OwnerId": "291634989063",
+        "PrivateIpAddress": "10.20.1.253",
+        "PrivateIpAddresses": [
+          {
+            "Primary": true,
+            "PrivateIpAddress": "10.20.1.253"
+          },
+          {
+            "Association": {
+              "IpOwnerId": "291634989063",
+              "PublicDnsName": "",
+              "PublicIp": "15.134.59.23"
+            },
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.236"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.10"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.11"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.12"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.13"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.14"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.15"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.17"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.18"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.20"
+          },
+          {
+            "Primary": false,
+            "PrivateDnsName": "",
+            "PrivateIpAddress": "10.20.1.21"
+          }
+        ],
+        "SourceDestCheck": false,
+        "Status": "in-use",
+        "SubnetId": "subnet-0c2058b1b74fae060",
+        "VpcId": "vpc-0923b0726b21010dd",
+        "InterfaceType": "interface",
+        "Operator": {
+          "Managed": false
+        }
+      }
+    ],
+    "RootDeviceName": "/dev/sda1",
+    "RootDeviceType": "ebs",
+    "SecurityGroups": [
+      {
+        "GroupId": "sg-0cd9aa0a1804aba43",
+        "GroupName": "RegionB-securityGroup"
+      }
+    ],
+    "SourceDestCheck": true,
+    "StateReason": {
+      "Code": "Client.UserInitiatedShutdown",
+      "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+    },
+    "Tags": [
+      {
+        "Key": "project",
+        "Value": "AWS"
+      },
+      {
+        "Key": "Name",
+        "Value": "RegionB-tempEC2"
+      }
+    ],
+    "VirtualizationType": "hvm",
+    "CpuOptions": {
+      "CoreCount": 2,
+      "ThreadsPerCore": 2,
+      "NestedVirtualization": "enabled"
+    },
+    "CapacityReservationSpecification": {
+      "CapacityReservationPreference": "open"
+    },
+    "HibernationOptions": {
+      "Configured": false
+    },
+    "MetadataOptions": {
+      "State": "applied",
+      "HttpTokens": "required",
+      "HttpPutResponseHopLimit": 2,
+      "HttpEndpoint": "enabled",
+      "HttpProtocolIpv6": "disabled",
+      "InstanceMetadataTags": "disabled"
+    },
+    "EnclaveOptions": {
+      "Enabled": false
+    },
+    "BootMode": "uefi-preferred",
+    "PlatformDetails": "Linux/UNIX",
+    "UsageOperation": "RunInstances",
+    "UsageOperationUpdateTime": "2026-11-04 13:37:57+00:00",
+    "PrivateDnsNameOptions": {
+      "HostnameType": "ip-name",
+      "EnableResourceNameDnsARecord": false,
+      "EnableResourceNameDnsAAAARecord": false
+    },
+    "MaintenanceOptions": {
+      "AutoRecovery": "default",
+      "RebootMigration": "default"
+    },
+    "CurrentInstanceBootMode": "uefi",
+    "NetworkPerformanceOptions": {
+      "BandwidthWeighting": "default"
+    },
+    "Operator": {
+      "Managed": false,
+      "HiddenByDefault": false
+    },
+    "InstanceId": "i-056d7f3dd24156234",
+    "ImageId": "ami-0c4c0d31978150116",
+    "State": {
+      "Code": 80,
+      "Name": "stopped"
+    },
+    "PrivateDnsName": "ip-10-20-10-183.ap-southeast-2.compute.internal",
+    "PublicDnsName": "",
+    "StateTransitionReason": "User initiated (2026-11-13 16:33:45 GMT)",
+    "KeyName": "testRegionB",
+    "AmiLaunchIndex": 0,
+    "ProductCodes": [],
+    "InstanceType": "m7i-flex.xlarge",
+    "LaunchTime": "2026-11-13 16:31:22+00:00",
+    "Placement": {
+      "AvailabilityZoneId": "apse2-az1",
+      "GroupName": "",
+      "Tenancy": "default",
+      "AvailabilityZone": "ap-southeast-2a"
+    },
+    "Monitoring": {
+      "State": "disabled"
+    },
+    "SubnetId": "subnet-0ed6959cba851d0bb",
+    "VpcId": "vpc-0923b0726b21010dd",
+    "PrivateIpAddress": "10.20.10.183"
+  }
+]

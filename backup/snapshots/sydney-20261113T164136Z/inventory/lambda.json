@@ -1,0 +1,2288 @@
+[
+  {
+    "FunctionName": "XRegion-KeySyncManager",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-KeySyncManager",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "key_sync_manager.lambda_handler",
+    "CodeSize": 2200,
+    "Description": "",
+    "Timeout": 30,
+    "MemorySize": 128,
+    "LastModified": "2026-11-08T06:58:07.000+0000",
+    "CodeSha256": "cuu5GhsQyGEs6VSOdH8oUVCf0w0tkD9rJIkxyEDT3eQ=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "DYNAMODB_TABLE": "XRegion-Keys",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OS_USERNAME": "admin",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "4b0be30d-4f45-4b1f-9f28-ddeca2a51485",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-KeySyncManager"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-TriggerSourceRollback",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-TriggerSourceRollback",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_trigger_source_rollback.lambda_handler",
+    "CodeSize": 1437,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:27:48.000+0000",
+    "CodeSha256": "dJNFRv/40/YimD5yeDsLmjFp7hidqLjDTlHTFnitVNA=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEFAULT_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "94b72e9a-41cd-48b5-8150-193c822c7ece",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-TriggerSourceRollback"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-BootNova",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-BootNova",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_boot_nova.lambda_handler",
+    "CodeSize": 14043,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:42:44.000+0000",
+    "CodeSha256": "EaN3aDp47MH1AuuRDIVjsYBzfLuQIvo5hCQIgiULSo4=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "b9a11c21-62d6-4d55-994d-d471719c9c18",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-BootNova"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-SyncDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 14276,
+    "Description": "Step 6 of LaunchInstance: persists compute record into XRegion-Nova and marks volume IN_USE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T12:06:56.000+0000",
+    "CodeSha256": "6MntePWpUyA1yGrQdeVcXM3el2GBAzaW0SFScPSIuq8=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "SyncDynamoDB",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "bdc2007a-b8df-4646-983b-59c963a5a968",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-SyncDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-SyncDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_sync_and_rollback.sync_handler",
+    "CodeSize": 13972,
+    "Description": "SPEC-SF-08 XRegion-Migrate-SyncDynamoDB",
+    "Timeout": 60,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T07:22:53.000+0000",
+    "CodeSha256": "jk/I7XbtsrTSux9pyzOl3xoN/AWA6X+LhojDf7sPMKU=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEST_AZ": "us-east-1a",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "CinderPoolManager",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "3871ef2d-1f8d-4fe9-a78e-7d1ad9860230",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-SyncDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-TerminateInstance-DeleteVolume",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteVolume",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "delete_volume.lambda_handler",
+    "CodeSize": 15623,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:33.000+0000",
+    "CodeSha256": "q2uxL2zp8vXO18B6oyzIIQ1er2cmaZgY0CEZnvgvXaY=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "DeleteVolume",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "a8b280c6-a328-44c1-8df6-581ad8937a76",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-DeleteVolume"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-Rollback",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-Rollback",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_rollback.lambda_handler",
+    "CodeSize": 14844,
+    "Description": "SPEC-SF-08 XRegion-Migrate-Rollback",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T04:07:30.000+0000",
+    "CodeSha256": "+bQdIwSvfrt8zRthS4qhf+Dgpbni1zhIRVPrqU5K1aI=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "3f819547-d00d-4aba-b1af-25fabba5fde3",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-Rollback"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-CreateAndCopy",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-CreateAndCopy",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_create_and_copy.lambda_handler",
+    "CodeSize": 1372,
+    "Description": "SPEC-SF-08 XRegion-Migrate-CreateAndCopy",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:04:00.000+0000",
+    "CodeSha256": "hnDuTh8dr4JuZrIKZymx+HB1Xn4eoSyCQgwZMu5OvNQ=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEST_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "8702a699-5692-494c-990f-68e89e287a06",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-CreateAndCopy"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-AllocateResource",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-AllocateResource",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13614,
+    "Description": "Step 2 of LaunchInstance: sequentially allocates Cinder volume and EIP",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T06:48:49.000+0000",
+    "CodeSha256": "VxOTlmTzhy6Xseid47rQQC/CNURIeXVGpmyZoKuPsTU=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "AllocateResource",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "8cb2cd4f-0d2d-4abc-8012-6f2eb3b21338",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-AllocateResource"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Network-CheckCommand",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-CheckCommand",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:18.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "CheckCommand",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "adff2acb-fb4a-4d98-884b-65f676db3335",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-CheckCommand"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-AssignSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-AssignSecurityGroup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_assign_sg.lambda_handler",
+    "CodeSize": 14660,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T11:55:52.000+0000",
+    "CodeSha256": "/27M7B2j9bXekHojt2EmJKbwZi7JJIt6E7WWRQ9vMCs=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "AssignSecurityGroup",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "a302230d-5875-49ad-b28f-f5447e45343f",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-AssignSecurityGroup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-AssignSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-AssignSecurityGroup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "Step 5 of LaunchInstance: assigns Security Group to created Nova VM and associates Elastic IP",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T08:34:12.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "AssignSecurityGroup",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "c6f8b440-e959-4b59-898d-75d6c19cea03",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-AssignSecurityGroup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncSecurityGroup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-SecurityGroupSyncRole",
+    "Handler": "sync_security_group.lambda_handler",
+    "CodeSize": 10706,
+    "Description": "SG sync worker canary (dry-run by default)",
+    "Timeout": 120,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T11:55:47.000+0000",
+    "CodeSha256": "ChGXUMCSCkfj53jx4sW/IvGMI9rRtb4SVN8ETNjx4W8=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "XREGION_SG_SYNC_LIVE": "true",
+        "OS_USERNAME": "admin",
+        "XREGION_SG_SYNC_LEASE_MS": "180000",
+        "XREGION_SG_SYNC_MANAGED_ALLOWLIST": "*",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "ecdbeff7-be4d-4cad-b1b6-046b75ae2613",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncSecurityGroup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-TriggerSourceCleanup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-TriggerSourceCleanup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_trigger_source_cleanup.lambda_handler",
+    "CodeSize": 996,
+    "Description": "",
+    "Timeout": 60,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:27:49.659+0000",
+    "CodeSha256": "X0DJGo9+KcBZAoLWvdSuR4+xRBRYhLPGrTkUgVAN/5s=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "95b0e6e1-008c-437a-bdc5-c5a702d8b4c0",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-TriggerSourceCleanup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-Network",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-Network",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_network.lambda_handler",
+    "CodeSize": 15936,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:27:47.000+0000",
+    "CodeSha256": "Y+aLN3Djf8tptcIxpmr0WheT9L/EJCvx3qJsaIXVej4=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "Reserve",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "c201a5dc-0399-4a0d-bc52-0391b7449563",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-Network"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-BootTarget",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-BootTarget",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_boot_target.lambda_handler",
+    "CodeSize": 13373,
+    "Description": "SPEC-SF-08 XRegion-Migrate-BootTarget",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T07:22:51.000+0000",
+    "CodeSha256": "CI9aiFS53YDkAOigwV90YiPDRCUy9dLcCOl+mBQ3px4=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEST_AZ": "us-east-1a",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "CinderPoolManager",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "e36c0f16-a51b-4cb9-aff0-34ea7fbb8691",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-BootTarget"
+    }
+  },
+  {
+    "FunctionName": "XRegion-TerminateInstance-DeleteNova",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteNova",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T08:34:32.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "DeleteNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "2ad75686-19f8-449b-8c08-49a83cccfcc0",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-DeleteNova"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-StopSource",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-StopSource",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_stop_source.lambda_handler",
+    "CodeSize": 14845,
+    "Description": "SPEC-SF-08 XRegion-Migrate-StopSource",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:03:55.000+0000",
+    "CodeSha256": "xvUG4bBzY/et+YhCkrJ8fXh9JQ0nDRdtmtVbinOEBgU=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "b2dd8fcf-a0aa-46f2-b0e9-cac3393e831c",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-StopSource"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-CheckPool",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-CheckPool",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13614,
+    "Description": "Step 1 of LaunchInstance: checks spare Cinder volume and EIP pool readiness",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T06:48:47.000+0000",
+    "CodeSha256": "VxOTlmTzhy6Xseid47rQQC/CNURIeXVGpmyZoKuPsTU=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "LAUNCH_ADMISSION_PARAMETER": "/xregion/ap-southeast-2/launch/admission",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "CheckPool",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "6d1eb1d1-e67b-4b0f-8e02-e120586cfaab",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-CheckPool"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Network-Dispatch",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Dispatch",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:23.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "Dispatch",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "e7c50a0e-180e-4ddc-a273-efdf91e84e1c",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-Dispatch"
+    }
+  },
+  {
+    "FunctionName": "XRegion-ScheduledEbsSnapshot",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-ScheduledEbsSnapshot",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "scheduled_ebs_snapshot.lambda_handler",
+    "CodeSize": 14366,
+    "Description": "SPEC-SF-07 Scheduled 30m EBS snapshot for running instances",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T07:22:38.000+0000",
+    "CodeSha256": "/aUyNLLJGqCM3+6v5lAzGwHeLc73XzjpGElGaexrePA=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "CinderPoolManager",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "f799013b-0a72-41b1-a390-5e107fb34916",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-ScheduledEbsSnapshot"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncImageToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncImageToDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 830,
+    "Description": "Syncs OpenStack Glance Images to DynamoDB XRegion-Images",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-07T08:29:03.018+0000",
+    "CodeSha256": "GwOLdv6HHOVGHe6q4Ja2gu+w3A765ZIeCrHIbxB6Pag=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "6503c6d5-37a7-4f70-8014-73087c236e77",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncImageToDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-ScheduledMigrationTrigger",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-ScheduledMigrationTrigger",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-ScheduledMigrationTriggerRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 2544,
+    "Description": "",
+    "Timeout": 30,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T15:53:40.000+0000",
+    "CodeSha256": "ymAP85sYezDy8p97kdA2wGHVAuFU+XjkcI/26eDPUOA=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "EVENT_GATEWAY_URL": "https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events",
+        "REGION_NAME": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "2362f269-f6eb-49a5-a28f-e9358fef8f56",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-ScheduledMigrationTrigger"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Network-Release",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Release",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:25.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "Release",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "1aa1ebac-0173-4cd9-8d78-795eef95295f",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-Release"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SyncFlavorToDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SyncFlavorToDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lambda_function.lambda_handler",
+    "CodeSize": 834,
+    "Description": "Syncs OpenStack Nova Flavors to DynamoDB XRegion-Flavors",
+    "Timeout": 15,
+    "MemorySize": 128,
+    "LastModified": "2026-11-07T08:29:10.535+0000",
+    "CodeSha256": "7yfTih+l5AMuGGxeSDDnD5XZWwEh35EI/YubFLLFaj8=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "a4c7a3e9-c3ca-4a1c-8e8f-401382818982",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SyncFlavorToDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-Volume",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-Volume",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_volume.lambda_handler",
+    "CodeSize": 15902,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T07:56:23.000+0000",
+    "CodeSha256": "0rahDZ1j0w3BlqBLMFiYvC7BayOwsC/H7LN6fGeaEeA=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "Reserve",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "bc8b8974-3ecc-4656-96f0-0394ee48ab9c",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-Volume"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SnapshotCleaner",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SnapshotCleaner",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "snapshot_cleaner.lambda_handler",
+    "CodeSize": 2315,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T14:21:08.846+0000",
+    "CodeSha256": "y07zDLTNogFlF+uXMz6PJgrpCnUjRGlJYwldgSjWh/I=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "fbc0c45c-cc50-48c0-bc2a-03d9c6fda4e6",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SnapshotCleaner"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Network-Commit",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Commit",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:21.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "Commit",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "53988b74-ee99-48ed-8721-b4aebafd2a89",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-Commit"
+    }
+  },
+  {
+    "FunctionName": "XRegion-MigrateTarget-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-MigrateTarget-SyncDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_target_sync.lambda_handler",
+    "CodeSize": 7840,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T12:18:13.000+0000",
+    "CodeSha256": "Mrg/J+odaqDx6p/yzqCQY9K7RTYlxiDAlQqTPR298ZU=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEFAULT_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "e9cbaa6f-15c3-4525-8a1f-1bd3ca739316",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-MigrateTarget-SyncDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-TerminateInstance-SyncDynamoDB",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-SyncDynamoDB",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 14309,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-13T12:07:01.000+0000",
+    "CodeSha256": "dOplw5d/BgC/fWhF03Q307N9f/D42BGcGaWPElNA3jM=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "TerminateSync",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "262da0a2-115d-4d92-92e5-84693a46eb92",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-SyncDynamoDB"
+    }
+  },
+  {
+    "FunctionName": "XRegion-CinderPoolManager",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-CinderPoolManager",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "cinder_pool_manager.lambda_handler",
+    "CodeSize": 16535,
+    "Description": "XRegion Cinder bootable volume reserve pool manager by Glance image type",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:48:52.000+0000",
+    "CodeSha256": "VwVwuhK+c4oCSvBTvACPjXQbyQMCAqJVeL9JA8VsOQM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "CinderPoolManager",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "ec9c342d-098a-464c-8147-bedf6a0c1719",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-CinderPoolManager"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-ExtendVolume",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-ExtendVolume",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "extend_volume.lambda_handler",
+    "CodeSize": 13647,
+    "Description": "Step 3 of LaunchInstance: extends Cinder volume size according to request",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:30.000+0000",
+    "CodeSha256": "LwZ3Gzmu/TWI1sGNzB95zGWs13SCtny1y6SyxIpJetk=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "ExtendVolume",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "d01e319b-9577-4366-94e3-8428d667f6e5",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-ExtendVolume"
+    }
+  },
+  {
+    "FunctionName": "XRegion-TerminateInstance-DeleteSecurityGroup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-TerminateInstance-DeleteSecurityGroup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T08:34:34.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "DeleteSecurityGroup",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "6c02b1dc-70d1-49cb-a843-771e60831755",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-TerminateInstance-DeleteSecurityGroup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-TriggerTargetLaunch",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-TriggerTargetLaunch",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_trigger_target_launch.lambda_handler",
+    "CodeSize": 1755,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:10:23.000+0000",
+    "CodeSha256": "7fLQkWeIU4FGJu5j7/QIFKITiFXuWSgqXJwCHcOEvYs=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEST_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "250c6bed-8b5a-4d9e-8aa3-d47f9ca9c506",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-TriggerTargetLaunch"
+    }
+  },
+  {
+    "FunctionName": "XRegion-LaunchInstance-BootNova",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-LaunchInstance-BootNova",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "Step 4 of LaunchInstance: boots Nova VM from Cinder bootable volume and polls ACTIVE",
+    "Timeout": 150,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T08:34:14.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "BootNova",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "428ab32c-c590-4663-ac77-e93e01689968",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-LaunchInstance-BootNova"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-SourceCleanup",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-SourceCleanup",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_source_cleanup.lambda_handler",
+    "CodeSize": 15874,
+    "Description": "",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T10:42:51.000+0000",
+    "CodeSha256": "0XAzEv05BQVS2Gr5WOC129etrsGi8/5mEpUVl17MLyo=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "DEST_REGION": "us-east-1",
+        "NETWORK_STAGE": "Reserve",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "d321a295-81a3-4409-b0f4-6829ea1ad80b",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-SourceCleanup"
+    }
+  },
+  {
+    "FunctionName": "XRegion-ResourceCleaner",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-ResourceCleaner",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "resource_cleaner.lambda_handler",
+    "CodeSize": 15369,
+    "Description": "",
+    "Timeout": 60,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T08:58:30.682+0000",
+    "CodeSha256": "Leez+YGDqm5jWYHkgAnzsufMcX/Xex8kqaFgyKIXaPI=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "EBS_POOL_ENABLED": "true",
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "GLANCE_URL": "http://10.20.10.183:9292/v2",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "CINDER_URL": "http://10.20.10.183:8776/v3",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "OS_PROJECT_ID": "d3bf05331973481891385d066d3eba3e",
+        "NETWORK_STAGE": "ResourceCleaner",
+        "NETWORK_ADMISSION": "open",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "4ae5a4e9-98f7-4f30-9dde-59a7afc6aba4",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-ResourceCleaner"
+    }
+  },
+  {
+    "FunctionName": "XRegion-SnapshotCrossRegionCopy",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-SnapshotCrossRegionCopy",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "snapshot_cross_region_copy.lambda_handler",
+    "CodeSize": 2367,
+    "Description": "SPEC-SF-07 v1.1.0 Cross-region EBS snapshot replication to us-east-1",
+    "Timeout": 300,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T07:22:40.000+0000",
+    "CodeSha256": "VCdKNJEXii4oJgFyuVBqqU4nqM/JJXvh9i2JZKG98to=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DESTINATION_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "9d53c583-2954-458c-89ec-fa63ea712e7a",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-SnapshotCrossRegionCopy"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Network-Reserve",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Network-Reserve",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/XRegion-NetworkLambdaRole",
+    "Handler": "network_runtime.lambda_handler",
+    "CodeSize": 13577,
+    "Description": "",
+    "Timeout": 150,
+    "MemorySize": 256,
+    "LastModified": "2026-11-12T08:34:27.000+0000",
+    "CodeSha256": "3m4Fj/YxgF+wzVLPo3DrRoeNT9u9DguICkIE2B4eaDM=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "PUBLIC_SUBNET_ID": "subnet-0c2058b1b74fae060",
+        "NETWORK_ID": "5b7d6d0c-3cca-45dc-b510-5b672321927f",
+        "OS_USERNAME": "admin",
+        "DEFAULT_AZ": "ap-southeast-2a",
+        "NEUTRON_URL": "http://10.20.10.183:9696/v2.0",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OPENSTACK_PUBLIC_ENI": "eni-091eaee3e69e3f42d",
+        "NETWORK_STAGE": "Reserve",
+        "NETWORK_ADMISSION": "maintenance",
+        "GATEWAY_HOST_ID": "i-056d7f3dd24156234",
+        "LEGACY_NETWORK_ID": "77e93c67-be12-4a0c-98f0-64d543833a62",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "3bcd3166-9753-41e9-9f7e-0bc0b62d065b",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Network-Reserve"
+    }
+  },
+  {
+    "FunctionName": "XRegion-EIPPoolManager",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-EIPPoolManager",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "eip_pool_manager.lambda_handler",
+    "CodeSize": 2770,
+    "Description": "XRegion EIP reserve pool manager with auto-replenish retry mechanism",
+    "Timeout": 30,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:22.000+0000",
+    "CodeSha256": "6ZG7Y1jmguhbSJCgPUli5y+d5QUgSV44S577qUB3+co=",
+    "Version": "$LATEST",
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "56967f22-dfb7-4818-a747-e40b100317ba",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-EIPPoolManager"
+    }
+  },
+  {
+    "FunctionName": "XRegion-Migrate-CleanSnapshots",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-Migrate-CleanSnapshots",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "migrate_clean_snapshots.lambda_handler",
+    "CodeSize": 1212,
+    "Description": "SPEC-SF-08 XRegion-Migrate-CleanSnapshots",
+    "Timeout": 180,
+    "MemorySize": 256,
+    "LastModified": "2026-11-13T06:03:51.000+0000",
+    "CodeSha256": "Cp3LZiRulhuYx3h3JcyhNEc5qiFaAIVa4HqCYP6KRPk=",
+    "Version": "$LATEST",
+    "Environment": {
+      "Variables": {
+        "DEST_REGION": "us-east-1",
+        "SOURCE_REGION": "ap-southeast-2"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "17f5ebdc-73dc-4c2c-ad81-0ef35951354b",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-Migrate-CleanSnapshots"
+    }
+  },
+  {
+    "FunctionName": "XRegion-InstanceLifecycle",
+    "FunctionArn": "arn:aws:lambda:ap-southeast-2:291634989063:function:XRegion-InstanceLifecycle",
+    "Runtime": "python3.12",
+    "Role": "arn:aws:iam::291634989063:role/DB-AccessRole",
+    "Handler": "lifecycle_runtime.lambda_handler",
+    "CodeSize": 16528,
+    "Description": "SPEC-SF-06 lifecycle LOAD/DISPATCH/STATUS/SYNC worker",
+    "Timeout": 60,
+    "MemorySize": 128,
+    "LastModified": "2026-11-12T07:22:25.000+0000",
+    "CodeSha256": "BRRFbYmNwcJXA9O6zhWEgog9uE3/MDDi1ZnxQ7Xtb7o=",
+    "Version": "$LATEST",
+    "VpcConfig": {
+      "SubnetIds": [
+        "subnet-0ed6959cba851d0bb"
+      ],
+      "SecurityGroupIds": [
+        "sg-0cd9aa0a1804aba43"
+      ],
+      "VpcId": "vpc-0923b0726b21010dd",
+      "Ipv6AllowedForDualStack": false
+    },
+    "Environment": {
+      "Variables": {
+        "OS_PASSWORD": "12345678",
+        "OS_PROJECT_NAME": "service",
+        "NOVA_URL": "http://10.20.10.183:8774/v2.1",
+        "OS_USERNAME": "admin",
+        "KEYSTONE_URL": "http://10.20.10.183:5000/v3"
+      }
+    },
+    "TracingConfig": {
+      "Mode": "PassThrough"
+    },
+    "RevisionId": "a3f1f330-89f4-4771-8c6d-275915368674",
+    "PackageType": "Zip",
+    "Architectures": [
+      "x86_64"
+    ],
+    "EphemeralStorage": {
+      "Size": 512
+    },
+    "SnapStart": {
+      "ApplyOn": "None",
+      "OptimizationStatus": "Off"
+    },
+    "LoggingConfig": {
+      "LogFormat": "Text",
+      "LogGroup": "/aws/lambda/XRegion-InstanceLifecycle"
+    }
+  }
+]

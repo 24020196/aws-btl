@@ -1,0 +1,1222 @@
+[
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0e1a952a2aac0f706",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "40caf87b-92e7-4f7c-b34e-e6ca9844d5a6"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-014ae78761fceacde",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "37582bc5-349d-4735-986a-63e2d9b6d2f3"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-d229d748"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "MigrationId",
+        "Value": "mig-fdb87013"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0deef8788526cc5ef",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "b7a7d219-b305-4334-b97f-7ab79ea4ecc6"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-SnapshotCleanerRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0f278c36f68f8e3ae",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07e0f75b0270aaf2d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "78cf0690-6fc4-4fb2-bb33-dfe98269f3f3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794576605"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-78cf0690-1794576605"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0d2d76db82b32424d",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-d229d748"
+      },
+      {
+        "Key": "SourceSnapshotId",
+        "Value": "snap-09b9be3c59ffb9471"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-dest-i-d229d7-1794586761"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0843909af2ce2ac0e",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0e947f009f58b7095"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "f352b61f-5eee-41a2-8d64-deefd46bd5d3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794578404"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-f352b61f-1794578404"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-019c2cf29883b4d48",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "52464b00-afcd-4e65-830f-53f44a6f7a2e"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0920a313e07330448",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "fb4054a8-d0d4-43f6-b246-13acfffae5ae"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-08877125a3957d90a",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "963ba622-38a8-493e-9e6f-3ef01df26594"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-NovaSyncCatalogRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-BackendEventRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:elastic-ip/eipalloc-0247efeef81529db6",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-AutoAssignEIP"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-04acb0153ebc294da",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07e0f75b0270aaf2d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "78cf0690-6fc4-4fb2-bb33-dfe98269f3f3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794574804"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-78cf0690-1794574804"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-044b8436b7b571da7",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-058540bb721a1ced0"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-11105a66"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-11105a-1794550771"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0d3cc0db3fe402a54",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-046f416774a6edbf2"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-c5e22052"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-c5e220-1794585519"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0436906405026daab",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-01cff689a0189a79f"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-acb36bef"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-acb36b-1794550298"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-03007c148f0d5d3b5",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07440b841d888371d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "877b3c1e-c885-4182-8fd6-b6d1a2cd6d4a"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794578404"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-877b3c1e-1794578404"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0d29fec98d5ed1145",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0deef8788526cc5ef"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "e0271f0b-ef20-48b0-afb0-0fdb0bddba30"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794501004"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-e0271f0b-1794501004"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-08be8902c5e5d5ee4",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07e0f75b0270aaf2d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "78cf0690-6fc4-4fb2-bb33-dfe98269f3f3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794578404"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-78cf0690-1794578404"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-05e7faee906d1af63",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "dc26edf4-ed60-4e73-90a0-86075cbb98ee"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-630246ee"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "MigrationId",
+        "Value": "mig_1794582555"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0241c0400ea68ed8b",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "e6ff2e81-49d5-48cd-babf-acfd7163caf0"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-07e0f75b0270aaf2d",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "2dd54800-1b35-4ff8-b268-116874cbd74a"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-08aa9547130d7a5c9",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "4e50d76c-0a2e-45e5-826a-460f9215cfeb"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-MigrateSourceCleanupRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0cfa3eef72824b9d8",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0deef8788526cc5ef"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "e0271f0b-ef20-48b0-afb0-0fdb0bddba30"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794502805"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-e0271f0b-1794502805"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-063893d1edb1359d8",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07440b841d888371d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "877b3c1e-c885-4182-8fd6-b6d1a2cd6d4a"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794574804"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-877b3c1e-1794574804"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-058540bb721a1ced0",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "30d9c894-6936-466f-9c34-f3288f919044"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:network-interface/eni-091eaee3e69e3f42d",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "Name",
+        "Value": "RegionB-SecondaryENI-Public"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0bc71cb8abfa37fb5",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0e947f009f58b7095"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "f352b61f-5eee-41a2-8d64-deefd46bd5d3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794574804"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-f352b61f-1794574804"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-08cd413989603fe69",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0e1a952a2aac0f706"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-45050c6f"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-45050c-1794557722"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0c3ffcb17c0b02dd1",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-046f416774a6edbf2"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-c5e22052"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-c5e220-1794586119"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-046f416774a6edbf2",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "dc85a9bb-9bc1-4c0b-89a7-e2d220757acc"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-ScheduledEbsSnapshotRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-MigrateTargetBootRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0bc88d76000a1c38c",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-630246ee"
+      },
+      {
+        "Key": "SourceSnapshotId",
+        "Value": "snap-04f29208c834afefb"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-dest-i-630246-1794582618"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-080d85917aef3d087",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-046f416774a6edbf2"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-c5e22052"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-c5e220-1794586314"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0b8c04ff50ce01beb",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07e0f75b0270aaf2d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-Migrate"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-4198400b"
+      },
+      {
+        "Key": "Name",
+        "Value": "mig-src-i-419840-1794549971"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-05396c3bc9073399d",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "f28b175f-9ec9-4fa6-b363-527526912521"
+      },
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "i-edbb251e"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "MigrationId",
+        "Value": "mig_1794557499"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0e947f009f58b7095",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "d77f6d8c-859e-41af-b10b-a18c775e4e1c"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-051d2eba59738bc5a",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "0495c04c-5ec2-40bb-b7c9-026c243a63e6"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceTerminateRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-ResourceCleanerCron",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-SecurityGroupSync",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0b3c9028b2a12b339",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0e947f009f58b7095"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "f352b61f-5eee-41a2-8d64-deefd46bd5d3"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794576605"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-f352b61f-1794576605"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-0e08ddc5a1faa1cf8",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-07440b841d888371d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "877b3c1e-c885-4182-8fd6-b6d1a2cd6d4a"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794576605"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-877b3c1e-1794576605"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-08b4914d4762f7e74",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "975e2bb3-516f-464c-b451-d65b3568e396"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-01cff689a0189a79f",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "6cb92d19-1d2d-423d-acf1-5d37dc015c6d"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-00cc1b0c0d45fc8f9",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "1daff4b3-c9b8-4df4-a2fe-1792ed57748c"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-SnapshotCrossRegionCopyRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLaunchRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceMigrationRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:snapshot/snap-005b08b0749683c4e",
+    "Tags": [
+      {
+        "Key": "Project",
+        "Value": "xregion"
+      },
+      {
+        "Key": "VolumeId",
+        "Value": "vol-0deef8788526cc5ef"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "XRegion-ScheduledEbsSnapshot"
+      },
+      {
+        "Key": "InstanceId",
+        "Value": "e0271f0b-ef20-48b0-afb0-0fdb0bddba30"
+      },
+      {
+        "Key": "CreatedAt",
+        "Value": "1794499204"
+      },
+      {
+        "Key": "Name",
+        "Value": "snapshot-e0271f0b-1794499204"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-034f7a7da8cd63130",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "7068b0c2-2523-46bb-b067-465d4252173a"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-07440b841d888371d",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "db48dd37-d73a-4809-afda-d4940c33ba68"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "XRegionResizeTargetGiB",
+        "Value": "2"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:ec2:ap-southeast-2:291634989063:volume/vol-0d43e89ec582645cd",
+    "Tags": [
+      {
+        "Key": "CinderVolumeId",
+        "Value": "7d358406-c79a-4595-b293-395be81b46b2"
+      },
+      {
+        "Key": "ManagedBy",
+        "Value": "xregion-cinder-ebs-v1"
+      },
+      {
+        "Key": "StorageBackend",
+        "Value": "aws-ebs"
+      },
+      {
+        "Key": "CinderProjectId",
+        "Value": "d3bf05331973481891385d066d3eba3e"
+      },
+      {
+        "Key": "StorageHostId",
+        "Value": "i-056d7f3dd24156234"
+      }
+    ]
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-InstanceLifecycleRule",
+    "Tags": []
+  },
+  {
+    "ResourceARN": "arn:aws:events:ap-southeast-2:291634989063:rule/XRegion-MigrateSourceRollbackRule",
+    "Tags": []
+  }
+]
