@@ -22,22 +22,31 @@ jobs:
           java-version: '17'
           cache: 'maven'
 
-      - name: Verify Maven Project
-        run: mvn clean compile -B -DskipTests
+      # 1. Build Fat JAR bằng Maven
+      - name: Package with Maven
+        run: mvn clean package -B -DskipTests
 
+      # 2. Đóng gói đúng file JAR cho Elastic Beanstalk Corretto
       - name: Create Elastic Beanstalk Deployment Package
         run: |
           mkdir -p bundle
-          zip -r deploy.zip Dockerfile pom.xml src .ebextensions -x "src/test/*"
+          cp target/xregion-*.jar bundle/application.jar
+          if [ -d ".ebextensions" ]; then
+            cp -r .ebextensions bundle/
+          fi
+          cd bundle
+          zip -r ../deploy.zip .
+          cd ..
 
+      # 3. Deploy file deploy.zip (chứa application.jar) lên Elastic Beanstalk
       - name: Deploy to AWS Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v22
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ${{ secrets.AWS_REGION || 'ap-southeast-2' }}
-          application_name: ${{ secrets.EB_APP_NAME || 'xregion-app' }}
-          environment_name: ${{ secrets.EB_ENV_NAME || 'xregion-app-env' }}
+          region: ${{ secrets.AWS_REGION || 'ca-central-1' }}
+          application_name: ${{ secrets.EB_APP_NAME || 'Xregion-app' }}
+          environment_name: ${{ secrets.EB_ENV_NAME || 'Xregion-app-env' }}
           version_label: xregion-${{ github.sha }}-${{ github.run_number }}
           deployment_package: deploy.zip
           use_existing_version_if_available: true
