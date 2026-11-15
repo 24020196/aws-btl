@@ -27,11 +27,12 @@ def test_launch_missing_required_fields(base_url, auth_context):
     res = requests.post(f"{base_url}/api/instances", headers=headers, json=payload_no_region)
     assert res.status_code == 400, f"Kỳ vọng 400 khi thiếu region, nhận được {res.status_code}"
 
-    # 3. Thiếu 'flavor'
+    # 3. Flavor rong bi tu choi; bo qua flavor thi dung m1.tiny theo SPEC-05.
     payload_no_flavor = {
         "name": f"test-vm-{int(time.time())}",
         "region": "ap-southeast-2",
         "imageId": auth_context["image_id"],
+        "flavor": "",
     }
     res = requests.post(f"{base_url}/api/instances", headers=headers, json=payload_no_flavor)
     assert res.status_code == 400, f"Kỳ vọng 400 khi thiếu flavor, nhận được {res.status_code}"

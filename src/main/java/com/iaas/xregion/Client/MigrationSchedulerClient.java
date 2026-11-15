@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.scheduler.SchedulerClient;
 import software.amazon.awssdk.services.scheduler.model.CreateScheduleRequest;
@@ -44,11 +41,11 @@ public class MigrationSchedulerClient {
     @Value("${aws.accountId:348498387626}")
     private String accountId;
 
-    @Value("${aws.accessKeyId:}")
-    private String accessKeyId;
+    private final AwsCredentialsProvider credentialsProvider;
 
-    @Value("${aws.secretAccessKey:}")
-    private String secretAccessKey;
+    public MigrationSchedulerClient(AwsCredentialsProvider credentialsProvider) {
+        this.credentialsProvider = credentialsProvider;
+    }
 
     public void upsertDualSchedules(String instanceId, String scenarioId, String sourceRegion,
                                     String destRegion, String dayTime, String nightTime, boolean active) {
@@ -180,14 +177,8 @@ public class MigrationSchedulerClient {
     protected SchedulerClient clientFor(String region) {
         return clients.computeIfAbsent(region, r -> SchedulerClient.builder()
                 .region(Region.of(r))
-                .credentialsProvider(credentialsProvider())
+                .credentialsProvider(credentialsProvider)
                 .build());
     }
 
-    private AwsCredentialsProvider credentialsProvider() {
-        if (accessKeyId != null && !accessKeyId.isBlank() && secretAccessKey != null && !secretAccessKey.isBlank()) {
-            return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim()));
-        }
-        return DefaultCredentialsProvider.create();
-    }
 }

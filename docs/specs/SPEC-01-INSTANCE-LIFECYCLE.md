@@ -1,8 +1,8 @@
 # SPEC-01: Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning)
 
-> **Phiên bản**: `1.13.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-13`  
+> **Phiên bản**: `1.12.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -86,8 +86,8 @@ Hệ thống phân định ranh giới trách nhiệm rõ ràng giữa hai bản
    - Quản trị viên gửi yêu cầu tạo VM từ UI -> `POST /api/instances` với payload `LaunchInstanceRequest`:
      - `name`: Bắt buộc, chuỗi tên máy ảo.
      - `region`: Bắt buộc, thuộc danh mục vùng hỗ trợ: **`us-east-1` (Region A - N. Virginia)** hoặc **`ap-southeast-2` (Region B - Sydney)**.
-     - `flavor`: Bắt buộc, hợp lệ trong `XRegion-Flavors`.
-     - `imageId`: Bắt buộc, UUID chuẩn 36 ký tự tồn tại trong `XRegion-Images`.
+     - `flavor`: Chỉ thuộc hai loại `tiny`/`mini`, đối chiếu `XRegion-Flavors` theo vùng; bỏ qua trường dùng mặc định `m1.tiny`, gửi rỗng bị từ chối theo [SPEC-09](SPEC-09-COMPUTE-CATALOG.md).
+     - `imageId`: Bắt buộc là UUID 36 ký tự của image duy nhất `cirros-0.6.2-x86_64` trong `XRegion-Images` tại đúng vùng theo SPEC-09; không dùng UUID của vùng khác.
      - `ebsSizeGb`: Kiểu `int`, mặc định `1`, bắt buộc `>= 1` (`@Min(1)`).
      - `keyPairName` (`keyId`): Bắt buộc, ID cặp khóa đã đăng ký.
      - `inboundRules`, `outboundRules`: Danh sách quy tắc tường lửa tùy chỉnh từ Wizard.
@@ -130,7 +130,7 @@ Hệ thống phân định ranh giới trách nhiệm rõ ràng giữa hai bản
 - **Loại bỏ Web VNC Console**: Hệ thống hoàn toàn không hỗ trợ giao diện Web VNC Console để loại bỏ nguy cơ bảo mật từ VNC proxy không mã hóa.
 - **Kết nối chuẩn duy nhất**: Người dùng bắt buộc phải sử dụng cặp khóa SSH Keypair (`.pem`) đã tải về khi tạo khóa để kết nối trực tiếp qua lệnh terminal:
   ```bash
-  ssh -i <ten_file_khoa>.pem ubuntu@<elastic_ip>
+  ssh -i <ten_file_khoa>.pem cirros@<elastic_ip>
   ```
 
 ---
@@ -155,6 +155,8 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
 
 ---
 
+> Thông số flavor bắt buộc theo SPEC-09 v1.1.0: `m1.tiny` ID `1` = 1 vCPU, 1024 MiB RAM, root disk 1 GiB; `m1.mini` ID `2` = 1 vCPU, 2048 MiB RAM, root disk 1 GiB.
+
 ## 8. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
@@ -173,3 +175,5 @@ Khi có yêu cầu Terminate từ người dùng (`DELETE /api/instances/{id}`):
 | `2026-11-13` | `1.11.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung Pre-condition Launch: giới hạn tối đa 5 máy ảo thuộc `{PENDING, RUNNING, STOPPED, REBOOTING, STOPPING, MIGRATING}` cho mỗi user (kể cả `admin`, `HTTP 409 Conflict`). |
 | `2026-11-13` | `1.12.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung khóa ngoại `scenario_id` (nullable, mặc định `null`) vào bảng `XRegion-Instances` để liên kết 1-1 với bảng `XRegion-MigrationScenarios`. |
 | `2026-11-13` | `1.13.0` | Chủ dự án (`backend-skill`) | Bổ sung ánh xạ `ebs_volume_id` (`vol-...`) trong bảng `XRegion-Nova` và `NovaLookup.java` tách biệt với Cinder `volume_id`. |
+| `2026-11-15` | `1.11.0` | Chủ dự án (yêu cầu trực tiếp) | Theo SPEC-09: chỉ tiny/mini và CirrOS-0.6.2 theo vùng; flavor mặc định m1.tiny, flavor rỗng bị từ chối. |
+| `2026-11-15` | `1.12.0` | Chủ dự án (kế hoạch đã duyệt) | Chuẩn hóa tên image cirros-0.6.2-x86_64; tiny ID 1: 1 vCPU/1024 MiB/1 GiB, mini ID 2: 1 vCPU/2048 MiB/1 GiB theo SPEC-09 v1.1.0. |

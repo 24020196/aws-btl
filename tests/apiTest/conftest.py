@@ -1,13 +1,82 @@
 import os
+import re
 import time
+from pathlib import Path
+from contextlib import closing
 import boto3
 import pytest
 import requests
+
+# Match the Java launcher: .env supplies missing values; process environment wins.
+_env_path = Path(__file__).resolve().parents[2] / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text(encoding="utf-8-sig").splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith("#") or "=" not in _line:
+            continue
+        _key, _value = _line.split("=", 1)
+        _value = _value.strip()
+        if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in "\"'":
+            _value = _value[1:-1]
+        os.environ.setdefault(_key.strip(), _value)
 
 API_BASE_URL = os.getenv("XREGION_API_URL", "http://localhost:8080")
 AWS_REGION_REA = os.getenv("AWS_REGION_REA", "us-east-1")
 AWS_REGION_REB = os.getenv("AWS_REGION_REB", "ap-southeast-2")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", AWS_REGION_REB)
+
+
+def select_regional_test_image(images_data, target_region):
+    """Choose a catalog image backed by an eligible volume in the requested region."""
+    available_ids = set()
+    with closing(boto3.client("dynamodb", region_name=target_region)) as client:
+        pages = client.get_paginator("scan").paginate(
+            TableName="XRegion-Volumes",
+            ConsistentRead=True,
+            ProjectionExpression="image_id, ebs_volume_id",
+            FilterExpression="#s = :available AND #r = :region AND storage_backend = :backend "
+            "AND cinder_volume_type = :volume_type",
+            ExpressionAttributeNames={"#s": "status", "#r": "region"},
+            ExpressionAttributeValues={
+                ":available": {"S": "AVAILABLE"},
+                ":region": {"S": target_region},
+                ":backend": {"S": "aws-ebs"},
+                ":volume_type": {"S": "aws-ebs-gp3"},
+            },
+        )
+        for page in pages:
+            for item in page.get("Items", []):
+                if re.fullmatch(r"vol-(?:[0-9a-f]{8}|[0-9a-f]{17})", item.get("ebs_volume_id", {}).get("S", "")):
+                    available_ids.add(item.get("image_id", {}).get("S"))
+    candidates = [img for img in images_data if (img.get("id") or img.get("imageId")) in available_ids]
+    assert candidates, f"No catalog image has an eligible AVAILABLE volume in {target_region}"
+    # Prefer a small boot image without relying on UUIDs from another deployment.
+    candidates.sort(key=lambda img: (
+        0 if "cirros" in str(img.get("name", "")).lower() else 1,
+        img.get("sizeGb") or 0,
+        str(img.get("name", "")),
+    ))
+    image_id = candidates[0].get("id") or candidates[0].get("imageId")
+    print(f"[TEST IMAGE] region={target_region}, image_id={image_id}, name={candidates[0].get('name')}")
+    return image_id
+
+
+@pytest.fixture(scope="session", autouse=True)
+def verified_aws_identity():
+    """Block every API test before requests can mutate the wrong account."""
+    expected = os.getenv("AWS_ACCOUNT_ID", "")
+    if len(expected) != 12 or not expected.isascii() or not expected.isdigit():
+        pytest.fail("AWS_ACCOUNT_ID must contain exactly 12 digits", pytrace=False)
+    with closing(boto3.client("sts", region_name=AWS_DEFAULT_REGION)) as sts:
+        identity = sts.get_caller_identity()
+    if identity["Account"] != expected:
+        pytest.fail(
+            f"AWS account mismatch: expected {expected}, credentials belong to "
+            f"{identity['Account']} ({identity['Arn']}). Update AWS credentials in .env "
+            "or the overriding process environment before running API tests.",
+            pytrace=False,
+        )
+    return identity
 
 
 @pytest.fixture(scope="session")
@@ -82,12 +151,7 @@ def _create_auth_context_for_region(base_url, target_region):
     images_data = images_res.json().get("data", [])
     
     # Ưu tiên tìm CirrOS hoặc Alpine đã đồng bộ trên cả REA & REB
-    image_id = "c66c2ab2-68fe-40bb-8f55-d2e5ba1c944d"
-    for img in images_data:
-        img_id = img.get("id") or img.get("imageId")
-        if img_id in ["831dc24b-9d29-4cb6-8154-9de2d0fd268f", "c66c2ab2-68fe-40bb-8f55-d2e5ba1c944d"]:
-            image_id = img_id
-            break
+    image_id = select_regional_test_image(images_data, target_region)
 
     # 4. Tạo SSH KeyPair cho user kiểm thử (sẽ tự động Fan-out qua cả 2 vùng theo SPEC-08)
     key_res = requests.post(

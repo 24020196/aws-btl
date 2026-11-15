@@ -64,6 +64,7 @@ def _run_migration_e2e(base_url, instances_table, auth_ctx, source_region, dest_
     headers = auth_ctx["headers"]
     instance_id = None
     source_nova_id = None
+    migration_completed = False
     vm_name = f"mig-e2e-vm-{int(time.time())}"
 
     try:
@@ -123,7 +124,7 @@ def _run_migration_e2e(base_url, instances_table, auth_ctx, source_region, dest_
             resp = instances_table.get_item(Key={"instance_id": instance_id}, ConsistentRead=True)
             last_item = resp.get("Item") or {}
             st = str(last_item.get("current_status", "")).upper()
-            reg = last_item.get("current_region")
+            reg = last_item.get("current_region") or last_item.get("requested_region")
             lock = bool(last_item.get("migration_lock", False))
             print(f"[{scenario_label}] Poll DDB: status={st}, region={reg}, migration_lock={lock}")
             if st == "MIGRATING" or lock:
@@ -143,11 +144,15 @@ def _run_migration_e2e(base_url, instances_table, auth_ctx, source_region, dest_
             f"Kỳ vọng RUNNING/ACTIVE sau migrate, nhận được: {last_item}"
         )
         assert not bool(last_item.get("migration_lock", False)), f"migration_lock chưa được giải phóng: {last_item}"
+        migration_completed = True
         print(f"[{scenario_label} THÀNH CÔNG] VM {instance_id} đã chuyển từ {source_region} sang {dest_region} (saw_migrating={saw_migrating})!")
     finally:
         if instance_id:
             print(f"\n[{scenario_label} - DỌN DẸP] Terminate máy ảo {instance_id}")
-            _release_source_region_eip(instances_table, instance_id, source_region, source_nova_id=source_nova_id)
+            # A rolled-back source VM still owns its network reservation. Terminate
+            # must remove that VM before releasing the EIP and reservation records.
+            if migration_completed:
+                _release_source_region_eip(instances_table, instance_id, source_region, source_nova_id=source_nova_id)
             try:
                 requests.post(
                     f"{base_url}/api/instances/{instance_id}/actions",

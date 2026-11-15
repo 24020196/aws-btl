@@ -1,8 +1,8 @@
 # SPEC-00: Quy Chế Quản Lý Nghiệp Vụ & Ràng Buộc Agent (Agent Scope Guard)
 
-> **Phiên bản**: `1.20.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-13`  
+> **Phiên bản**: `1.22.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
 > **Áp dụng cho**: Toàn bộ AI Coding Agents (Gemini, Antigravity, Codex, Cline, Claude Code...) tham gia phát triển dự án XRegion.
 
 ---
@@ -73,30 +73,31 @@ Trước khi Agent bắt đầu soạn thảo Plan hoặc gõ dòng code/test đ
 
 | Mã Spec | Tên Đặc Tả Nghiệp Vụ | Phiên Bản | Trạng Thái |
 | :--- | :--- | :--- | :--- |
-| **`SPEC-00`** | Quy Chế Quản Lý Nghiệp Vụ & Ràng Buộc Agent | `1.19.0` | `APPROVED` |
-| **`SPEC-01`** | Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning) | `1.10.0` | `APPROVED` |
+| **`SPEC-00`** | Quy Chế Quản Lý Nghiệp Vụ & Ràng Buộc Agent | `1.22.0` | `APPROVED` |
+| **`SPEC-01`** | Quản Trị Vòng Đời Máy Ảo (Instance Lifecycle & Provisioning) | `1.12.0` | `APPROVED` |
 | **`SPEC-02`** | Quản Lý Pool Tài Nguyên & Dọn Dẹp Mồ Côi (Resource Pool Cleaner) | `1.0.0` | `APPROVED` |
 | **`SPEC-03`** | Chuyển Vùng Xuyên Vùng Trực Tiếp (Cross-Region Live Migration) | `1.1.0` | `APPROVED` |
 | **`SPEC-04`** | Hạ Tầng Mạng NAT & Điều Tuyến L2 (Network NAT & Routing) | `1.2.0` | `APPROVED` |
-| **`SPEC-05`** | Kiểm Soát Nhập Lệnh & Lưu Trữ Đĩa Cinder/EBS (Admission & Storage) | `1.2.0` | `APPROVED` |
+| **`SPEC-05`** | Kiểm Soát Nhập Lệnh & Lưu Trữ Đĩa Cinder/EBS (Admission & Storage) | `1.5.0` | `APPROVED` |
 | **`SPEC-06`** | Phục Hồi Lỗi Bền Vững & Quản Trị Khóa SSH/Bảo Mật (Recovery & Security) | `1.2.0` | `APPROVED` |
 | **`SPEC-07`** | Xác Thực & Quản Trị API Token Dài Hạn (Authentication & API Tokens) | `1.0.0` | `APPROVED` |
 | **`SPEC-08`** | Định Tuyến Sự Kiện Qua API Gateway Đa Vùng (Multi-Region API Gateway Routing) | `1.3.0` | `APPROVED` |
+| **`SPEC-09`** | Danh Mục Flavor và Image Được Hỗ Trợ | `1.1.0` | `APPROVED` |
 
 ### 4.2. Bộ Đặc Tả Serverless & Step Functions (`docs/specs/serverless/`)
 
 | Mã Spec | Tên Đặc Tả Nghiệp Vụ Serverless | Phiên Bản | Trạng Thái |
 | :--- | :--- | :--- | :--- |
 | **`SPEC-SF-00`** | Quy Chế Quản Trị Serverless Scope Guard (Step Functions & Lambda) | `1.0.0` | `APPROVED` |
-| **`SPEC-SF-01`** | Quy Trình Khởi Tạo Máy Ảo Step Function (Launch Pipeline) | `1.5.0` | `APPROVED` |
+| **`SPEC-SF-01`** | Quy Trình Khởi Tạo Máy Ảo Step Function (Launch Pipeline) | `1.7.0` | `APPROVED` |
 | **`SPEC-SF-02`** | Quy Trình Hủy Máy Ảo Step Function (Terminate Pipeline) | `1.1.0` | `APPROVED` |
-| **`SPEC-SF-03`** | Trình Quản Lý & Tự Bù Đắp Warm Pool (Cinder Pool Manager) | `1.1.0` | `APPROVED` |
+| **`SPEC-SF-03`** | Trình Quản Lý & Tự Bù Đắp Warm Pool (Cinder Pool Manager) | `1.5.0` | `APPROVED` |
 | **`SPEC-SF-04`** | Hệ Thống Tự Thu Hồi Máy Ảo Lỗi (Instance Fault Recovery) | `1.0.0` | `APPROVED` |
 | **`SPEC-SF-05`** | Đồng Bộ Hóa Nhóm Bảo Mật (Security Group Synchronizer) | `1.2.0` | `APPROVED` |
 | **`SPEC-SF-06`** | Quy Trình Vòng Đời Máy Ảo Step Function (Lifecycle Pipeline) | `1.0.0` | `APPROVED` |
 | **`SPEC-SF-07`** | Định Kỳ Sao Lưu EBS Snapshot (Scheduled EBS Snapshot Pipeline) | `1.1.0` | `APPROVED` |
 | **`SPEC-SF-08`** | Quy Trình Di Trú Máy Ảo Step Function (Migration Pipeline) | `1.2.0` | `APPROVED` |
-| **`SPEC-SF-09`** | Step Function Boot Nova VM Tại Vùng Đích & Rollback 2 Tầng (`MigrateTargetBoot`) | `1.2.0` | `APPROVED` |
+| **`SPEC-SF-09`** | Step Function Boot Nova VM Tại Vùng Đích & Rollback 2 Tầng (`MigrateTargetBoot`) | `1.13.0` | `APPROVED` |
 
 ---
 
@@ -125,3 +126,5 @@ Trước khi Agent bắt đầu soạn thảo Plan hoặc gõ dòng code/test đ
 | `2026-11-12` | `1.18.0` | Lead Architect / Product Owner | Thiết lập rea-skill chuyên trách quản lý, kiểm tra và bảo vệ toàn bộ tài nguyên AWS Cloud tại Region A (N. Virginia - us-east-1), đối xứng với reb-skill. |
 | `2026-11-12` | `1.19.0` | Chủ dự án & Lead Architect (`xacnhan-skill`) | Ban hành SPEC-08 v1.0.0 & nâng cấp v1.1.0: Chuẩn hóa toàn diện 6 nhóm sự kiện API Gateway, áp dụng chính sách Fail-closed bắt buộc có vùng, Fan-out SSH Key 2 vùng, định tuyến SG Sync theo máy ảo và định tuyến di trú theo vùng nguồn. |
 | `2026-11-13` | `1.20.0` | Chủ dự án (`xacnhan-skill`) | Nâng cấp `SPEC-08` v1.3.0, `SPEC-SF-08` v1.2.0 và ban hành `SPEC-SF-09` v1.1.0: chuẩn hóa `MigrateInstance` & `MigrateTargetBoot` theo cơ chế `LaunchInstance` (`Wait/Choice` polling, `Retry/Catch`, Compensating Rollback từng bước, giữ nguyên SG rules và Rollback 2 tầng). |
+| `2026-11-15` | `1.21.0` | Chủ dự án (yêu cầu trực tiếp) | Ban hành SPEC-09 v1.0.0; đồng bộ danh mục tiny/mini và CirrOS-0.6.2 trong lifecycle, admission, pool, launch và migration target. |
+| `2026-11-15` | `1.22.0` | Chủ dự án (kế hoạch đã duyệt) | Cập nhật SPEC-09 v1.1.0 và spec dẫn chiếu: image cirros-0.6.2-x86_64, hai flavor có ID và thông số cố định; phân biệt nghiệm thu catalog host với nghiệm thu hệ thống. |

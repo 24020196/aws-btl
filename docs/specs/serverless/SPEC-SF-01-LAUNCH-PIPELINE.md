@@ -1,8 +1,8 @@
 # SPEC-SF-01: Quy Trình Khởi Tạo Máy Ảo Step Function (Launch Pipeline)
 
-> **Phiên bản**: `1.5.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-10`  
+> **Phiên bản**: `1.7.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)
 
 ---
@@ -53,8 +53,8 @@ flowchart TD
 {
   "instance_id": "i-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "instance_name": "Web-Prod-01",
-  "flavor": "m1.medium",
-  "image_id": "72e9830a-53ef-4c36-8b5c-fae3b96a3fd0",
+  "flavor": "m1.tiny",
+  "image_id": "<CIRROS_0_6_2_IMAGE_UUID_IN_TARGET_REGION>",
   "key_id": "key-mykey-a1b2c3d4",
   "ebs_size_gb": 20,
   "volume_type": "gp3",
@@ -70,7 +70,7 @@ flowchart TD
 
 | Bước | Tên State | Lambda Function | Hành Động & Ràng Buộc | Retry / Timeout |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | `CheckPool` | `XRegion-LaunchInstance-CheckPool` | Kiểm tra Cinder Warm Pool (`AVAILABLE`) và Elastic IP Pool. **Fail-Fast**: Xác thực hợp lệ của Nova Flavor và SSH Keypair (`key_id`) ngay trước khi cấp phát. | **5 lần Exponential Backoff** (Interval: 5s, Rate: 2.0). Quá 180s ném `POOL_EXHAUSTED`. |
+| **1** | `CheckPool` | `XRegion-LaunchInstance-CheckPool` | Kiểm tra Cinder Warm Pool (`AVAILABLE`) và Elastic IP Pool. Theo [SPEC-09](../SPEC-09-COMPUTE-CATALOG.md), chỉ chấp nhận flavor `tiny`/`mini` và image `cirros-0.6.2-x86_64` với UUID/volume thuộc đúng vùng. **Fail-Fast**: Xác thực Nova Flavor và SSH Keypair (`key_id`) ngay trước khi cấp phát; không thay thế bằng flavor/image khác. | **5 lần Exponential Backoff** (Interval: 5s, Rate: 2.0). Quá 180s ném `POOL_EXHAUSTED`. |
 | **2** | `AllocateResource` | `XRegion-LaunchInstance-AllocateResource` | Chiếm khóa Volume nguyên tử (`status = ALLOCATED`, `lease_instance_id = instance_id`). **Bắt buộc khớp chính xác `image_id`** (CẤM fallback sang image khác). Gán Tag EIP `ClaimedBy = instance_id`. | Retry 2 lần (Interval 2s). |
 | **3** | `ReserveNetwork` | `XRegion-Network-Reserve` | Cấp phát `guest_private_ip` (192.168.100.x) và gán `gateway_private_ip` (10.20.1.x) trên ENI `ens6`. | Retry 2 lần (Interval 2s). |
 | **4** | `ExtendVolume` | `XRegion-LaunchInstance-ExtendVolume` | Gọi GET Cinder API xác thực volume đang `available` và đạt đủ kích thước. Nếu `ebs_size_gb > 10GB`, gọi Cinder POST `os-extend` và ghi nhận tag `XRegionResizeTargetGiB`. Nếu `ebs_size_gb == 10GB`, xác nhận `CONFIRMED` ngay sau khi GET thành công (không gọi POST để tránh lỗi HTTP 400). | Timeout tối đa 300s. Ghi `extend_post_attempted` trước khi POST. Polling 5s. |
@@ -107,6 +107,8 @@ Bất kỳ bước nào gặp lỗi không thể phục hồi hoặc vượt qu�
 
 ---
 
+> Thông số flavor bắt buộc theo SPEC-09 v1.1.0: `m1.tiny` ID `1` = 1 vCPU, 1024 MiB RAM, root disk 1 GiB; `m1.mini` ID `2` = 1 vCPU, 2048 MiB RAM, root disk 1 GiB.
+
 ## 5. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
@@ -117,3 +119,5 @@ Bất kỳ bước nào gặp lỗi không thể phục hồi hoặc vượt qu�
 | `2026-11-10` | `1.3.0` | xacnhan-skill (Security Sync Sign-off) | Chuẩn hóa toàn diện bước AssignSecurityGroup & SyncDynamoDB: Ánh xạ 1-1 cả Inbound và Outbound rules theo đúng payload API; xóa Orphan SG khi Rollback; đồng bộ group_id=nova_id, revision=1, applied_revision=1, sync_status='SYNCED', managed=true với SPEC-SF-05. |
 | `2026-11-10` | `1.4.0` | Chủ dự án (yêu cầu trực tiếp) | Loại bỏ hoàn toàn bước `VerifyNetwork` khỏi LaunchInstance: ChoiceNatCommand chuyển thẳng `SyncDynamoDB` khi APPLY `SUCCEEDED`; LaunchSuccess chỉ chứng minh NAT mapping đã áp dụng, không chứng minh reachability ICMP/TCP 22. Ảnh hưởng nguyên nhân lỗi hai execution `04c53918…` và `ec603769…` (gateway VERIFY báo `Network unreachable within 10s`). |
 | `2026-11-11` | `1.5.0` | Chủ dự án (yêu cầu trực tiếp) | Bổ sung `inbound_rules`/`outbound_rules` vào hợp đồng đầu vào; nêu rõ `AssignSecurityGroup` chỉ tạo/gắn SG và worker là nơi duy nhất áp rule; `SyncDynamoDB` lưu nguyên văn rule của payload với `sync_status = PENDING_SYNC` thay vì ghi `SYNCED`/`applied_revision = 1` khi chưa có bằng chứng hạ tầng. |
+| `2026-11-15` | `1.6.0` | Chủ dự án (yêu cầu trực tiếp) | Launch chỉ tiny/mini và CirrOS-0.6.2; payload minh họa dùng UUID theo vùng thay UUID cố định. |
+| `2026-11-15` | `1.7.0` | Chủ dự án (kế hoạch đã duyệt) | Chuẩn hóa tên image cirros-0.6.2-x86_64; tiny ID 1: 1 vCPU/1024 MiB/1 GiB, mini ID 2: 1 vCPU/2048 MiB/1 GiB theo SPEC-09 v1.1.0. |

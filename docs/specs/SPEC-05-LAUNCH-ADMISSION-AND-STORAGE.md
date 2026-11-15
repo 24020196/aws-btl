@@ -1,8 +1,8 @@
 # SPEC-05: Kiểm Soát Nhập Lệnh & Lưu Trữ Đĩa Cinder/EBS (Admission & Storage)
 
-> **Phiên bản**: `1.3.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-13`  
+> **Phiên bản**: `1.5.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
 > **Tài liệu cha**: [SPEC-00: Agent Scope Guard](SPEC-00-AGENT-SCOPE-GUARD.md)
 
 ---
@@ -39,8 +39,8 @@ Mỗi khi có yêu cầu `POST /api/instances`:
 2. **Xác thực tính hợp lệ của tham số yêu cầu**:
    - **Vùng (Region)**: Bắt buộc phải thuộc danh mục vùng hỗ trợ: **`us-east-1` (Region A - N. Virginia)** hoặc **`ap-southeast-2` (Region B - Sydney)**.
    - **Kích thước đĩa (ebsSizeGb)**: Bắt buộc là số nguyên nằm trong khoảng **`1 <= ebsSizeGb <= 5` (tối đa 5 GiB)**, ràng buộc đồng bộ tại cả Frontend (`launch.html`/`launch.js`) và Backend (`LaunchInstanceRequest` `@Min(1) @Max(5)` & `LaunchAdmissionService`).
-   - **Mã ảnh (ImageId)**: Bắt buộc là chuỗi chuẩn UUID (36 ký tự) và phải tồn tại bản ghi trong bảng DynamoDB `XRegion-Images`.
-   - **Cấu hình máy (Flavor)**: Mặc định là **`m1.tiny`** trên UI (`launch.html`/`launch.js`) và `LaunchInstanceRequest`; bắt buộc phải tồn tại trong bảng DynamoDB `XRegion-Flavors` (so khớp theo `flavorName` hoặc `flavorId`).
+   - **Mã ảnh (ImageId)**: Bắt buộc là UUID (36 ký tự) của **`cirros-0.6.2-x86_64`** tại đúng vùng, tồn tại trong `XRegion-Images`. Chỉ hỗ trợ một image logic theo [SPEC-09](SPEC-09-COMPUTE-CATALOG.md); UUID có thể khác giữa hai vùng.
+   - **Cấu hình máy (Flavor)**: Chỉ hỗ trợ **`tiny`** và **`mini`** theo [SPEC-09](SPEC-09-COMPUTE-CATALOG.md). Mặc định **`m1.tiny`** khi bỏ qua trường trên UI/DTO; flavor rỗng không hợp lệ. Tên/ID phải ánh xạ đúng catalog `XRegion-Flavors` tại vùng được chọn; không fallback sang `small`, `medium` hoặc flavor khác.
    - **Khóa SSH (KeyPair)**: Bắt buộc phải tồn tại trong danh mục khóa của người dùng qua `KeyService` (trừ trường hợp canary test đã cấu hình).
 3. **Hạn mức máy ảo mỗi người dùng (Per-User Instance Quota)**:
    - Mỗi người dùng (bao gồm **cả `admin`**) chỉ được phép sở hữu tối đa **5 máy ảo** đang ở tập trạng thái hoạt động/chuyển tiếp: `PENDING`, `RUNNING`, `STOPPED`, `REBOOTING`, `STOPPING`, `MIGRATING` (không tính các máy ở trạng thái `FAILED`, `ERROR`, `TERMINATED`, `SHUTTING_DOWN`).
@@ -50,7 +50,7 @@ Mỗi khi có yêu cầu `POST /api/instances`:
 
 ## 2. Quy Chuẩn Mở Rộng Ổ Đĩa Cinder/EBS (Volume Extend Contract)
 
-Mỗi máy ảo khởi tạo theo mô hình Boot-from-Volume sử dụng một ổ đĩa Cinder backend gp3 EBS (kích thước mặc định trong pool được xác định động theo ảnh: `max(1, min_disk)`, cụ thể là 1 GiB cho CirrOS/Alpine và 10 GiB cho Ubuntu). Khi người dùng yêu cầu kích thước lớn hơn dung lượng sẵn có của volume trong pool (`ebsSizeGb > pool_volume_size`):
+Mỗi máy ảo khởi tạo theo mô hình Boot-from-Volume sử dụng một ổ đĩa Cinder backend gp3 EBS. Pool chỉ chuẩn bị boot volume **1 GiB cho `cirros-0.6.2-x86_64`** theo SPEC-09; không bù pool cho image khác. Khi người dùng yêu cầu kích thước lớn hơn dung lượng sẵn có của volume trong pool (`ebsSizeGb > pool_volume_size`):
 
 ### 2.1. Ràng Buộc Resize Một Lần Duy Nhất Trong Đời (One-Time Lifetime Resize)
 > [!IMPORTANT]
@@ -99,6 +99,8 @@ Mỗi máy ảo khởi tạo theo mô hình Boot-from-Volume sử dụng một �
 
 ---
 
+> Thông số flavor bắt buộc theo SPEC-09 v1.1.0: `m1.tiny` ID `1` = 1 vCPU, 1024 MiB RAM, root disk 1 GiB; `m1.mini` ID `2` = 1 vCPU, 2048 MiB RAM, root disk 1 GiB.
+
 ## 4. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
@@ -107,3 +109,5 @@ Mỗi máy ảo khởi tạo theo mô hình Boot-from-Volume sử dụng một �
 | `2026-11-12` | `1.1.0` | Lead Architect / Product Owner | Chuẩn hóa dung lượng tối thiểu 1 GiB cho CirrOS/Alpine, xác nhận chế độ mở cổng Admission Gate và ràng buộc SSH Key Pair của người dùng qua xacnhan-skill. |
 | `2026-11-12` | `1.2.0` | Chủ dự án (xacnhan-skill) | Chuẩn hóa hỗ trợ 2 vùng hợp lệ: us-east-1 (Region A - N. Virginia) và ap-southeast-2 (Region B - Sydney), phân giải động SSM Parameter /xregion/{region}/launch/admission. |
 | `2026-11-13` | `1.3.0` | Chủ dự án (`xacnhan-skill`) | Ràng buộc Root Disk tối đa `5 GiB` (`1..5`), flavor mặc định `m1.tiny`, và giới hạn tối đa `5` máy ảo đang hoạt động/chuyển tiếp cho mỗi user (kể cả `admin`, trả `HTTP 409 Conflict`). |
+| `2026-11-15` | `1.4.0` | Chủ dự án (yêu cầu trực tiếp) | Giới hạn danh mục theo SPEC-09: tiny/mini, CirrOS-0.6.2; boot pool 1 GiB, UUID theo vùng. |
+| `2026-11-15` | `1.5.0` | Chủ dự án (kế hoạch đã duyệt) | Chuẩn hóa tên image cirros-0.6.2-x86_64; tiny ID 1: 1 vCPU/1024 MiB/1 GiB, mini ID 2: 1 vCPU/2048 MiB/1 GiB theo SPEC-09 v1.1.0. |

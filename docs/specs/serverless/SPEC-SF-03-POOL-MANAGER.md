@@ -1,15 +1,15 @@
 # SPEC-SF-03: Trình Quản Lý & Tự Bù Đắp Warm Pool (Cinder Pool Manager)
 
-> **Phiên bản**: `1.3.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-13`  
+> **Phiên bản**: `1.5.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
 > **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)
 
 ---
 
 ## 1. Tổng Quan Mục Đích & Kiến Trúc Bù Đắp Tự Động
 
-Lambda `XRegion-CinderPoolManager` chịu trách nhiệm duy trì số lượng ổ đĩa boot volume Cinder (chuẩn `aws-ebs-gp3`, kích thước động `size_gb = max(1, min_disk)`, cụ thể 1 GiB cho CirrOS/Alpine và 10 GiB cho Ubuntu) sẵn sàng ở trạng thái rảnh rỗi (`AVAILABLE`) trong bảng DynamoDB `XRegion-Volumes` để Step Function `LaunchInstance` có thể cấp phát ngay lập tức (CheckPool).
+Lambda `XRegion-CinderPoolManager` chỉ duy trì boot volume Cinder **`1 GiB` cho image logic `cirros-0.6.2-x86_64`**, chuẩn `aws-ebs-gp3`, ở trạng thái `AVAILABLE` trong `XRegion-Volumes`. Áp dụng [SPEC-09](../SPEC-09-COMPUTE-CATALOG.md): chọn UUID image của đúng vùng, không bù pool Alpine/Ubuntu hoặc image khác. Hai flavor được hỗ trợ là `tiny` và `mini`.
 
 - **Mã nguồn**: `serverless/launch-contract/XRegion-CinderPoolManager/cinder_pool_manager.py`.
 - **Cơ chế kích hoạt kép (Dual Trigger)**:
@@ -23,6 +23,7 @@ Lambda `XRegion-CinderPoolManager` chịu trách nhiệm duy trì số lượng 
 > [!IMPORTANT]
 > ### GIỚI HẠN WARM POOL TỐI ĐA 5 ĐƠN VỊ (`max(0, 5 - occupied)`)
 > - Số lượng tài nguyên rảnh rỗi (`AVAILABLE` hoặc đang `CREATING`) trong Warm Pool đối với mỗi catalog ảnh (`image_id`) **TẠI MỌI THỜI ĐIỂM TỐI ĐA LÀ 5 ĐƠN VỊ (<= 5)**.
+> - Chỉ có một image logic `cirros-0.6.2-x86_64` mỗi vùng; tính `occupied` theo UUID image và region tương ứng. Không cộng volume thuộc vùng khác hoặc bù thêm pool cho image ngoài danh mục SPEC-09.
 > - Công thức bù đắp trong Lambda bắt buộc phải tuân thủ:
 >   ```python
 >   occupied = sum(r["status"] in ("AVAILABLE", "CREATING") for r in rows)
@@ -63,6 +64,8 @@ Trước khi tính `occupied` slots, Lambda đối soát trực tiếp với h�
 
 ---
 
+> Thông số flavor bắt buộc theo SPEC-09 v1.1.0: `m1.tiny` ID `1` = 1 vCPU, 1024 MiB RAM, root disk 1 GiB; `m1.mini` ID `2` = 1 vCPU, 2048 MiB RAM, root disk 1 GiB.
+
 ## 5. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
@@ -70,3 +73,5 @@ Trước khi tính `occupied` slots, Lambda đối soát trực tiếp với h�
 | `2026-11-10` | `1.0.0` | Lead Architect / Product Owner | Ban hành đặc tả Cinder Pool Manager, chuẩn hóa giới hạn pool <= 2 volume rảnh rỗi, khóa nguyên tử 20 phút và cơ chế chống ambiguous POST. |
 | `2026-11-12` | `1.1.0` | Lead Architect / Product Owner | Cập nhật kích thước pool volume động max(1, min_disk), chuẩn hóa 1 GiB cho CirrOS/Alpine qua xacnhan-skill. |
 | `2026-11-13` | `1.3.0` | Chủ dự án (`xacnhan-skill`) | Đồng bộ công thức `refill_count = max(0, 5 - occupied)` với ngưỡng tối đa `5` Volume rảnh rỗi (phân tách với ngưỡng `2` EIP rảnh rỗi tại `SPEC-02 v1.2.0`). |
+| `2026-11-15` | `1.4.0` | Chủ dự án (yêu cầu trực tiếp) | Chỉ bù pool CirrOS-0.6.2 1 GiB theo vùng; tối đa 5 AVAILABLE/CREATING mỗi vùng, không bù Alpine/Ubuntu. |
+| `2026-11-15` | `1.5.0` | Chủ dự án (kế hoạch đã duyệt) | Chuẩn hóa tên image cirros-0.6.2-x86_64; tiny ID 1: 1 vCPU/1024 MiB/1 GiB, mini ID 2: 1 vCPU/2048 MiB/1 GiB theo SPEC-09 v1.1.0. |
