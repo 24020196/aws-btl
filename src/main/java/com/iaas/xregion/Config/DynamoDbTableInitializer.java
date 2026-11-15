@@ -21,11 +21,11 @@ public class DynamoDbTableInitializer implements ApplicationRunner {
     private final String migrationScenariosTableName;
 
     public DynamoDbTableInitializer(DynamoDbClient dynamoDbClient,
-                                    @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}") String instancesTableArn,
-                                    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}") String migrationsTableArn,
-                                    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}") String usersTableArn,
-                                    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}") String novaTableArn,
-                                    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-MigrationScenarios}") String migrationScenariosTableArn) {
+                                    @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances}") String instancesTableArn,
+                                    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Migrations}") String migrationsTableArn,
+                                    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Users}") String usersTableArn,
+                                    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Nova}") String novaTableArn,
+                                    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-MigrationScenarios}") String migrationScenariosTableArn) {
         this.dynamoDbClient = dynamoDbClient;
         this.instancesTableName = DynamoDbConfig.parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
         this.migrationsTableName = DynamoDbConfig.parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");

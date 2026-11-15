@@ -41,7 +41,7 @@ public class MigrationSchedulerClient {
     @Value("${aws.scheduler.enabled:true}")
     private boolean enabled;
 
-    @Value("${aws.accountId:291634989063}")
+    @Value("${aws.accountId:348498387626}")
     private String accountId;
 
     @Value("${aws.accessKeyId:}")

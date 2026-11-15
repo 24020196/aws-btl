@@ -36,25 +36,25 @@ public class DynamoDbConfig {
     @Value("${aws.secretAccessKey:}")
     private String secretAccessKey;
 
-    @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}")
+    @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances}")
     private String instancesTableArn;
 
-    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}")
+    @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Migrations}")
     private String migrationsTableArn;
 
-    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}")
+    @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Nova}")
     private String novaTableArn;
 
-    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}")
+    @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Users}")
     private String usersTableArn;
 
-    @Value("${dynamodb.imagesTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Images}")
+    @Value("${dynamodb.imagesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Images}")
     private String imagesTableArn;
 
-    @Value("${dynamodb.flavorsTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}")
+    @Value("${dynamodb.flavorsTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Flavors}")
     private String flavorsTableArn;
 
-    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-MigrationScenarios}")
+    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-MigrationScenarios}")
     private String migrationScenariosTableArn;
 
     @Value("${dynamodb.endpoint:}")
