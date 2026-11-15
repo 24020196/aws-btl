@@ -19,7 +19,7 @@ import java.util.Set;
 public class ApiGatewayClientConfig {
 
     private static final String DEFAULT_EVENT_ENDPOINT =
-            "https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events";
+            "https://p8rwmv21ud.execute-api.ap-southeast-2.amazonaws.com/prod/events";
 
     @Value("${aws.region:ap-southeast-2}")
     private String awsRegion;
@@ -30,7 +30,7 @@ public class ApiGatewayClientConfig {
     @Value("${aws.apigateway.eventEndpoints.ap-southeast-2:" + DEFAULT_EVENT_ENDPOINT + "}")
     private String apSoutheast2EventEndpoint;
 
-    @Value("${aws.apigateway.eventEndpoints.us-east-1:https://dawfyj0692.execute-api.us-east-1.amazonaws.com/prod/events}")
+    @Value("${aws.apigateway.eventEndpoints.us-east-1:https://o495nrvj1d.execute-api.us-east-1.amazonaws.com/prod/events}")
     private String usEast1EventEndpoint;
 
     /**

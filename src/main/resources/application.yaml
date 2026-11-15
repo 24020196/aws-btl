@@ -16,25 +16,27 @@ spring:
 
 # AWS Direct Cloud Credentials (reads from environment variables)
 aws:
+  accountId: ${AWS_ACCOUNT_ID:348498387626}
   region: ${AWS_REGION:ap-southeast-2}
   accessKeyId: ${AWS_ACCESS_KEY_ID:}
   secretAccessKey: ${AWS_SECRET_ACCESS_KEY:}
   apigateway:
-    eventEndpoint: ${AWS_APIGATEWAY_EVENT_ENDPOINT:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
+    eventEndpoint: ${AWS_APIGATEWAY_EVENT_ENDPOINT:https://p8rwmv21ud.execute-api.ap-southeast-2.amazonaws.com/prod/events}
     # Mỗi vùng có một API Gateway EventBridge riêng (AWS_IAM): sự kiện phải được ký SigV4
     # bằng đúng region của gateway đích, nếu không API Gateway trả 403.
     eventEndpoints:
-      ap-southeast-2: ${AWS_APIGATEWAY_EVENT_ENDPOINT_AP_SOUTHEAST_2:https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events}
-      us-east-1: ${AWS_APIGATEWAY_EVENT_ENDPOINT_US_EAST_1:https://dawfyj0692.execute-api.us-east-1.amazonaws.com/prod/events}
+      ap-southeast-2: ${AWS_APIGATEWAY_EVENT_ENDPOINT_AP_SOUTHEAST_2:https://p8rwmv21ud.execute-api.ap-southeast-2.amazonaws.com/prod/events}
+      us-east-1: ${AWS_APIGATEWAY_EVENT_ENDPOINT_US_EAST_1:https://o495nrvj1d.execute-api.us-east-1.amazonaws.com/prod/events}
 
 # DynamoDB Live Cloud Configuration via Table ARN
 dynamodb:
-  instancesTableArn: ${DYNAMODB_INSTANCES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances}
-  migrationsTableArn: ${DYNAMODB_MIGRATIONS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations}
-  novaTableArn: ${DYNAMODB_NOVA_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Nova}
-  usersTableArn: ${DYNAMODB_USERS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users}
-  imagesTableArn: ${DYNAMODB_IMAGES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Images}
-  flavorsTableArn: ${DYNAMODB_FLAVORS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Flavors}
+  instancesTableArn: ${DYNAMODB_INSTANCES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances}
+  migrationsTableArn: ${DYNAMODB_MIGRATIONS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Migrations}
+  novaTableArn: ${DYNAMODB_NOVA_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Nova}
+  usersTableArn: ${DYNAMODB_USERS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Users}
+  imagesTableArn: ${DYNAMODB_IMAGES_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Images}
+  flavorsTableArn: ${DYNAMODB_FLAVORS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Flavors}
+  migrationScenariosTableArn: ${DYNAMODB_MIGRATION_SCENARIOS_TABLE_ARN:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-MigrationScenarios}
   endpoint: ${DYNAMODB_ENDPOINT:}
 
 # Security Configuration (JWT)
