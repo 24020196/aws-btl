@@ -1,8 +1,0 @@
-{
-  "ContinuousBackupsDescription": {
-    "ContinuousBackupsStatus": "ENABLED",
-    "PointInTimeRecoveryDescription": {
-      "PointInTimeRecoveryStatus": "DISABLED"
-    }
-  }
-}

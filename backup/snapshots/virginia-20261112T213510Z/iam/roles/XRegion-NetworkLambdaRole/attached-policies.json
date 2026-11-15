@@ -1,6 +1,0 @@
-[
-  {
-    "PolicyName": "AWSLambdaVPCAccessExecutionRole",
-    "PolicyArn": "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-  }
-]
