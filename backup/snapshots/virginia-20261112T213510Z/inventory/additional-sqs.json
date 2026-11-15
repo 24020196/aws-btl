@@ -1,5 +1,0 @@
-[
-  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-InstanceLifecycle-DLQ",
-  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-ResourceAllocation.fifo",
-  "https://sqs.us-east-1.amazonaws.com/291634989063/XRegion-SecurityGroupSync-Canary-dlq"
-]

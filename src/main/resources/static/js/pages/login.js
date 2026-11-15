@@ -26,14 +26,11 @@ registerI18n({
   brandSubtitle: ['Hệ Thống Quản Trị Máy Ảo Đa Vùng', 'Multi-Region Cloud Console'],
   signInHeading: ['Đăng nhập người dùng', 'User sign in'],
   signInDesc: ['Đăng nhập để quản lý máy ảo và hạ tầng đám mây của bạn', 'Sign in to manage your virtual machines and cloud infrastructure'],
-  troubleTitle: ['Tài khoản mặc định để thử nghiệm:', 'Default demo credentials:'],
-  troubleAutoFill: ['Bấm vào đây để tự động điền admin / admin123', 'Click here to auto-fill admin / admin123'],
   labelUsername: ['Tên đăng nhập', 'Username'],
   placeholderUsername: ['Nhập tên đăng nhập', 'Enter username'],
   rememberAccount: ['Ghi nhớ tài khoản này', 'Remember this account'],
   labelPassword: ['Mật khẩu', 'Password'],
   showPassword: ['Hiển thị mật khẩu', 'Show Password'],
-  havingTrouble: ['Tài khoản mẫu?', 'Demo account?'],
   signInBtn: ['Đăng nhập', 'Sign in'],
   signingInBtn: ['Đang đăng nhập...', 'Signing in...'],
   orDivider: ['Chưa có tài khoản?', 'New to XRegion?'],
@@ -71,19 +68,6 @@ function toggleShowLoginPassword(show) {
   if (passInput) {
     passInput.type = show ? 'text' : 'password';
   }
-}
-
-function toggleTroubleBox() {
-  const box = document.getElementById('troubleHintBox');
-  if (box) {
-    box.style.display = box.style.display === 'block' ? 'none' : 'block';
-  }
-}
-
-function fillDefaultAdminCredentials() {
-  document.getElementById('authUsername').value = 'admin';
-  document.getElementById('authPassword').value = 'admin123';
-  showToast(t('Đã điền tài khoản mặc định: admin / admin123', 'Filled demo account: admin / admin123'), 'success');
 }
 
 async function handleLoginPageSubmit(e) {
