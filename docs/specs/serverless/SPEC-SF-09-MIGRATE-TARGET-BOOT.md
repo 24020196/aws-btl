@@ -1,9 +1,9 @@
 # SPEC-SF-09: Step Function Boot Nova VM Tại Vùng Đích & Rollback 2 Tầng (MigrateTargetBoot)
 
-> **Phiên bản**: `1.11.0`  
-> **Trạng thái**: `APPROVED (CHÍNH THỨC)`  
-> **Ngày phê duyệt**: `2026-11-13`  
-> **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)  
+> **Phiên bản**: `1.13.0`<br>
+> **Trạng thái**: `APPROVED (CHÍNH THỨC)`<br>
+> **Ngày phê duyệt**: `2026-11-15`<br>
+> **Tài liệu cha**: [SPEC-SF-00: Serverless Scope Guard](SPEC-SF-00-SERVERLESS-SCOPE-GUARD.md)<br>
 > **Liên kết**: [SPEC-02](../SPEC-02-RESOURCE-POOL-CLEANER.md), [SPEC-03](../SPEC-03-CROSS-REGION-LIVE-MIGRATION.md), [SPEC-04](../SPEC-04-NETWORK-NAT-ROUTING.md), [SPEC-08](../SPEC-08-API-GATEWAY-ROUTING.md), [SPEC-SF-01](SPEC-SF-01-LAUNCH-PIPELINE.md), [SPEC-SF-06](SPEC-SF-06-LIFECYCLE-PIPELINE.md), [SPEC-SF-08](SPEC-SF-08-MIGRATION-PIPELINE.md)
 
 ---
@@ -83,7 +83,7 @@ flowchart TD
   "instance_name": "Web-Prod-01",
   "username": "tuanl",
   "flavor": "m1.tiny",
-  "image_id": "831dc24b-9d29-4cb6-8154-9de2d0fd268f",
+  "image_id": "<CIRROS_0_6_2_IMAGE_UUID>",
   "key_id": "key-mykey-a1b2c3d4",
   "size_gb": 2,
   "ebs_size_gb": 2,
@@ -121,7 +121,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | **1** | `CreateVolumeFromSnapshot` (`XRegion-MigrateTarget-Volume`) + `WaitTargetVolume` / `CheckTargetVolume` / `ChoiceTargetVolume` | Tạo EBS Volume (`Encrypted=True`, `VolumeType=gp3`) từ `dest_snapshot_id` cùng AZ với `StorageHost` (kích thước `max(1, size_gb)`), gắn đủ tag `xregion-cinder-ebs-v1` (`ManagedBy`, `StorageBackend`, `StorageHostId`, `CinderVolumeId`), đăng ký quản lý vào OpenStack Cinder (`os-volume_manage`, `volume_type=aws-ebs-gp3`), đặt `bootable=true` và `volume_image_metadata.image_id`; polling mỗi `5 giây` tới khi Cinder & EBS Volume đều `available`. |
 | **2** | `ReserveNetwork` (`XRegion-MigrateTarget-Network`) | Dùng `reservation_id = execution_arn`, **bắt buộc xác minh SSH Keypair (`key_id`) đã tồn tại sẵn trên Nova `dest_region`** (lỗi nếu thiếu), kiểm tra flavor, cấp phát `guest_private_ip`, `gateway_private_ip` trên `OPENSTACK_PUBLIC_ENI` (`ens6`). Cấp phát EIP theo thứ tự: tìm EIP rảnh trong Warm Pool (`Project=xregion`, không `AssociationId`, không `ClaimedBy`, chưa có `EIP#` trong `XRegion-NetworkReservations`); **nếu hết EIP rảnh thì gọi `ec2.allocate_address(Domain="vpc")` cấp mới EIP** và gắn tag `Project=xregion`, `ManagedBy=XRegion-EIPPoolManager`. Giữ nguyên `cinder_volume_id` / `ebs_volume_id` từ Bước 1. |
-| **3** | `BootNovaVM` (`XRegion-MigrateTarget-BootNova`) | Kiểm tra `checked_volume` + `validate_ebs_mapping`, gọi Nova REST API (`POST /servers`) tại `dest_region` khởi tạo máy ảo với: `name = instance_name`, `flavorRef` theo `flavor` (fallback `m1.medium`), `key_name = key_id`, `config_drive = true`, `networks = [{"port": neutron_port_id}]`, `metadata = {"xregion_reservation": execution_arn}`, `block_device_mapping_v2` boot từ `cinder_volume_id` (`source_type=volume`, `destination_type=volume`, `boot_index=0`, `delete_on_termination=False`). Polling mỗi `3 giây` (tối đa `100 giây`) tới khi Nova đạt `ACTIVE`, xác nhận `port.device_id == target_nova_id`. |
+| **3** | `BootNovaVM` (`XRegion-MigrateTarget-BootNova`) | Kiểm tra `checked_volume` + `validate_ebs_mapping`, gọi Nova REST API (`POST /servers`) tại `dest_region` khởi tạo máy ảo với: `name = instance_name`, `flavorRef` theo flavor nguồn `tiny`/`mini` đã xác minh ở vùng đích theo [SPEC-09](../SPEC-09-COMPUTE-CATALOG.md), không fallback `m1.medium` hoặc flavor khác; dữ liệu đĩa thuộc image được hỗ trợ `cirros-0.6.2-x86_64`; `key_name = key_id`, `config_drive = true`, `networks = [{"port": neutron_port_id}]`, `metadata = {"xregion_reservation": execution_arn}`, `block_device_mapping_v2` boot từ `cinder_volume_id` (`source_type=volume`, `destination_type=volume`, `boot_index=0`, `delete_on_termination=False`). Polling mỗi `3 giây` (tối đa `100 giây`) tới khi Nova đạt `ACTIVE`, xác nhận `port.device_id == target_nova_id`. |
 | **4** | `CommitNetworkMapping` (`XRegion-MigrateTarget-Network`) | Xác nhận mapping mạng giữa AWS ENI và OpenStack TAP interface tại `dest_region` trong `XRegion-NetworkMappings` và `XRegion-NetworkReservations` với `reservation_id = execution_arn`, cập nhật tag EIP `ClaimedBy = target_nova_id`, `NovaId = target_nova_id`, `ReservationId = execution_arn`. |
 | **5** | `AssignSecurityGroup` (`XRegion-MigrateTarget-AssignSecurityGroup`) | Tạo Neutron Security Group 1-1 mới với `name = target_nova_id`, `owner = username` (CẤM hardcode `"system"`), gắn vào port của Nova VM (loại bỏ `default`), parse `inbound_rules` và `outbound_rules` thành List chuẩn, ghi vào `XRegion-SecurityGroups` và **đồng bộ/áp trực tiếp 100% rule xuống Neutron SG mới** tại `dest_region`. |
 | **6** | `ApplyNatMapping` -> `WaitNatCommand` -> `CheckNatCommand` -> `ChoiceNatCommand` (`XRegion-MigrateTarget-Network`) | Gắn EIP vào `gateway_private_ip` (`ec2.associate_address`), phát lệnh SSM Run Command `APPLY` thiết lập `nftables` DNAT/SNAT (`Wait 3s -> CheckNatCommand`) tới khi `command_status = SUCCEEDED`, sau đó chuyển thẳng sang `SyncDynamoDB` (theo đúng ASL `LaunchInstance`, bỏ qua `VerifyNetwork`). |
@@ -179,6 +179,8 @@ flowchart TD
 
 ---
 
+> Thông số flavor bắt buộc theo SPEC-09 v1.1.0: `m1.tiny` ID `1` = 1 vCPU, 1024 MiB RAM, root disk 1 GiB; `m1.mini` ID `2` = 1 vCPU, 2048 MiB RAM, root disk 1 GiB.
+
 ## 6. Lịch Sử Phiên Bản (Changelog)
 
 | Ngày | Phiên Bản | Người Thay Đổi | Nội Dung |
@@ -195,3 +197,5 @@ flowchart TD
 | `2026-11-13` | `1.9.0` | Chủ dự án (`xacnhan-skill`) | Đồng bộ với `TerminateInstance` (`SPEC-SF-02 v1.3.0`): `SyncDynamoDB` (Bước 7) ghi bản ghi `XRegion-Volumes` tại `dest_region` (`status = IN_USE`, `attached_instance_id = instance_id`) để `TerminateInstance` ở vùng đích xóa sạch Cinder/EBS volume; `MigrateSourceCleanup` (Bước 8) cập nhật bản ghi `XRegion-Volumes` của volume nguồn sang `DELETED`. |
 | `2026-11-13` | `1.10.0` | Chủ dự án (`xacnhan-skill`) | Xác nhận 100% quy trình `MigrateSourceCleanup` qua `xacnhan-skill`: chuẩn hóa `TimeoutSeconds = 300s`, `Retry` 2 lần lỗi Lambda, `Catch -> SourceCleanupFailed`, và polling xác nhận xóa Cinder/EBS volume nguồn + cập nhật `XRegion-Volumes = DELETED`. |
 | `2026-11-13` | `1.11.0` | Chủ dự án (`xacnhan-skill`) | Bổ sung cập nhật Route 53 A record `<instance_id>.xregion-iaas.online` (`TTL = 60s`, fail-open sau 2 lần retry) và lưu `public_dns` vào `XRegion-Instances` / `XRegion-Nova` tại `SyncDynamoDB`. |
+| `2026-11-15` | `1.12.0` | Chủ dự án (yêu cầu trực tiếp) | Bảo toàn flavor tiny/mini và image CirrOS-0.6.2 theo SPEC-09; bỏ fallback m1.medium trong hợp đồng hiện hành. |
+| `2026-11-15` | `1.13.0` | Chủ dự án (kế hoạch đã duyệt) | Chuẩn hóa tên image cirros-0.6.2-x86_64; tiny ID 1: 1 vCPU/1024 MiB/1 GiB, mini ID 2: 1 vCPU/2048 MiB/1 GiB theo SPEC-09 v1.1.0. |

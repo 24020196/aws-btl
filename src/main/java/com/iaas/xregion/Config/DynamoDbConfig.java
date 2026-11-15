@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
@@ -20,8 +21,11 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
+import software.amazon.awssdk.services.sts.StsClient;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -35,6 +39,12 @@ public class DynamoDbConfig {
 
     @Value("${aws.secretAccessKey:}")
     private String secretAccessKey;
+
+    @Value("${aws.sessionToken:}")
+    private String sessionToken;
+
+    @Value("${aws.accountId}")
+    private String accountId;
 
     @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances}")
     private String instancesTableArn;
@@ -82,15 +92,36 @@ public class DynamoDbConfig {
 
     @Bean
     public software.amazon.awssdk.auth.credentials.AwsCredentialsProvider awsCredentialsProvider() {
+        boolean hasKey = accessKeyId != null && !accessKeyId.isBlank();
+        boolean hasSecret = secretAccessKey != null && !secretAccessKey.isBlank();
+        if (hasKey != hasSecret) {
+            throw new IllegalStateException("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be configured together");
+        }
+        software.amazon.awssdk.auth.credentials.AwsCredentialsProvider provider;
         if (accessKeyId != null && !accessKeyId.trim().isEmpty() &&
             secretAccessKey != null && !secretAccessKey.trim().isEmpty()) {
             log.info("Initialized StaticCredentialsProvider with configured IAM Access Key");
-            return StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim())
-            );
+            provider = StaticCredentialsProvider.create(sessionToken != null && !sessionToken.isBlank()
+                    ? AwsSessionCredentials.create(accessKeyId.trim(), secretAccessKey.trim(), sessionToken.trim())
+                    : AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim()));
+        } else {
+            log.info("Initialized DefaultCredentialsProvider for AWS components");
+            provider = DefaultCredentialsProvider.create();
         }
-        log.info("Initialized DefaultCredentialsProvider for AWS components");
-        return DefaultCredentialsProvider.create();
+        if (endpoint == null || endpoint.isBlank()) {
+            AwsAccountGuard.requireAccountId(accountId);
+            for (String arn : List.of(instancesTableArn, migrationsTableArn, novaTableArn, usersTableArn,
+                    imagesTableArn, flavorsTableArn, migrationScenariosTableArn)) {
+                AwsAccountGuard.requireTableArn(arn, accountId, awsRegion);
+            }
+            try (StsClient sts = StsClient.builder().region(Region.of(awsRegion)).credentialsProvider(provider)
+                    .overrideConfiguration(c -> c.apiCallTimeout(Duration.ofSeconds(20))
+                            .apiCallAttemptTimeout(Duration.ofSeconds(10))).build()) {
+                AwsAccountGuard.verifyIdentity(sts, accountId);
+            }
+            log.info("Verified AWS credentials for configured account {}", accountId);
+        }
+        return provider;
     }
 
     @Bean

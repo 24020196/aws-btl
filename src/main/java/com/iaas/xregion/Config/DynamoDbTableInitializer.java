@@ -8,49 +8,52 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import java.util.List;
 
 @Slf4j
 @Component
 public class DynamoDbTableInitializer implements ApplicationRunner {
 
     private final DynamoDbClient dynamoDbClient;
-    private final String instancesTableName;
-    private final String migrationsTableName;
-    private final String usersTableName;
-    private final String novaTableName;
-    private final String migrationScenariosTableName;
+    private final List<String> expectedTableArns;
+    private final boolean localEndpoint;
 
     public DynamoDbTableInitializer(DynamoDbClient dynamoDbClient,
                                     @Value("${dynamodb.instancesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances}") String instancesTableArn,
                                     @Value("${dynamodb.migrationsTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Migrations}") String migrationsTableArn,
                                     @Value("${dynamodb.usersTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Users}") String usersTableArn,
                                     @Value("${dynamodb.novaTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Nova}") String novaTableArn,
-                                    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-MigrationScenarios}") String migrationScenariosTableArn) {
+                                    @Value("${dynamodb.migrationScenariosTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-MigrationScenarios}") String migrationScenariosTableArn,
+                                    @Value("${dynamodb.imagesTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Images}") String imagesTableArn,
+                                    @Value("${dynamodb.flavorsTableArn:arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Flavors}") String flavorsTableArn,
+                                    @Value("${dynamodb.endpoint:}") String endpoint) {
         this.dynamoDbClient = dynamoDbClient;
-        this.instancesTableName = DynamoDbConfig.parseTableNameFromArn(instancesTableArn, "XRegion-Instances");
-        this.migrationsTableName = DynamoDbConfig.parseTableNameFromArn(migrationsTableArn, "XRegion-Migrations");
-        this.usersTableName = DynamoDbConfig.parseTableNameFromArn(usersTableArn, "XRegion-Users");
-        this.novaTableName = DynamoDbConfig.parseTableNameFromArn(novaTableArn, "XRegion-Nova");
-        this.migrationScenariosTableName = DynamoDbConfig.parseTableNameFromArn(migrationScenariosTableArn, "XRegion-MigrationScenarios");
+        this.expectedTableArns = List.of(instancesTableArn, migrationsTableArn, usersTableArn, novaTableArn,
+                migrationScenariosTableArn, imagesTableArn, flavorsTableArn);
+        this.localEndpoint = endpoint != null && !endpoint.isBlank();
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("Verifying live connection to AWS DynamoDB tables: [{}], [{}], [{}], [{}] and [{}]",
-                instancesTableName, migrationsTableName, usersTableName, novaTableName, migrationScenariosTableName);
-        verifyTable(instancesTableName);
-        verifyTable(migrationsTableName);
-        verifyTable(usersTableName);
-        verifyTable(novaTableName);
-        verifyTable(migrationScenariosTableName);
+        for (String expectedArn : expectedTableArns) {
+            verifyTable(expectedArn);
+        }
     }
 
-    private void verifyTable(String tableName) {
+    private void verifyTable(String expectedArn) {
+        String tableName = DynamoDbConfig.parseTableNameFromArn(expectedArn, expectedArn);
         try {
             TableDescription table = dynamoDbClient.describeTable(DescribeTableRequest.builder().tableName(tableName).build()).table();
+            if (!localEndpoint && !expectedArn.equals(table.tableArn())) {
+                throw new IllegalStateException("DynamoDB table ARN mismatch: expected " + expectedArn
+                        + " but AWS returned " + table.tableArn());
+            }
             log.info("AWS DynamoDB Table [{}] is healthy. Status: {}, KeySchema: {}, Attributes: {}, Item count: {}, ARN: {}", 
                     tableName, table.tableStatus(), table.keySchema(), table.attributeDefinitions(), table.itemCount(), table.tableArn());
         } catch (Exception e) {
+            if (!localEndpoint) {
+                throw new IllegalStateException("Could not verify configured DynamoDB table " + expectedArn, e);
+            }
             log.warn("Could not describe table [{}]: {}. Ensure AWS credentials and network connection are active.", tableName, e.getMessage());
         }
     }

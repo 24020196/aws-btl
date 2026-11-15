@@ -518,18 +518,18 @@ SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=cloud
 
 # 2. Thông Tin Xác Thực AWS Cloud (Sydney ap-southeast-2)
+AWS_ACCOUNT_ID=348498387626
 AWS_REGION=ap-southeast-2
 AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
 AWS_SECRET_ACCESS_KEY=YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
 
 # 3. Điểm Cuối AWS API Gateway Event Ingestion (EventBridge Bus)
-AWS_APIGATEWAY_EVENT_ENDPOINT=https://oqp7jmg7je.execute-api.ap-southeast-2.amazonaws.com/prod/events
-AWS_APIGATEWAY_API_TOKEN=xreg_YWRtaW4_enterpriseSecretTokenForEventBridgeGateway8899
+AWS_APIGATEWAY_EVENT_ENDPOINT=https://p8rwmv21ud.execute-api.ap-southeast-2.amazonaws.com/prod/events
 
 # 4. Bảng Amazon DynamoDB Chính Thức Qua Table ARN
-DYNAMODB_INSTANCES_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Instances
-DYNAMODB_MIGRATIONS_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Migrations
-DYNAMODB_USERS_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:291634989063:table/XRegion-Users
+DYNAMODB_INSTANCES_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Instances
+DYNAMODB_MIGRATIONS_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Migrations
+DYNAMODB_USERS_TABLE_ARN=arn:aws:dynamodb:ap-southeast-2:348498387626:table/XRegion-Users
 
 # 5. DynamoDB Endpoint (Để trống để tự động kết nối HTTPS tới AWS Cloud; điền http://localhost:8000 khi chạy Local)
 DYNAMODB_ENDPOINT=
@@ -538,6 +538,14 @@ DYNAMODB_ENDPOINT=
 JWT_SECRET=XRegionEnterpriseSecretKeyWithAtLeast256BitsLengthForSecureHMACSHA256Tokens
 JWT_EXPIRATION_HOURS=24
 ```
+
+Backend xác minh danh tính bằng STS trước khi cấp credentials cho các AWS client.
+Account thực tế phải khớp `AWS_ACCOUNT_ID`; cả 7 bảng DynamoDB cũng phải trả về đúng ARN cấu hình.
+Nếu không xác minh được, backend dừng khởi động. Đổi Account ID hoặc ARN không đổi danh tính của access key.
+Với credentials tạm thời, điền thêm `AWS_SESSION_TOKEN` theo `.env.example`.
+
+API test tự nạp `.env` và xác minh account trước mọi request kiểm thử.
+Biến môi trường có sẵn được ưu tiên hơn `.env` ở cả backend và test; hãy loại bỏ giá trị cũ trước khi chạy.
 
 ---
 
